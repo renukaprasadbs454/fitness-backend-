@@ -1,57 +1,56 @@
 # Dependencies
 node_modules/
+
+# Logs
+logs/
+*.log
 npm-debug.log*
-npm-error.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-pnpm-error.log*
 
-# Environment variables
+# Runtime data & temp files
+pids/
+*.pid
+*.seed
+*.pid.lock
+*.tmp
+*.temp
+temp/
+tmp/
+.cache/
+
+# Environment files (MUST NOT be committed)
 .env
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# IDE
+# IDEs & System files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+Thumbs.db
 *.sublime-workspace
 *.sublime-project
 
-# Build
+# Build directories
 dist/
 build/
-
-# Logs
-logs/
-
-# OS files
-.DS_Store
-Thumbs.db
+out/
 
 # Prisma
 .prisma/
-prisma/migrations/
+# NOTE: DO NOT ignore prisma/migrations/ as migration history is needed in git!
 
-# Uploads
+# Uploads & Local Media
 uploads/*
 !uploads/.gitkeep
-
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
 
 # Coverage
 coverage/
 .nyc_output/
-
-# Miscellaneous
-.cache/
-tmp/
-temp/

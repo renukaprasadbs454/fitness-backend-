@@ -1,95 +1,85 @@
 # FitNerve Backend — Phase 1
 
-Production-style Node.js/Express/PostgreSQL/Prisma backend covering Phase 1 scope only: **Authentication, User Profile, Coach Module, Image Uploads, and backend infrastructure.**
+Production-grade Node.js/Express/PostgreSQL/Prisma backend covering Phase 1 scope: **Authentication, User Profile, Coach Module, and Image Uploads.**
 
-Full design docs: [`docs/PHASE1_DOCUMENTATION.md`](./docs/PHASE1_DOCUMENTATION.md) (ER diagram, API spec, auth flow, frontend mapping, security, roadmap, testing checklist).
+Full design specifications can be found in [`FitNerve_Phase1_Documentation.md`](./FitNerve_Phase1_Documentation.md).
 
 ## Folder Structure
 
 ```
 backend/
 ├── src/
-│   ├── config/         env.js, logger.js
-│   ├── constants/       roles.js, httpStatus.js
-│   ├── controllers/    auth, user, coach, upload
-│   ├── services/       business logic per module
-│   ├── repositories/   Prisma queries only, isolated from services
-│   ├── routes/v1/      versioned route definitions + Swagger JSDoc
-│   ├── middlewares/    auth, role, validate, rateLimiter, error, upload
-│   ├── validators/     Zod schemas
-│   ├── utils/          ApiError, ApiResponse, asyncHandler, jwt, password, storage, ms
-│   ├── docs/           swagger.js (OpenAPI spec generator)
-│   ├── database/       Prisma client singleton
-│   ├── app.js
-│   └── server.js
-├── prisma/schema.prisma
-├── postman/FitNerve-Phase1.postman_collection.json
-├── docs/PHASE1_DOCUMENTATION.md
+│   ├── config/         # env.js, logger.js (Winston configuration)
+│   ├── constants/      # roles.js, httpStatus.js
+│   ├── controllers/    # auth, user, coach, upload controllers
+│   ├── services/       # business logic layers per module
+│   ├── repositories/   # Prisma query repository layer (isolated from services)
+│   ├── routes/v1/      # versioned route definitions + JSDoc OpenAPI specs
+│   ├── middlewares/    # auth checks, rate limiters, validation, error handling
+│   ├── validators/     # Zod schema definitions
+│   ├── utils/          # ApiError, ApiResponse, jwt, storage helper
+│   ├── database/       # Prisma client initializer singleton
+│   ├── app.js          # Express app configuration
+│   └── server.js       # App entry point
+├── prisma/             # Schema definition
+├── postman/            # Postman integration collection
 └── .env.example
 ```
 
 ## 1. Prerequisites
 
 - Node.js ≥ 18
-- A running PostgreSQL instance (local, Docker, Railway, or Render)
+- Running PostgreSQL database (e.g., Supabase PostgreSQL)
 
-## 2. Setup
+## 2. Environment Variables & Setup
+
+Create a `.env` file in the root of the backend folder:
 
 ```bash
-cd backend
-npm install
 cp .env.example .env
 ```
 
-Edit `.env` — at minimum set `DATABASE_URL` to your Postgres connection string, and replace `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` with strong random values, e.g.:
+Define the configuration keys:
+- **`DATABASE_URL`**: Use the standard session mode pooler (e.g. port `5432`) for Prisma CLI schema pushes and migrations.
+  - *Example*: `postgresql://postgres.zrbcjqjqtreuadxkzeht:PASSWORD@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`
+- **`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`**: Strong random hex strings.
+
+## 3. Database Synchronization
+
+Since the schema uses Supabase, always connect to the session pooler (port `5432`) to sync tables. Run the following commands:
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+# Push the local schema.prisma directly to the database
+npx prisma db push
+
+# Generate the Prisma client code
+npx prisma generate
 ```
 
-## 3. Database
+> **Note**: If `npx prisma generate` fails with an `EPERM` error, stop your Express development server (`npm run dev`) first to unlock the Prisma query engine binary in memory, then run the command again.
+
+## 4. Run Server
 
 ```bash
-npm run prisma:generate     # generates the Prisma client from schema.prisma
-npm run prisma:migrate      # creates the tables (users, refresh_tokens, password_reset_tokens,
-                             # user_profiles, coaches, coach_availability, media)
+# Start development server with Nodemon auto-reloads
+npm run dev
+
+# Start production server
+npm start
 ```
 
-> **Note:** this repo's schema and code were validated by static review (syntax-checked, wiring traced) in an offline sandbox that couldn't reach Prisma's binary CDN. The above two commands are the first thing to run in your real environment — they haven't been executed against a live database yet.
+- **API Base URL**: `http://localhost:4000/api/v1`
+- **Swagger Documentation UI**: `http://localhost:4000/api-docs`
+- **API Health Check Endpoint**: `GET http://localhost:4000/api/v1/health`
 
-## 4. Run
+## 5. Password Security & Validation Rules
 
-```bash
-npm run dev     # nodemon, auto-reload
-# or
-npm start       # plain node
-```
+When registering a new user account, the backend validates passwords with Zod using these criteria:
+- Minimum of **8 characters**
+- Contains at least one **uppercase letter** (`A-Z`)
+- Contains at least one **lowercase letter`** (`a-z`)
+- Contains at least one **number** (`0-9`)
 
-- API base: `http://localhost:4000/api/v1`
-- Swagger UI: `http://localhost:4000/api-docs`
-- Health check: `GET /api/v1/health`
+## 6. Postman Integration
 
-## 5. Postman
-
-Import `postman/FitNerve-Phase1.postman_collection.json`. The `baseUrl` variable defaults to `http://localhost:4000/api/v1`. Running **Register** or **Login** auto-populates the `accessToken`/`refreshToken` collection variables for subsequent requests via a test script.
-
-## 6. File Storage
-
-Controlled by `STORAGE_DRIVER` in `.env`:
-- `local` (default) — files saved under `uploads/`, served statically at `/uploads/...`
-- `s3` — set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET`
-
-No code changes needed to switch — the storage abstraction (`src/utils/storage.js`) is driver-agnostic.
-
-## 7. Deployment (Railway / Render / EC2)
-
-1. Provision a managed Postgres instance and copy its connection string into `DATABASE_URL`.
-2. Set all `.env.example` keys as environment variables in your platform's dashboard (never commit `.env`).
-3. Build step: `npm install && npm run prisma:generate`
-4. Release/pre-deploy step: `npm run prisma:migrate:deploy`
-5. Start command: `npm start`
-6. Set `STORAGE_DRIVER=s3` in production — local disk storage doesn't persist across container restarts/redeploys.
-
-## 8. What's explicitly out of scope (Phase 2 / Phase 3)
-
-BMI, Calorie, Activity/Steps, Workouts, Progress logs, Appointments, Calendar, Chat (Socket.io), Notifications (FCM), Content, Admin analytics. See `docs/PHASE1_DOCUMENTATION.md` §8 for the roadmap into those phases.
+Import the file `postman/FitNerve-Phase1.postman_collection.json` into Postman. After running **Register** or **Login**, a post-request script automatically captures the tokens and configures variables for all subsequent authenticated endpoints (like `GET /users/me`).
