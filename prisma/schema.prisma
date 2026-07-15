@@ -1,0 +1,183 @@
+// FitNerve Backend — Phase 1 Database Schema
+// PostgreSQL + Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ────────────────────────────────────────────────────────────
+// ENUMS
+// ────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  COACH
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum Goal {
+  WEIGHT_LOSS
+  MUSCLE_GAIN
+  STRENGTH
+  ENDURANCE
+  GENERAL_FITNESS
+  REHAB
+}
+
+enum MediaType {
+  PROFILE_IMAGE
+  PROGRESS_IMAGE
+  COACH_IMAGE
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+// ────────────────────────────────────────────────────────────
+// CORE IDENTITY
+// ────────────────────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  phone         String?  @unique
+  passwordHash  String   @map("password_hash")
+  fullName      String   @map("full_name")
+  role          Role     @default(USER)
+  isActive      Boolean  @default(true) @map("is_active")
+  isEmailVerified Boolean @default(false) @map("is_email_verified")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  profile        UserProfile?
+  coach          Coach?
+  refreshTokens  RefreshToken[]
+  passwordResets PasswordResetToken[]
+  media          Media[]
+
+  @@map("users")
+  @@index([role])
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime @map("expires_at")
+  revoked    Boolean  @default(false)
+  replacedByToken String? @map("replaced_by_token")
+  createdByIp String? @map("created_by_ip")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("refresh_tokens")
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique @map("token_hash")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("password_reset_tokens")
+  @@index([userId])
+}
+
+// ────────────────────────────────────────────────────────────
+// USER MODULE (Phase 1)
+// ────────────────────────────────────────────────────────────
+
+model UserProfile {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heightCm  Decimal? @map("height_cm") @db.Decimal(5, 2)
+  weightKg  Decimal? @map("weight_kg") @db.Decimal(5, 2)
+  age       Int?
+  gender    Gender?
+  goal      Goal?
+  profileImageUrl String? @map("profile_image_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_profiles")
+}
+
+// ────────────────────────────────────────────────────────────
+// COACH MODULE (Phase 1 — base CRUD + availability basics)
+// ────────────────────────────────────────────────────────────
+
+model Coach {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio             String?
+  specialties     String[] @default([])
+  experienceYears Int?     @map("experience_years")
+  profileImageUrl String?  @map("profile_image_url")
+  isAcceptingClients Boolean @default(true) @map("is_accepting_clients")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  availability CoachAvailability[]
+
+  @@map("coaches")
+}
+
+model CoachAvailability {
+  id        String    @id @default(uuid())
+  coachId   String    @map("coach_id")
+  coach     Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  dayOfWeek DayOfWeek @map("day_of_week")
+  startTime String    @map("start_time") // "HH:mm" 24h
+  endTime   String    @map("end_time")   // "HH:mm" 24h
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("coach_availability")
+  @@unique([coachId, dayOfWeek, startTime])
+  @@index([coachId])
+}
+
+// ────────────────────────────────────────────────────────────
+// IMAGE UPLOAD MODULE (Phase 1 — generic media table)
+// ────────────────────────────────────────────────────────────
+
+model Media {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      MediaType
+  url       String
+  storageKey String   @map("storage_key") // S3 key or local relative path
+  mimeType  String?   @map("mime_type")
+  sizeBytes Int?      @map("size_bytes")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("media")
+  @@index([userId, type])
+}
