@@ -4,7 +4,7 @@ const ApiResponse = require("../utils/ApiResponse");
 const httpStatus = require("../constants/httpStatus");
 const ApiError = require("../utils/ApiError");
 
-const VALID_TYPES = ["PROFILE_IMAGE", "PROGRESS_IMAGE", "COACH_IMAGE"];
+const VALID_TYPES = ["PROFILE_IMAGE", "PROGRESS_IMAGE", "COACH_IMAGE", "CONTENT_IMAGE"];
 
 const uploadImage = asyncHandler(async (req, res) => {
   const type = (req.body.type || "").toUpperCase();

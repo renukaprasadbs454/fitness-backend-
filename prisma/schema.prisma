@@ -40,6 +40,8 @@ enum MediaType {
   PROFILE_IMAGE
   PROGRESS_IMAGE
   COACH_IMAGE
+  CHAT_IMAGE
+  CONTENT_IMAGE
 }
 
 enum DayOfWeek {
@@ -50,6 +52,64 @@ enum DayOfWeek {
   FRIDAY
   SATURDAY
   SUNDAY
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 2 ENUMS
+// ────────────────────────────────────────────────────────────
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
+}
+
+enum WorkoutCategoryKey {
+  WEIGHT_LOSS
+  MUSCLE_GAIN
+  STRENGTH
+  CARDIO
+  YOGA
+  GENERAL_FITNESS
+}
+
+enum WorkoutDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum ActivityType {
+  WORKOUT_COMPLETED
+  MEAL_LOGGED
+  HYDRATION_GOAL
+  APPOINTMENT_BOOKED
+  STEP_MILESTONE
+  BMI_LOGGED
+  WEIGHT_LOGGED
+  OTHER
+}
+
+enum NotificationType {
+  WORKOUT_REMINDER
+  APPOINTMENT_REMINDER
+  COACH_MESSAGE
+  ANNOUNCEMENT
+  SYSTEM
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
 }
 
 // ────────────────────────────────────────────────────────────
@@ -74,6 +134,22 @@ model User {
   refreshTokens  RefreshToken[]
   passwordResets PasswordResetToken[]
   media          Media[]
+
+  bmiLogs           BmiLog[]
+  calorieLogs       CalorieLog[]
+  stepLogs          StepLog[]
+  activityLogs      ActivityLog[]
+  weightLogs        WeightLog[]
+  bodyMeasurements  BodyMeasurement[]
+  workoutCompletions WorkoutCompletion[]
+  appointments      Appointment[]
+  notifications     Notification[]
+  deviceTokens      DeviceToken[]
+  adminAuditLogs    AdminAuditLog[]
+  chatRoomsAsUser   ChatRoom[]      @relation("ChatRoomsAsUser")
+  chatMessagesSent  ChatMessage[]   @relation("ChatMessagesSent")
+  notificationPreference NotificationPreference?
+  contentPosts      ContentPost[]
 
   @@map("users")
   @@index([role])
@@ -144,6 +220,8 @@ model Coach {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   availability CoachAvailability[]
+  appointments Appointment[]
+  chatRooms    ChatRoom[]
 
   @@map("coaches")
 }
@@ -180,4 +258,380 @@ model Media {
 
   @@map("media")
   @@index([userId, type])
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 2 — BMI MODULE
+// ────────────────────────────────────────────────────────────
+
+model BmiLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heightCm  Decimal  @map("height_cm") @db.Decimal(5, 2)
+  weightKg  Decimal  @map("weight_kg") @db.Decimal(5, 2)
+  bmi       Decimal  @db.Decimal(4, 1)
+  category  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("bmi_logs")
+  @@index([userId, createdAt])
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 2 — CALORIE MODULE
+// ────────────────────────────────────────────────────────────
+
+model CalorieLog {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age             Int
+  gender          Gender
+  heightCm        Decimal       @map("height_cm") @db.Decimal(5, 2)
+  weightKg        Decimal       @map("weight_kg") @db.Decimal(5, 2)
+  activityLevel   ActivityLevel @map("activity_level")
+  goal            Goal
+  bmr             Decimal       @db.Decimal(6, 1)
+  tdee            Decimal       @db.Decimal(6, 1)
+  targetCalories  Decimal       @map("target_calories") @db.Decimal(6, 1)
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@map("calorie_logs")
+  @@index([userId, createdAt])
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 2 — ACTIVITY / STEPS MODULE
+// ────────────────────────────────────────────────────────────
+
+model StepLog {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime @db.Date
+  steps          Int
+  distanceKm     Decimal? @map("distance_km") @db.Decimal(6, 2)
+  caloriesBurned Int?     @map("calories_burned")
+  activeMinutes  Int?     @map("active_minutes")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("step_logs")
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model ActivityLog {
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        ActivityType
+  description String
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@map("activity_logs")
+  @@index([userId, createdAt])
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 2 — PROGRESS TRACKER MODULE
+// ────────────────────────────────────────────────────────────
+
+model WeightLog {
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weightKg Decimal  @map("weight_kg") @db.Decimal(5, 2)
+  loggedAt DateTime @default(now()) @map("logged_at")
+
+  @@map("weight_logs")
+  @@index([userId, loggedAt])
+}
+
+model BodyMeasurement {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chestCm   Decimal? @map("chest_cm") @db.Decimal(5, 2)
+  waistCm   Decimal? @map("waist_cm") @db.Decimal(5, 2)
+  hipCm     Decimal? @map("hip_cm") @db.Decimal(5, 2)
+  armCm     Decimal? @map("arm_cm") @db.Decimal(5, 2)
+  thighCm   Decimal? @map("thigh_cm") @db.Decimal(5, 2)
+  loggedAt  DateTime @default(now()) @map("logged_at")
+
+  @@map("body_measurements")
+  @@index([userId, loggedAt])
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 2 — WORKOUT MODULE
+// ────────────────────────────────────────────────────────────
+
+model Exercise {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  muscleGroup   String?  @map("muscle_group")
+  equipment     String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  planLinks WorkoutPlanExercise[]
+
+  @@map("exercises")
+}
+
+model WorkoutPlan {
+  id              String             @id @default(uuid())
+  categoryKey     WorkoutCategoryKey @map("category_key")
+  title           String
+  description     String?
+  durationMinutes Int                @map("duration_minutes")
+  difficulty      WorkoutDifficulty
+  accentColor     String             @map("accent_color")
+  isActive        Boolean            @default(true) @map("is_active")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  exercises   WorkoutPlanExercise[]
+  completions WorkoutCompletion[]
+
+  @@map("workout_plans")
+  @@index([categoryKey])
+}
+
+model WorkoutPlanExercise {
+  id         String      @id @default(uuid())
+  planId     String      @map("plan_id")
+  plan       WorkoutPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  exerciseId String      @map("exercise_id")
+  exercise   Exercise    @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  sortOrder  Int         @default(0) @map("sort_order")
+  sets       Int?
+  reps       Int?
+
+  @@map("workout_plan_exercises")
+  @@unique([planId, exerciseId])
+  @@index([planId])
+}
+
+model WorkoutCompletion {
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId      String      @map("plan_id")
+  plan        WorkoutPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  completedAt DateTime    @default(now()) @map("completed_at")
+
+  @@map("workout_completions")
+  @@index([userId, completedAt])
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 2 — APPOINTMENT MODULE
+// ────────────────────────────────────────────────────────────
+
+model Appointment {
+  id              String            @id @default(uuid())
+  userId          String            @map("user_id")
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coachId         String            @map("coach_id")
+  coach           Coach             @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  title           String
+  scheduledAt     DateTime          @map("scheduled_at")
+  durationMinutes Int               @default(45) @map("duration_minutes")
+  status          AppointmentStatus @default(PENDING)
+  notes           String?
+  reminderSentAt  DateTime?         @map("reminder_sent_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@map("appointments")
+  @@index([coachId, scheduledAt])
+  @@index([userId, scheduledAt])
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 2 — NOTIFICATION GROUNDWORK
+// ────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@map("notifications")
+  @@index([userId, isRead, createdAt])
+}
+
+model DeviceToken {
+  id        String         @id @default(uuid())
+  userId    String         @map("user_id")
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String         @unique
+  platform  DevicePlatform
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  @@map("device_tokens")
+  @@index([userId])
+}
+
+// ────────────────────────────────────────────────────────────
+// ADMIN PORTAL — AUDIT LOGGING
+// ────────────────────────────────────────────────────────────
+
+enum AdminAction {
+  SUSPEND_USER
+  ACTIVATE_USER
+  CHANGE_ROLE
+  RESET_PASSWORD
+  DELETE_USER
+  UPDATE_USER
+  CREATE_COACH
+  UPDATE_COACH
+  DELETE_COACH
+}
+
+model AdminAuditLog {
+  id         String      @id @default(uuid())
+  adminId    String      @map("admin_id")
+  admin      User        @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action     AdminAction
+  targetType String      @map("target_type") // "USER" | "COACH"
+  targetId   String      @map("target_id")
+  metadata   Json?
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@map("admin_audit_logs")
+  @@index([adminId, createdAt])
+  @@index([targetType, targetId])
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 3 — REAL-TIME CHAT (user ↔ coach)
+// ────────────────────────────────────────────────────────────
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  SEEN
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+}
+
+// One room per (user, coach) pair. Created lazily on first message
+// or when a user opens a coach's chat for the first time.
+model ChatRoom {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  user          User     @relation("ChatRoomsAsUser", fields: [userId], references: [id], onDelete: Cascade)
+  coachId       String   @map("coach_id")
+  coach         Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  lastMessageAt DateTime? @map("last_message_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  messages ChatMessage[]
+
+  @@map("chat_rooms")
+  @@unique([userId, coachId])
+  @@index([userId, lastMessageAt])
+  @@index([coachId, lastMessageAt])
+}
+
+model ChatMessage {
+  id          String        @id @default(uuid())
+  roomId      String        @map("room_id")
+  room        ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderId    String        @map("sender_id")
+  sender      User          @relation("ChatMessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  type        MessageType   @default(TEXT)
+  body        String?
+  imageUrl    String?       @map("image_url")
+  status      MessageStatus @default(SENT)
+  deliveredAt DateTime?     @map("delivered_at")
+  seenAt      DateTime?     @map("seen_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  @@map("chat_messages")
+  @@index([roomId, createdAt])
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 3 — NOTIFICATION PREFERENCES
+// ────────────────────────────────────────────────────────────
+
+model NotificationPreference {
+  id                    String   @id @default(uuid())
+  userId                String   @unique @map("user_id")
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutReminders      Boolean  @default(true) @map("workout_reminders")
+  appointmentReminders  Boolean  @default(true) @map("appointment_reminders")
+  coachMessages         Boolean  @default(true) @map("coach_messages")
+  announcements         Boolean  @default(true) @map("announcements")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("notification_preferences")
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 3 — CONTENT MANAGEMENT SYSTEM
+// ────────────────────────────────────────────────────────────
+
+enum ContentType {
+  BLOG
+  VIDEO
+  WORKOUT_TIP
+  NUTRITION_TIP
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model ContentCategory {
+  id        String        @id @default(uuid())
+  name      String        @unique
+  slug      String        @unique
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  posts ContentPost[]
+
+  @@map("content_categories")
+}
+
+model ContentPost {
+  id            String        @id @default(uuid())
+  type          ContentType
+  title         String
+  slug          String        @unique
+  summary       String?
+  body          String?
+  videoUrl      String?       @map("video_url")
+  coverImageUrl String?       @map("cover_image_url")
+  status        ContentStatus @default(DRAFT)
+  categoryId    String?       @map("category_id")
+  category      ContentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  authorId      String        @map("author_id")
+  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  viewCount     Int           @default(0) @map("view_count")
+  publishedAt   DateTime?     @map("published_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@map("content_posts")
+  @@index([type, status, publishedAt])
+  @@index([categoryId])
 }

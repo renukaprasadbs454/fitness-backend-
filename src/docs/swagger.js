@@ -5,10 +5,10 @@ const options = {
   definition: {
     openapi: "3.0.3",
     info: {
-      title: "FitNerve API — Phase 1",
-      version: "1.0.0",
+      title: "FitNerve API — Phase 1 + Phase 2 + Phase 3 (Admin)",
+      version: "1.3.0",
       description:
-        "Authentication, User Profile, Coach Module, and Image Upload endpoints for the FitNerve fitness platform (Phase 1 scope only)."
+        "Authentication, User Profile, Coach Module, Uploads (Phase 1); BMI, Calorie, Activity/Steps, Progress Tracker, Workouts, Appointments, Calendar (Phase 2); Real-time Chat (Socket.io), Push Notifications (FCM), Content Management, Admin Analytics Dashboard, and an enhanced Workout Recommendation engine (Phase 3); plus admin-only user/coach management, dashboard stats, and audit logging (Admin Portal) for the FitNerve fitness platform."
     },
     servers: [{ url: `/api/${env.apiVersion}` }],
     components: {

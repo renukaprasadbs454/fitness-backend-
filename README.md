@@ -1,85 +1,132 @@
-# FitNerve Backend — Phase 1
+# FitNerve — Unified Phase 3 Workspace
 
-Production-grade Node.js/Express/PostgreSQL/Prisma backend covering Phase 1 scope: **Authentication, User Profile, Coach Module, and Image Uploads.**
+FitNerve is a consolidated fitness platform backend and admin portal built for Phase 3 delivery. This repository combines the production-ready backend API, admin portal frontend, shared authentication, role-based access control, and a single Prisma schema with environment-driven configuration.
 
-Full design specifications can be found in [`FitNerve_Phase1_Documentation.md`](./FitNerve_Phase1_Documentation.md).
+## Project overview
 
-## Folder Structure
+This workspace includes:
+- Backend API server with Phase 1, Phase 2, and Phase 3 features.
+- Real-time chat via Socket.io.
+- Push notification support with FCM integration.
+- Content management APIs for blog posts, tips, and videos.
+- Admin analytics and dashboard endpoints.
+- Workout recommendation engine based on user goals, BMI, and activity.
+- Admin portal frontend under `frontend/admin-app`.
 
+## Repository structure
+
+```text
+merged-backend-phase 3/
+├── docs/                     # documentation and design notes
+├── frontend/                 # admin portal source
+│   └── admin-app/            # Vite + React admin app
+├── prisma/                   # Prisma schema, migrations, and seed scripts
+├── src/                      # backend source code
+├── uploads/                  # local storage for uploaded media
+├── .env.example              # environment variable template
+├── package.json              # backend package configuration
+├── README.md                 # this file
+└── start.ps1                 # local launch script for Windows
 ```
-backend/
-├── src/
-│   ├── config/         # env.js, logger.js (Winston configuration)
-│   ├── constants/      # roles.js, httpStatus.js
-│   ├── controllers/    # auth, user, coach, upload controllers
-│   ├── services/       # business logic layers per module
-│   ├── repositories/   # Prisma query repository layer (isolated from services)
-│   ├── routes/v1/      # versioned route definitions + JSDoc OpenAPI specs
-│   ├── middlewares/    # auth checks, rate limiters, validation, error handling
-│   ├── validators/     # Zod schema definitions
-│   ├── utils/          # ApiError, ApiResponse, jwt, storage helper
-│   ├── database/       # Prisma client initializer singleton
-│   ├── app.js          # Express app configuration
-│   └── server.js       # App entry point
-├── prisma/             # Schema definition
-├── postman/            # Postman integration collection
-└── .env.example
-```
 
-## 1. Prerequisites
+## Key features
 
-- Node.js ≥ 18
-- Running PostgreSQL database (e.g., Supabase PostgreSQL)
+- Authentication and JWT-based session management
+- Role-based access control for `USER`, `COACH`, and `ADMIN`
+- User profile, coach management, appointment booking, and workout tracking
+- Real-time chat and message delivery across user and coach participants
+- Notification feed, device token registration, and push dispatch support
+- Content CMS for posts, categories, and published content
+- Admin analytics and reporting endpoints
+- Swagger API documentation and Postman collection
 
-## 2. Environment Variables & Setup
+## Prerequisites
 
-Create a `.env` file in the root of the backend folder:
+- Node.js 18 or later
+- npm
+- PostgreSQL
+
+## Setup
+
+1. Copy environment configuration:
 
 ```bash
 cp .env.example .env
 ```
 
-Define the configuration keys:
-- **`DATABASE_URL`**: Use the standard session mode pooler (e.g. port `5432`) for Prisma CLI schema pushes and migrations.
-  - *Example*: `postgresql://postgres.zrbcjqjqtreuadxkzeht:PASSWORD@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`
-- **`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`**: Strong random hex strings.
+2. Update `.env` with the correct database credentials, JWT secret, and other required values.
 
-## 3. Database Synchronization
-
-Since the schema uses Supabase, always connect to the session pooler (port `5432`) to sync tables. Run the following commands:
+3. Install backend dependencies:
 
 ```bash
-# Push the local schema.prisma directly to the database
-npx prisma db push
-
-# Generate the Prisma client code
-npx prisma generate
+npm install
 ```
 
-> **Note**: If `npx prisma generate` fails with an `EPERM` error, stop your Express development server (`npm run dev`) first to unlock the Prisma query engine binary in memory, then run the command again.
-
-## 4. Run Server
+4. Generate Prisma client and run migrations:
 
 ```bash
-# Start development server with Nodemon auto-reloads
+npm run prisma:generate
+npm run prisma:migrate
+```
+
+5. Seed the database if required:
+
+```bash
+npm run prisma:seed
+```
+
+## Running the backend
+
+Start the backend server in development mode:
+
+```bash
 npm run dev
-
-# Start production server
-npm start
 ```
 
-- **API Base URL**: `http://localhost:4000/api/v1`
-- **Swagger Documentation UI**: `http://localhost:4000/api-docs`
-- **API Health Check Endpoint**: `GET http://localhost:4000/api/v1/health`
+The backend listens on the port defined in `.env`.
 
-## 5. Password Security & Validation Rules
+## Running the admin portal
 
-When registering a new user account, the backend validates passwords with Zod using these criteria:
-- Minimum of **8 characters**
-- Contains at least one **uppercase letter** (`A-Z`)
-- Contains at least one **lowercase letter`** (`a-z`)
-- Contains at least one **number** (`0-9`)
+Open a second terminal and run:
 
-## 6. Postman Integration
+```bash
+cd frontend/admin-app
+npm install
+npm run dev
+```
 
-Import the file `postman/FitNerve-Phase1.postman_collection.json` into Postman. After running **Register** or **Login**, a post-request script automatically captures the tokens and configures variables for all subsequent authenticated endpoints (like `GET /users/me`).
+## Local launch script
+
+On Windows PowerShell:
+
+```powershell
+./start.ps1
+```
+
+## API documentation
+
+Swagger UI is available at:
+
+- `http://localhost:4000/api-docs`
+
+Use the Swagger documentation to explore the backend endpoints and request schemas.
+
+## Useful commands
+
+- `npm start` — start the backend server
+- `npm run dev` — start the backend with `nodemon`
+- `npm run lint` — run ESLint against backend source files
+- `npm run prisma:generate` — generate Prisma client
+- `npm run prisma:migrate` — apply database migrations
+- `npm run prisma:seed` — run database seed script
+
+## Notes
+
+- The admin portal frontend is located in `frontend/admin-app` and runs independently from the backend.
+- Ensure `.env` is not committed; use `.env.example` as the template.
+- If Firebase push notifications are enabled, configure the `FCM_SERVICE_ACCOUNT_BASE64` environment variable.
+- The root backend project includes `eslint`, but root-level lint configuration may need review or extension for your preferred style rules.
+
+## Contact
+
+For implementation details or support, review the source code in `src/` and the referenced Postman collection in `postman/FitNerve-Phase3.postman_collection.json`.

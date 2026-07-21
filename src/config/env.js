@@ -58,7 +58,17 @@ const env = {
     }
   },
 
-  logLevel: process.env.LOG_LEVEL || "info"
+  logLevel: process.env.LOG_LEVEL || "info",
+
+  firebase: {
+    serviceAccountBase64: process.env.FCM_SERVICE_ACCOUNT_BASE64 || ""
+  },
+
+  cron: {
+    enabled: process.env.ENABLE_CRON === "true",
+    // "HH:mm" 24h local server time — reminder sweep for workouts/appointments
+    reminderSweepCron: process.env.REMINDER_SWEEP_CRON || "*/15 * * * *"
+  }
 };
 
 module.exports = env;

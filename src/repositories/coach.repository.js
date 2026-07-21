@@ -41,7 +41,38 @@ const coachRepository = {
     prisma.coachAvailability.findMany({ where: { coachId }, orderBy: { dayOfWeek: "asc" } }),
 
   deleteAvailabilitySlot: (id, coachId) =>
-    prisma.coachAvailability.deleteMany({ where: { id, coachId } })
+    prisma.coachAvailability.deleteMany({ where: { id, coachId } }),
+
+  // ── Admin ──────────────────────────────────────────────
+  adminList: ({ skip, take, search, sortBy = "createdAt", sortOrder = "desc" }) =>
+    prisma.coach.findMany({
+      where: search
+        ? {
+            OR: [
+              { user: { fullName: { contains: search, mode: "insensitive" } } },
+              { user: { email: { contains: search, mode: "insensitive" } } },
+              { specialties: { has: search } }
+            ]
+          }
+        : undefined,
+      include: { user: { select: { fullName: true, email: true, isActive: true } } },
+      skip,
+      take,
+      orderBy: { [sortBy]: sortOrder }
+    }),
+
+  adminCount: (search) =>
+    prisma.coach.count({
+      where: search
+        ? {
+            OR: [
+              { user: { fullName: { contains: search, mode: "insensitive" } } },
+              { user: { email: { contains: search, mode: "insensitive" } } },
+              { specialties: { has: search } }
+            ]
+          }
+        : undefined
+    })
 };
 
 module.exports = coachRepository;

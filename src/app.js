@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
@@ -39,6 +40,13 @@ app.use(`/api/${env.apiVersion}`, generalLimiter);
 // ── Static file serving for local-driver uploads ────────
 app.use(`/${env.storage.localUploadDir}`, express.static(env.storage.localUploadDir));
 
+// ── Admin frontend served from backend under /admin ─────
+const adminDir = path.join(__dirname, "../admin");
+app.use("/admin", express.static(adminDir, { index: false }));
+app.get(["/admin", "/admin/*"], (req, res) => {
+  res.sendFile(path.join(adminDir, "index.html"));
+});
+
 // ── API docs ─────────────────────────────────────────────
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -46,7 +54,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(`/api/${env.apiVersion}`, v1Routes);
 
 app.get("/", (req, res) => {
-  res.json({ success: true, message: "FitNerve API is running", docs: "/api-docs" });
+  res.json({ success: true, message: "FitNerve API is running", docs: "/api-docs", admin: "/admin" });
 });
 
 // ── 404 + centralized error handling (must be last) ─────

@@ -7,7 +7,9 @@ const ApiError = require("../utils/ApiError");
 const SUBFOLDER_BY_TYPE = {
   PROFILE_IMAGE: "profile",
   PROGRESS_IMAGE: "progress",
-  COACH_IMAGE: "coach"
+  COACH_IMAGE: "coach",
+  CHAT_IMAGE: "chat",
+  CONTENT_IMAGE: "content"
 };
 
 async function uploadImage(userId, file, type) {
