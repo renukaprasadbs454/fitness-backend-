@@ -1,4 +1,4 @@
-# FitNerve Backend — Phase 1
+# FitNerve Backend — Phase 1 & Phase 2
 
 Production-grade Node.js/Express/PostgreSQL/Prisma backend covering Phase 1 scope: **Authentication, User Profile, Coach Module, and Image Uploads.**
 
