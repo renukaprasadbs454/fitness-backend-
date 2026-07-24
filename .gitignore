@@ -1,48 +1,65 @@
-# Node
+# ─── Node ────────────────────────────────────────────────────────────────────
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.pnpm-debug.log
 package-lock.json
 yarn.lock
-.pnpm-debug.log
 
-# Environment
+# ─── Environment ─────────────────────────────────────────────────────────────
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
 
-# Logs
+# ─── Firebase / GCP credentials ──────────────────────────────────────────────
+firebase-adminsdk*.json
+service-account*.json
+google-credentials*.json
+*-firebase-*.json
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
 logs/
 *.log
+combined.log
+error.log
 
-# Runtime data
+# ─── Runtime data ────────────────────────────────────────────────────────────
 pids/
 *.pid
 *.seed
 *.pid.lock
 
-# Coverage
+# ─── Coverage & test output ───────────────────────────────────────────────────
 coverage/
 .nyc_output/
+test-results/
+junit.xml
 
-# Editor
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
-# Build output
+# ─── Build output ────────────────────────────────────────────────────────────
 dist/
 build/
 
-# Dependency directories
-frontend/admin-app/node_modules/
-frontend/admin-app/dist/
+# ─── Prisma ──────────────────────────────────────────────────────────────────
+prisma/dev.db
+prisma/dev.db-journal
+prisma/*.db
+node_modules/.prisma/
 
-# Local uploads
+# ─── Uploads (local storage) ─────────────────────────────────────────────────
 uploads/
 
-# Prisma
-prisma/dev.db
+
+# ─── Editor & OS ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.DS_Store
+Thumbs.db
+desktop.ini

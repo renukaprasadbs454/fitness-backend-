@@ -1,4 +1,4 @@
-# FitNerve Backend — Phase 1 Documentation
+# FitNerve Backend — Phase 3 Documentation
 
 ## 1. ER Diagram
 
@@ -171,13 +171,13 @@ Winston, npm log levels. Dev: colorized console. Prod: structured JSON (ready to
 4. ✅ Coach CRUD + availability
 5. ✅ Upload module (local-disk now, S3 by flipping one env var)
 6. ✅ Infra: logging, validation, error handling, security headers, rate limiting, Swagger, Postman
-7. ⬜ **You provision a real PostgreSQL instance** and run `npm run prisma:migrate` (sandbox network here can't reach Prisma's binary CDN — see Section 10)
+7. ⬜ **You provision a real PostgreSQL instance** and run `npx prisma migrate dev` (sandbox network here can't reach Prisma's binary CDN — see Section 10)
 8. ⬜ Frontend team builds Login/Register screens and wires `ProfileScreen`/uploads to these live endpoints
 9. ⬜ Phase 2 kickoff: BMI, Calorie, Activity, Workouts, Progress, Appointments
 
 ## 9. Testing Checklist (run once you have a live Postgres instance)
 
-- [ ] `npm run prisma:migrate` creates all 6 tables without error
+- [ ] `npx prisma migrate dev` creates all tables without error
 - [ ] `POST /auth/register` → 201, returns tokens; duplicate email → 409
 - [ ] `POST /auth/login` with wrong password → 401
 - [ ] `GET /users/me` without token → 401; with token → 200
@@ -198,7 +198,7 @@ Winston, npm log levels. Dev: colorized console. Prod: structured JSON (ready to
 - Route → controller → service → repository → Prisma wiring was manually traced for every endpoint.
 
 **What could not be verified here, and why:**
-- `npx prisma generate` / `migrate` fail in this sandbox because Prisma downloads its query engine binary from `binaries.prisma.sh`, which isn't on this environment's network allowlist (only npm/GitHub/PyPI domains are reachable here). This is a sandbox restriction, not a code defect. Run `npm run prisma:generate` and `npm run prisma:migrate` on your own machine/CI (with normal internet access and a real `DATABASE_URL`) as the first setup step — see README.
+- `npx prisma generate` / `npx prisma migrate dev` fail in this sandbox because Prisma downloads its query engine binary from `binaries.prisma.sh`, which isn't on this environment's network allowlist (only npm/GitHub/PyPI domains are reachable here). This is a sandbox restriction, not a code defect. Run `npx prisma generate` and `npx prisma migrate dev` on your own machine/CI (with normal internet access and a real `DATABASE_URL`) as the first setup step — see README.
 - No live database means the auth/CRUD flows above are traced by code review, not executed. Run the Testing Checklist above once Postgres is connected.
 
 **Known Phase 1 gaps to plan for (not backend defects — frontend/process items):**

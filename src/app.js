@@ -16,7 +16,24 @@ const { errorHandler, notFoundHandler } = require("./middlewares/error.middlewar
 const app = express();
 
 // ── Security & parsing ──────────────────────────────────
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:"],
+        frameSrc: ["'self'", "http://localhost:5555"],
+        connectSrc: ["'self'", "http://localhost:4000", "https://localhost:4000"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        frameAncestors: ["'self'"]
+      }
+    }
+  })
+);
 app.use(
   cors({
     origin: env.corsAllowedOrigins.length ? env.corsAllowedOrigins : true,
@@ -44,7 +61,7 @@ app.use(`/${env.storage.localUploadDir}`, express.static(env.storage.localUpload
 const adminDir = path.join(__dirname, "../admin");
 app.use("/admin", express.static(adminDir, { index: false }));
 app.get(["/admin", "/admin/*"], (req, res) => {
-  res.sendFile(path.join(adminDir, "index.html"));
+  res.sendFile(path.join(adminDir, "admin.html"));
 });
 
 // ── API docs ─────────────────────────────────────────────

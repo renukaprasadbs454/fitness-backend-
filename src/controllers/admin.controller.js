@@ -88,6 +88,31 @@ const broadcastAnnouncement = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Announcement broadcast", result);
 });
 
+const getDatabaseSchema = asyncHandler(async (req, res) => {
+  const schema = adminService.getDatabaseSchema();
+  return ApiResponse.success(res, httpStatus.OK, "Database schema retrieved", schema);
+});
+
+const getModelData = asyncHandler(async (req, res) => {
+  const result = await adminService.getModelData(req.params.tableName, req.query);
+  return ApiResponse.success(res, httpStatus.OK, "Table data retrieved", result.items, result.meta);
+});
+
+const createModelRow = asyncHandler(async (req, res) => {
+  const item = await adminService.createModelRow(req.params.tableName, req.body);
+  return ApiResponse.success(res, httpStatus.CREATED, "Row created", item);
+});
+
+const updateModelRow = asyncHandler(async (req, res) => {
+  const item = await adminService.updateModelRow(req.params.tableName, req.params.id, req.body);
+  return ApiResponse.success(res, httpStatus.OK, "Row updated", item);
+});
+
+const deleteModelRow = asyncHandler(async (req, res) => {
+  await adminService.deleteModelRow(req.params.tableName, req.params.id);
+  return ApiResponse.success(res, httpStatus.OK, "Row deleted", null);
+});
+
 module.exports = {
   dashboardStats,
   listUsers,
@@ -103,5 +128,11 @@ module.exports = {
   updateCoach,
   deleteCoach,
   listAuditLogs,
-  broadcastAnnouncement
+  broadcastAnnouncement,
+  getDatabaseSchema,
+  getModelData,
+  createModelRow,
+  updateModelRow,
+  deleteModelRow
 };
+

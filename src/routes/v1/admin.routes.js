@@ -234,4 +234,12 @@ router.post(
   adminController.broadcastAnnouncement
 );
 
+// ── Dynamic Database Explorer (Prisma Studio integration) ──
+router.get("/db/tables", adminController.getDatabaseSchema);
+router.get("/db/tables/:tableName", adminController.getModelData);
+router.post("/db/tables/:tableName", adminController.createModelRow);
+router.put("/db/tables/:tableName/:id", adminController.updateModelRow);
+router.delete("/db/tables/:tableName/:id", adminController.deleteModelRow);
+
 module.exports = router;
+

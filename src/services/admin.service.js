@@ -163,16 +163,163 @@ async function deleteCoach(adminId, id) {
   });
 }
 
-// ── Audit logs ─────────────────────────────────────────────
+// ── Audit Logs ──────────────────────────────────────────
 
 async function listAuditLogs(query) {
   const { page, limit, skip } = parsePagination(query);
-  const filters = { targetType: query.targetType, targetId: query.targetId };
   const [items, total] = await Promise.all([
-    adminRepository.listAuditLogs({ skip, take: limit, ...filters }),
-    adminRepository.countAuditLogs(filters)
+    adminRepository.listAuditLogs({ skip, take: limit, action: query?.action, adminId: query?.adminId }),
+    adminRepository.countAuditLogs({ action: query?.action, adminId: query?.adminId })
   ]);
   return { items, meta: buildMeta(page, limit, total) };
+}
+
+// ── Dynamic Database Schema & Table Explorer (Prisma Studio integration) ──
+
+const { Prisma } = require("@prisma/client");
+const prisma = require("../database/prismaClient");
+
+function getDatabaseSchema() {
+  const models = Prisma.dmmf.datamodel.models;
+  return models.map((m) => {
+    const delegateName = m.name.charAt(0).toLowerCase() + m.name.slice(1);
+    return {
+      name: m.name,
+      delegateName,
+      tableName: m.dbName || m.name.toLowerCase() + "s",
+      fields: m.fields.map((f) => ({
+        name: f.name,
+        type: f.type,
+        isId: f.isId,
+        isRequired: f.isRequired,
+        isList: f.isList,
+        kind: f.kind
+      }))
+    };
+  });
+}
+
+async function getModelData(modelName, query = {}) {
+  const models = getDatabaseSchema();
+  const modelInfo = models.find(
+    (m) =>
+      m.name.toLowerCase() === modelName.toLowerCase() ||
+      m.delegateName.toLowerCase() === modelName.toLowerCase() ||
+      m.tableName.toLowerCase() === modelName.toLowerCase()
+  );
+  if (!modelInfo) throw ApiError.notFound(`Table '${modelName}' not found`);
+
+  const delegate = prisma[modelInfo.delegateName];
+  if (!delegate) throw ApiError.notFound(`Prisma delegate for '${modelName}' not found`);
+
+  const limit = Math.min(Number(query.limit) || 50, 200);
+  const page = Math.max(Number(query.page) || 1, 1);
+  const skip = (page - 1) * limit;
+
+  const scalarFields = modelInfo.fields.filter((f) => f.kind === "scalar" || f.kind === "enum");
+  const selectObj = {};
+  scalarFields.forEach((f) => {
+    selectObj[f.name] = true;
+  });
+
+  const [items, total] = await Promise.all([
+    delegate
+      .findMany({
+        skip,
+        take: limit,
+        select: selectObj,
+        orderBy: { [scalarFields[0]?.name || "createdAt"]: "desc" }
+      })
+      .catch(() => delegate.findMany({ skip, take: limit, select: selectObj })),
+    delegate.count().catch(() => 0)
+  ]);
+
+  return {
+    model: modelInfo,
+    items,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit) || 1
+    }
+  };
+}
+
+function sanitizeModelData(modelInfo, data) {
+  const sanitized = { ...data };
+  if (modelInfo && modelInfo.fields) {
+    modelInfo.fields.forEach((f) => {
+      if (f.type === "DateTime" && f.name in sanitized) {
+        const val = sanitized[f.name];
+        if (val === "" || val === null || val === undefined) {
+          if (!f.isRequired) {
+            sanitized[f.name] = null;
+          } else {
+            delete sanitized[f.name];
+          }
+        } else if (typeof val === "string") {
+          const parsed = new Date(val);
+          if (!isNaN(parsed.getTime())) {
+            sanitized[f.name] = parsed.toISOString();
+          } else {
+            if (!f.isRequired) {
+              sanitized[f.name] = null;
+            } else {
+              delete sanitized[f.name];
+            }
+          }
+        }
+      }
+    });
+  }
+  return sanitized;
+}
+
+async function createModelRow(modelName, data) {
+  const models = getDatabaseSchema();
+  const modelInfo = models.find(
+    (m) =>
+      m.name.toLowerCase() === modelName.toLowerCase() ||
+      m.delegateName.toLowerCase() === modelName.toLowerCase() ||
+      m.tableName.toLowerCase() === modelName.toLowerCase()
+  );
+  if (!modelInfo) throw ApiError.notFound(`Table '${modelName}' not found`);
+
+  const delegate = prisma[modelInfo.delegateName];
+  const cleanedData = sanitizeModelData(modelInfo, data);
+  return delegate.create({ data: cleanedData });
+}
+
+async function updateModelRow(modelName, id, data) {
+  const models = getDatabaseSchema();
+  const modelInfo = models.find(
+    (m) =>
+      m.name.toLowerCase() === modelName.toLowerCase() ||
+      m.delegateName.toLowerCase() === modelName.toLowerCase() ||
+      m.tableName.toLowerCase() === modelName.toLowerCase()
+  );
+  if (!modelInfo) throw ApiError.notFound(`Table '${modelName}' not found`);
+
+  const delegate = prisma[modelInfo.delegateName];
+  const idField = modelInfo.fields.find((f) => f.isId)?.name || "id";
+  const cleanedData = sanitizeModelData(modelInfo, data);
+  return delegate.update({ where: { [idField]: id }, data: cleanedData });
+}
+
+async function deleteModelRow(modelName, id) {
+  const models = getDatabaseSchema();
+  const modelInfo = models.find(
+    (m) =>
+      m.name.toLowerCase() === modelName.toLowerCase() ||
+      m.delegateName.toLowerCase() === modelName.toLowerCase() ||
+      m.tableName.toLowerCase() === modelName.toLowerCase()
+  );
+  if (!modelInfo) throw ApiError.notFound(`Table '${modelName}' not found`);
+
+  const delegate = prisma[modelInfo.delegateName];
+  const idField = modelInfo.fields.find((f) => f.isId)?.name || "id";
+  return delegate.delete({ where: { [idField]: id } });
 }
 
 module.exports = {
@@ -188,5 +335,11 @@ module.exports = {
   createCoach,
   updateCoach,
   deleteCoach,
-  listAuditLogs
+  listAuditLogs,
+  getDatabaseSchema,
+  getModelData,
+  createModelRow,
+  updateModelRow,
+  deleteModelRow
 };
+

@@ -46,7 +46,7 @@ merged-backend-phase 3/
 - npm
 - PostgreSQL
 
-## Setup
+## Setup (one-time)
 
 1. Copy environment configuration:
 
@@ -54,7 +54,7 @@ merged-backend-phase 3/
 cp .env.example .env
 ```
 
-2. Update `.env` with the correct database credentials, JWT secret, and other required values.
+2. Update `.env` with the correct `DATABASE_URL`, JWT secret, Firebase credentials, and AWS keys.
 
 3. Install backend dependencies:
 
@@ -65,25 +65,45 @@ npm install
 4. Generate Prisma client and run migrations:
 
 ```bash
-npm run prisma:generate
-npm run prisma:migrate
+npx prisma generate
+npx prisma migrate dev
 ```
 
-5. Seed the database if required:
+5. (Optional) Seed the database:
 
 ```bash
-npm run prisma:seed
+node prisma/seed.js
 ```
 
 ## Running the backend
 
-Start the backend server in development mode:
+**Development mode** (auto-restarts on file changes via nodemon):
 
 ```bash
 npm run dev
 ```
 
+**Production mode:**
+
+```bash
+npm start
+```
+
 The backend listens on the port defined in `.env`.
+
+### Prisma & database utilities
+
+```bash
+npx prisma studio          # Open Prisma DB GUI in the browser
+npx prisma migrate deploy  # Apply migrations in production
+```
+
+### Admin scripts
+
+```bash
+node scripts/create-admin.js   # Create an admin user
+node scripts/check-admin.js    # Check admin status
+```
 
 ## Running the admin portal
 
@@ -113,12 +133,19 @@ Use the Swagger documentation to explore the backend endpoints and request schem
 
 ## Useful commands
 
-- `npm start` — start the backend server
-- `npm run dev` — start the backend with `nodemon`
-- `npm run lint` — run ESLint against backend source files
-- `npm run prisma:generate` — generate Prisma client
-- `npm run prisma:migrate` — apply database migrations
-- `npm run prisma:seed` — run database seed script
+| Command | Description |
+|---|---|
+| `npm install` | Install all backend dependencies |
+| `npm run dev` | Start backend in development mode (nodemon) |
+| `npm start` | Start backend in production mode |
+| `npm run lint` | Run ESLint against backend source files |
+| `npx prisma generate` | Generate Prisma client |
+| `npx prisma migrate dev` | Apply database migrations (development) |
+| `npx prisma migrate deploy` | Apply database migrations (production) |
+| `npx prisma studio` | Open Prisma DB GUI in browser |
+| `node prisma/seed.js` | Seed the database |
+| `node scripts/create-admin.js` | Create an admin user |
+| `node scripts/check-admin.js` | Check admin user status |
 
 ## Notes
 

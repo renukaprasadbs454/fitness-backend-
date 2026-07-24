@@ -26,6 +26,7 @@ app.set("io", io);
 const server = httpServer.listen(env.port, () => {
   logger.info(`FitNerve API listening on port ${env.port} [${env.nodeEnv}]`);
   logger.info(`Swagger docs available at http://localhost:${env.port}/api-docs`);
+  logger.info(`Admin portal available at http://localhost:${env.port}/admin`);
   logger.info(`Socket.io chat namespace ready at /chat`);
   if (env.cron.enabled) {
     startCronJobs();
