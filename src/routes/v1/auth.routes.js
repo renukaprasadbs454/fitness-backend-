@@ -30,6 +30,34 @@ router.post("/register", authLimiter, validate(schemas.register), authController
 
 /**
  * @swagger
+ * /auth/verify-email:
+ *   post:
+ *     summary: Verify a registration OTP code and receive tokens
+ *     tags: [Auth]
+ *     responses:
+ *       200: { description: Email verified, tokens issued }
+ *       400: { description: Invalid or expired code }
+ */
+router.post(
+  "/verify-email",
+  authLimiter,
+  validate(schemas.verifyEmail),
+  authController.verifyEmail
+);
+
+/**
+ * @swagger
+ * /auth/resend-otp:
+ *   post:
+ *     summary: Resend an OTP code for registration or password reset
+ *     tags: [Auth]
+ *     responses:
+ *       200: { description: Code resent if the account exists }
+ */
+router.post("/resend-otp", authLimiter, validate(schemas.resendOtp), authController.resendOtp);
+
+/**
+ * @swagger
  * /auth/login:
  *   post:
  *     summary: Log in with email and password
@@ -82,7 +110,7 @@ router.post("/logout", validate(schemas.logout), authController.logout);
  * @swagger
  * /auth/forgot-password:
  *   post:
- *     summary: Request a password reset link
+ *     summary: Request a password reset OTP code
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -90,7 +118,7 @@ router.post("/logout", validate(schemas.logout), authController.logout);
  *         application/json:
  *           schema: { $ref: '#/components/schemas/ForgotPasswordRequest' }
  *     responses:
- *       200: { description: Reset link sent if the account exists }
+ *       200: { description: OTP code sent if the account exists }
  */
 router.post(
   "/forgot-password",
@@ -103,7 +131,7 @@ router.post(
  * @swagger
  * /auth/reset-password:
  *   post:
- *     summary: Reset password using a token from the forgot-password email
+ *     summary: Reset password using the OTP code from the forgot-password request
  *     tags: [Auth]
  *     requestBody:
  *       required: true

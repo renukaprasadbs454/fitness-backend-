@@ -120,7 +120,54 @@ const workoutRepository = {
       orderBy: { completedAt: "desc" },
       take,
       include: { plan: { select: { categoryKey: true, difficulty: true, title: true } } }
-    })
+    }),
+
+  // ── Scheduled workouts (Calendar "workout schedule") ────
+  scheduleInclude: {
+    plan: { select: { title: true, categoryKey: true, difficulty: true, durationMinutes: true, accentColor: true } }
+  },
+
+  createSchedule: (userId, planId, scheduledAt) =>
+    prisma.scheduledWorkout.create({
+      data: { userId, planId, scheduledAt },
+      include: workoutRepository.scheduleInclude
+    }),
+
+  listSchedule: (userId, { from, to, status } = {}) =>
+    prisma.scheduledWorkout.findMany({
+      where: {
+        userId,
+        status: status || undefined,
+        scheduledAt: { gte: from || undefined, lte: to || undefined }
+      },
+      include: workoutRepository.scheduleInclude,
+      orderBy: { scheduledAt: "asc" }
+    }),
+
+  upcomingScheduleForUser: (userId, take = 20) =>
+    prisma.scheduledWorkout.findMany({
+      where: { userId, status: "SCHEDULED", scheduledAt: { gte: new Date() } },
+      include: workoutRepository.scheduleInclude,
+      orderBy: { scheduledAt: "asc" },
+      take
+    }),
+
+  findScheduleById: (id) =>
+    prisma.scheduledWorkout.findUnique({ where: { id }, include: workoutRepository.scheduleInclude }),
+
+  updateScheduleStatus: (id, status) =>
+    prisma.scheduledWorkout.update({ where: { id }, data: { status }, include: workoutRepository.scheduleInclude }),
+
+  deleteSchedule: (id) => prisma.scheduledWorkout.delete({ where: { id } }),
+
+  dueScheduleForReminder: (windowStart, windowEnd) =>
+    prisma.scheduledWorkout.findMany({
+      where: { status: "SCHEDULED", reminderSentAt: null, scheduledAt: { gte: windowStart, lte: windowEnd } },
+      include: workoutRepository.scheduleInclude
+    }),
+
+  markScheduleReminded: (id) =>
+    prisma.scheduledWorkout.update({ where: { id }, data: { reminderSentAt: new Date() } })
 };
 
 module.exports = workoutRepository;

@@ -58,6 +58,26 @@ const deleteExercise = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Exercise deleted", null);
 });
 
+const scheduleWorkout = asyncHandler(async (req, res) => {
+  const schedule = await workoutService.scheduleWorkout(req.user.id, req.body);
+  return ApiResponse.success(res, httpStatus.CREATED, "Workout scheduled", schedule);
+});
+
+const listSchedule = asyncHandler(async (req, res) => {
+  const schedules = await workoutService.listSchedule(req.user.id, req.query);
+  return ApiResponse.success(res, httpStatus.OK, "Scheduled workouts retrieved", schedules);
+});
+
+const updateScheduleStatus = asyncHandler(async (req, res) => {
+  const schedule = await workoutService.updateScheduleStatus(req.user.id, req.params.id, req.body.status);
+  return ApiResponse.success(res, httpStatus.OK, "Scheduled workout updated", schedule);
+});
+
+const cancelSchedule = asyncHandler(async (req, res) => {
+  await workoutService.cancelSchedule(req.user.id, req.params.id);
+  return ApiResponse.success(res, httpStatus.OK, "Scheduled workout cancelled", null);
+});
+
 module.exports = {
   listPlans,
   getPlanById,
@@ -69,5 +89,9 @@ module.exports = {
   listExercises,
   createExercise,
   updateExercise,
-  deleteExercise
+  deleteExercise,
+  scheduleWorkout,
+  listSchedule,
+  updateScheduleStatus,
+  cancelSchedule
 };

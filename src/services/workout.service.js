@@ -26,6 +26,8 @@ function toPlanDto(plan) {
     difficulty: plan.difficulty.charAt(0) + plan.difficulty.slice(1).toLowerCase(),
     accent: plan.accentColor,
     category: plan.categoryKey,
+    imageUrl: plan.imageUrl ?? null,
+    videoUrl: plan.videoUrl ?? null,
     exercises: (plan.exercises || [])
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((e) => e.exercise.name),
@@ -214,6 +216,64 @@ async function deleteExercise(id) {
   await workoutRepository.deleteExercise(id);
 }
 
+// ── Scheduled workouts (Calendar "workout schedule") ──────
+
+function toScheduleDto(schedule) {
+  return {
+    id: schedule.id,
+    planId: schedule.planId,
+    planTitle: schedule.plan.title,
+    category: schedule.plan.categoryKey,
+    difficulty: schedule.plan.difficulty,
+    durationMinutes: schedule.plan.durationMinutes,
+    accent: schedule.plan.accentColor,
+    scheduledAt: schedule.scheduledAt,
+    status: schedule.status
+  };
+}
+
+async function scheduleWorkout(userId, { planId, scheduledAt }) {
+  const plan = await workoutRepository.findPlanById(planId);
+  if (!plan) throw ApiError.notFound("Workout plan not found");
+
+  const schedule = await workoutRepository.createSchedule(userId, planId, new Date(scheduledAt));
+  await activityFeed.record(userId, "OTHER", `Scheduled ${plan.title} workout`);
+  return toScheduleDto(schedule);
+}
+
+async function listSchedule(userId, query) {
+  const schedules = await workoutRepository.listSchedule(userId, {
+    from: query.from ? new Date(query.from) : undefined,
+    to: query.to ? new Date(query.to) : undefined,
+    status: query.status
+  });
+  return schedules.map(toScheduleDto);
+}
+
+async function assertOwnSchedule(userId, id) {
+  const schedule = await workoutRepository.findScheduleById(id);
+  if (!schedule) throw ApiError.notFound("Scheduled workout not found");
+  if (schedule.userId !== userId) throw ApiError.forbidden("Not your scheduled workout");
+  return schedule;
+}
+
+async function updateScheduleStatus(userId, id, status) {
+  const schedule = await assertOwnSchedule(userId, id);
+  const updated = await workoutRepository.updateScheduleStatus(id, status);
+
+  if (status === "COMPLETED") {
+    await workoutRepository.createCompletion(userId, schedule.planId);
+    await activityFeed.record(userId, "WORKOUT_COMPLETED", `Completed ${schedule.plan.title} workout`);
+  }
+
+  return toScheduleDto(updated);
+}
+
+async function cancelSchedule(userId, id) {
+  await assertOwnSchedule(userId, id);
+  await workoutRepository.deleteSchedule(id);
+}
+
 module.exports = {
   listPlans,
   getPlanById,
@@ -225,5 +285,10 @@ module.exports = {
   listExercises,
   createExercise,
   updateExercise,
-  deleteExercise
+  deleteExercise,
+  scheduleWorkout,
+  listSchedule,
+  updateScheduleStatus,
+  cancelSchedule,
+  toScheduleDto
 };

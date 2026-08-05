@@ -5,6 +5,9 @@ const { requireRole } = require("../../middlewares/role.middleware");
 const validate = require("../../middlewares/validate.middleware");
 const upload = require("../../middlewares/upload.middleware");
 const schemas = require("../../validators/content.validator");
+const { cacheResponse, invalidate } = require("../../middlewares/cache.middleware");
+
+const CACHE_PREFIX = "/api/v1/content";
 
 /**
  * @swagger
@@ -25,7 +28,7 @@ const schemas = require("../../validators/content.validator");
  *     responses:
  *       200: { description: Categories retrieved }
  */
-router.get("/categories", authenticate, contentController.listCategories);
+router.get("/categories", authenticate, cacheResponse(300), contentController.listCategories);
 
 /**
  * @swagger
@@ -40,6 +43,7 @@ router.get("/categories", authenticate, contentController.listCategories);
 router.get(
   "/blogs",
   authenticate,
+  cacheResponse(60),
   (req, res, next) => {
     req.query.type = "BLOG";
     next();
@@ -61,6 +65,7 @@ router.get(
 router.get(
   "/videos",
   authenticate,
+  cacheResponse(60),
   (req, res, next) => {
     req.query.type = "VIDEO";
     next();
@@ -82,6 +87,7 @@ router.get(
 router.get(
   "/tips",
   authenticate,
+  cacheResponse(60),
   (req, res, next) => {
     req.query.type = ["WORKOUT_TIP", "NUTRITION_TIP"];
     next();
@@ -152,6 +158,7 @@ router.get(
  */
 router.post(
   "/",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole("ADMIN", "COACH"),
   validate(schemas.create),
@@ -170,6 +177,7 @@ router.post(
  */
 router.patch(
   "/:id",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole("ADMIN", "COACH"),
   validate(schemas.update),
@@ -188,6 +196,7 @@ router.patch(
  */
 router.delete(
   "/:id",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole("ADMIN", "COACH"),
   validate(schemas.idParam),
@@ -231,6 +240,7 @@ router.post(
  */
 router.post(
   "/categories",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole("ADMIN"),
   validate(schemas.createCategory),
@@ -249,6 +259,7 @@ router.post(
  */
 router.delete(
   "/categories/:id",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole("ADMIN"),
   validate(schemas.idParam),

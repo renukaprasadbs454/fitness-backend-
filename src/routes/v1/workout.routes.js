@@ -5,6 +5,9 @@ const { requireRole } = require("../../middlewares/role.middleware");
 const validate = require("../../middlewares/validate.middleware");
 const schemas = require("../../validators/workout.validator");
 const { ROLES } = require("../../constants/roles");
+const { cacheResponse, invalidate } = require("../../middlewares/cache.middleware");
+
+const CACHE_PREFIX = "/api/v1/workouts";
 
 /**
  * @swagger
@@ -29,6 +32,74 @@ router.get("/recommended", authenticate, workoutController.recommended);
 
 /**
  * @swagger
+ * /workouts/schedule:
+ *   post:
+ *     summary: Schedule a workout plan for a future date/time
+ *     tags: [Workouts]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       201: { description: Workout scheduled }
+ */
+router.post(
+  "/schedule",
+  authenticate,
+  validate(schemas.scheduleWorkout),
+  workoutController.scheduleWorkout
+);
+
+/**
+ * @swagger
+ * /workouts/schedule:
+ *   get:
+ *     summary: List the current user's scheduled workouts
+ *     tags: [Workouts]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Scheduled workouts retrieved }
+ */
+router.get(
+  "/schedule",
+  authenticate,
+  validate(schemas.listSchedule),
+  workoutController.listSchedule
+);
+
+/**
+ * @swagger
+ * /workouts/schedule/{id}/status:
+ *   patch:
+ *     summary: Mark a scheduled workout completed or skipped
+ *     tags: [Workouts]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Scheduled workout updated }
+ */
+router.patch(
+  "/schedule/:id/status",
+  authenticate,
+  validate(schemas.updateScheduleStatus),
+  workoutController.updateScheduleStatus
+);
+
+/**
+ * @swagger
+ * /workouts/schedule/{id}:
+ *   delete:
+ *     summary: Cancel a scheduled workout
+ *     tags: [Workouts]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Scheduled workout cancelled }
+ */
+router.delete(
+  "/schedule/:id",
+  authenticate,
+  validate(schemas.idParam),
+  workoutController.cancelSchedule
+);
+
+/**
+ * @swagger
  * /workouts/exercises:
  *   get:
  *     summary: List the exercise library (paginated, searchable)
@@ -36,7 +107,7 @@ router.get("/recommended", authenticate, workoutController.recommended);
  *     responses:
  *       200: { description: Exercises retrieved }
  */
-router.get("/exercises", validate(schemas.listExercises), workoutController.listExercises);
+router.get("/exercises", cacheResponse(60), validate(schemas.listExercises), workoutController.listExercises);
 
 /**
  * @swagger
@@ -50,6 +121,7 @@ router.get("/exercises", validate(schemas.listExercises), workoutController.list
  */
 router.post(
   "/exercises",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole(ROLES.ADMIN),
   validate(schemas.createExercise),
@@ -68,6 +140,7 @@ router.post(
  */
 router.put(
   "/exercises/:id",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole(ROLES.ADMIN),
   validate(schemas.updateExercise),
@@ -86,6 +159,7 @@ router.put(
  */
 router.delete(
   "/exercises/:id",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole(ROLES.ADMIN),
   validate(schemas.idParam),
@@ -108,7 +182,7 @@ router.delete(
  *     responses:
  *       200: { description: Workout plans retrieved }
  */
-router.get("/", validate(schemas.listPlans), workoutController.listPlans);
+router.get("/", cacheResponse(60), validate(schemas.listPlans), workoutController.listPlans);
 
 /**
  * @swagger
@@ -122,6 +196,7 @@ router.get("/", validate(schemas.listPlans), workoutController.listPlans);
  */
 router.post(
   "/",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole(ROLES.ADMIN),
   validate(schemas.createPlan),
@@ -138,7 +213,7 @@ router.post(
  *       200: { description: Workout plan retrieved }
  *       404: { description: Not found }
  */
-router.get("/:id", validate(schemas.idParam), workoutController.getPlanById);
+router.get("/:id", cacheResponse(60), validate(schemas.idParam), workoutController.getPlanById);
 
 /**
  * @swagger
@@ -152,6 +227,7 @@ router.get("/:id", validate(schemas.idParam), workoutController.getPlanById);
  */
 router.put(
   "/:id",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole(ROLES.ADMIN),
   validate(schemas.updatePlan),
@@ -170,6 +246,7 @@ router.put(
  */
 router.delete(
   "/:id",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole(ROLES.ADMIN),
   validate(schemas.idParam),

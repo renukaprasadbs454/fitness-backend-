@@ -18,7 +18,7 @@ function toHHMM(date) {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-async function assertNoConflict(coachId, scheduledAt, durationMinutes) {
+async function assertNoConflict(coachId, scheduledAt, durationMinutes, excludeAppointmentId) {
   const startsAt = new Date(scheduledAt);
   const endsAt = new Date(startsAt.getTime() + durationMinutes * 60000);
 
@@ -39,6 +39,7 @@ async function assertNoConflict(coachId, scheduledAt, durationMinutes) {
   // Double-booking check: any existing PENDING/CONFIRMED appointment overlapping this window.
   const candidates = await appointmentRepository.overlappingForCoach(coachId, startsAt, endsAt);
   const conflict = candidates.some((c) => {
+    if (excludeAppointmentId && c.id === excludeAppointmentId) return false;
     const cStart = new Date(c.scheduledAt);
     const cEnd = new Date(cStart.getTime() + c.durationMinutes * 60000);
     return cStart < endsAt && cEnd > startsAt;
@@ -106,4 +107,27 @@ async function updateStatus(userId, userRole, id, status) {
   return appointmentRepository.updateStatus(id, status);
 }
 
-module.exports = { create, list, getById, updateStatus };
+async function reschedule(userId, userRole, id, { scheduledAt, durationMinutes }) {
+  const appointment = await appointmentRepository.findById(id);
+  if (!appointment) throw ApiError.notFound("Appointment not found");
+
+  const isOwner = appointment.userId === userId;
+  const isCoachOnAppointment = appointment.coach?.userId === userId;
+  if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
+    throw ApiError.forbidden("You cannot modify this appointment");
+  }
+  if (appointment.status === "CANCELLED" || appointment.status === "COMPLETED") {
+    throw ApiError.badRequest("Cannot reschedule a cancelled or completed appointment");
+  }
+
+  await assertNoConflict(
+    appointment.coachId,
+    scheduledAt,
+    durationMinutes || appointment.durationMinutes,
+    id
+  );
+
+  return appointmentRepository.updateSchedule(id, { scheduledAt: new Date(scheduledAt), durationMinutes });
+}
+
+module.exports = { create, list, getById, updateStatus, reschedule };

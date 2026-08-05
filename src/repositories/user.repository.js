@@ -16,6 +16,8 @@ const userRepository = {
 
   updatePassword: (id, passwordHash) => prisma.user.update({ where: { id }, data: { passwordHash } }),
 
+  markEmailVerified: (id) => prisma.user.update({ where: { id }, data: { isEmailVerified: true } }),
+
   createProfile: (userId, data) => prisma.userProfile.create({ data: { userId, ...data } }),
 
   upsertProfile: (userId, data) =>

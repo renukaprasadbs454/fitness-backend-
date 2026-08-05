@@ -47,10 +47,27 @@ const options = {
         },
         ResetPasswordRequest: {
           type: "object",
-          required: ["token", "newPassword"],
+          required: ["email", "code", "newPassword"],
           properties: {
-            token: { type: "string" },
+            email: { type: "string" },
+            code: { type: "string", example: "123456" },
             newPassword: { type: "string" }
+          }
+        },
+        VerifyEmailRequest: {
+          type: "object",
+          required: ["email", "code"],
+          properties: {
+            email: { type: "string" },
+            code: { type: "string", example: "123456" }
+          }
+        },
+        ResendOtpRequest: {
+          type: "object",
+          required: ["email", "purpose"],
+          properties: {
+            email: { type: "string" },
+            purpose: { type: "string", enum: ["REGISTRATION", "PASSWORD_RESET"] }
           }
         },
         UpdateProfileRequest: {

@@ -27,4 +27,12 @@ const updateStatus = {
   })
 };
 
-module.exports = { idParam, createAppointment, listAppointments, updateStatus };
+const rescheduleAppointment = {
+  params: idParam.params,
+  body: z.object({
+    scheduledAt: z.string().datetime(),
+    durationMinutes: z.number().int().positive().max(240).optional()
+  })
+};
+
+module.exports = { idParam, createAppointment, listAppointments, updateStatus, rescheduleAppointment };

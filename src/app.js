@@ -11,6 +11,7 @@ const logger = require("./config/logger");
 const swaggerSpec = require("./docs/swagger");
 const v1Routes = require("./routes/v1");
 const { generalLimiter } = require("./middlewares/rateLimiter.middleware");
+const { signS3Urls } = require("./middlewares/signedUrl.middleware");
 const { errorHandler, notFoundHandler } = require("./middlewares/error.middleware");
 
 const app = express();
@@ -31,12 +32,31 @@ app.use(
         baseUri: ["'self'"],
         frameAncestors: ["'self'"]
       }
-    }
+    },
+    // Helmet's default same-origin resource policy blocks the web client
+    // (served from a different origin, e.g. localhost:8081) from loading
+    // uploaded images/avatars from this API — allow cross-origin reads of
+    // our own static assets (uploads, admin) while keeping every other
+    // helmet protection at its default.
+    crossOriginResourcePolicy: { policy: "cross-origin" }
   })
 );
 app.use(
   cors({
-    origin: env.corsAllowedOrigins.length ? env.corsAllowedOrigins : true,
+    origin: (origin, callback) => {
+      // Expo's web dev server picks whatever port is free (8081, 8082, ...),
+      // so hardcoding one port in CORS_ALLOWED_ORIGINS breaks the moment it
+      // picks a different one. In dev, allow any localhost/127.0.0.1 origin
+      // regardless of port; production still enforces the explicit allowlist.
+      const isLocalhostDev =
+        env.nodeEnv !== "production" && (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin));
+
+      if (isLocalhostDev || !env.corsAllowedOrigins.length || env.corsAllowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true
   })
 );
@@ -68,7 +88,7 @@ app.get(["/admin", "/admin/*"], (req, res) => {
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ── Versioned API ────────────────────────────────────────
-app.use(`/api/${env.apiVersion}`, v1Routes);
+app.use(`/api/${env.apiVersion}`, signS3Urls(), v1Routes);
 
 app.get("/", (req, res) => {
   res.json({ success: true, message: "FitNerve API is running", docs: "/api-docs", admin: "/admin" });

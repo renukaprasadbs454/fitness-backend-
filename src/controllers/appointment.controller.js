@@ -28,4 +28,14 @@ const updateStatus = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Appointment status updated", appointment);
 });
 
-module.exports = { create, list, getById, updateStatus };
+const reschedule = asyncHandler(async (req, res) => {
+  const appointment = await appointmentService.reschedule(
+    req.user.id,
+    req.user.role,
+    req.params.id,
+    req.body
+  );
+  return ApiResponse.success(res, httpStatus.OK, "Appointment rescheduled", appointment);
+});
+
+module.exports = { create, list, getById, updateStatus, reschedule };

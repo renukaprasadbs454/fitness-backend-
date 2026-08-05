@@ -74,4 +74,22 @@ router.patch(
   appointmentController.updateStatus
 );
 
+/**
+ * @swagger
+ * /appointments/{id}/reschedule:
+ *   patch:
+ *     summary: Reschedule an appointment (validates availability + conflicts)
+ *     tags: [Appointments]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Appointment rescheduled }
+ *       409: { description: Coach already booked for that slot }
+ */
+router.patch(
+  "/:id/reschedule",
+  authenticate,
+  validate(schemas.rescheduleAppointment),
+  appointmentController.reschedule
+);
+
 module.exports = router;

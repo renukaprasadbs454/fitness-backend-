@@ -60,6 +60,28 @@ const listExercises = {
   })
 };
 
+const scheduleWorkout = {
+  body: z.object({
+    planId: z.string().uuid(),
+    scheduledAt: z.string().datetime()
+  })
+};
+
+const listSchedule = {
+  query: z.object({
+    from: z.string().datetime().optional(),
+    to: z.string().datetime().optional(),
+    status: z.enum(["SCHEDULED", "COMPLETED", "SKIPPED"]).optional()
+  })
+};
+
+const updateScheduleStatus = {
+  params: idParam.params,
+  body: z.object({
+    status: z.enum(["COMPLETED", "SKIPPED"])
+  })
+};
+
 module.exports = {
   idParam,
   listPlans,
@@ -67,5 +89,8 @@ module.exports = {
   updatePlan,
   createExercise,
   updateExercise,
-  listExercises
+  listExercises,
+  scheduleWorkout,
+  listSchedule,
+  updateScheduleStatus
 };

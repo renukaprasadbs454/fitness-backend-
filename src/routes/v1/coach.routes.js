@@ -5,6 +5,9 @@ const { requireRole } = require("../../middlewares/role.middleware");
 const validate = require("../../middlewares/validate.middleware");
 const schemas = require("../../validators/coach.validator");
 const { ROLES } = require("../../constants/roles");
+const { cacheResponse, invalidate } = require("../../middlewares/cache.middleware");
+
+const CACHE_PREFIX = "/api/v1/coaches";
 
 /**
  * @swagger
@@ -32,7 +35,7 @@ const { ROLES } = require("../../constants/roles");
  *     responses:
  *       200: { description: Coaches retrieved }
  */
-router.get("/", validate(schemas.listCoaches), coachController.listCoaches);
+router.get("/", cacheResponse(60), validate(schemas.listCoaches), coachController.listCoaches);
 
 /**
  * @swagger
@@ -58,6 +61,7 @@ router.get("/me", authenticate, requireRole(ROLES.COACH), coachController.getMyC
  */
 router.put(
   "/me",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole(ROLES.COACH),
   validate(schemas.createOrUpdateCoach),
@@ -74,7 +78,7 @@ router.put(
  *     responses:
  *       200: { description: Coach profile deleted }
  */
-router.delete("/me", authenticate, requireRole(ROLES.COACH), coachController.deleteMyCoachProfile);
+router.delete("/me", invalidate(CACHE_PREFIX), authenticate, requireRole(ROLES.COACH), coachController.deleteMyCoachProfile);
 
 /**
  * @swagger
@@ -91,7 +95,7 @@ router.delete("/me", authenticate, requireRole(ROLES.COACH), coachController.del
  *       200: { description: Coach retrieved }
  *       404: { description: Coach not found }
  */
-router.get("/:id", validate(schemas.idParam), coachController.getCoachById);
+router.get("/:id", cacheResponse(60), validate(schemas.idParam), coachController.getCoachById);
 
 /**
  * @swagger
@@ -102,7 +106,7 @@ router.get("/:id", validate(schemas.idParam), coachController.getCoachById);
  *     responses:
  *       200: { description: Availability retrieved }
  */
-router.get("/:coachId/availability", coachController.listAvailability);
+router.get("/:coachId/availability", cacheResponse(60), coachController.listAvailability);
 
 /**
  * @swagger
@@ -117,6 +121,7 @@ router.get("/:coachId/availability", coachController.listAvailability);
  */
 router.post(
   "/:coachId/availability",
+  invalidate(CACHE_PREFIX),
   authenticate,
   requireRole(ROLES.COACH),
   validate(schemas.upsertAvailability),

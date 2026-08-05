@@ -42,11 +42,37 @@ const forgotPassword = {
   })
 };
 
+const otpCode = z.string().trim().regex(/^\d{6}$/, "Code must be a 6-digit number");
+
 const resetPassword = {
   body: z.object({
-    token: z.string().min(1, "token is required"),
+    email: z.string().trim().toLowerCase().email(),
+    code: otpCode,
     newPassword: passwordSchema
   })
 };
 
-module.exports = { register, login, refresh, logout, forgotPassword, resetPassword };
+const verifyEmail = {
+  body: z.object({
+    email: z.string().trim().toLowerCase().email(),
+    code: otpCode
+  })
+};
+
+const resendOtp = {
+  body: z.object({
+    email: z.string().trim().toLowerCase().email(),
+    purpose: z.enum(["REGISTRATION", "PASSWORD_RESET"])
+  })
+};
+
+module.exports = {
+  register,
+  login,
+  refresh,
+  logout,
+  forgotPassword,
+  resetPassword,
+  verifyEmail,
+  resendOtp
+};

@@ -16,18 +16,7 @@ const tokenRepository = {
     prisma.refreshToken.updateMany({
       where: { userId, revoked: false },
       data: { revoked: true }
-    }),
-
-  // ── Password reset tokens ───────────────────────────────
-  createPasswordResetToken: (data) => prisma.passwordResetToken.create({ data }),
-
-  findValidPasswordResetToken: (tokenHash) =>
-    prisma.passwordResetToken.findFirst({
-      where: { tokenHash, used: false, expiresAt: { gt: new Date() } }
-    }),
-
-  markPasswordResetTokenUsed: (id) =>
-    prisma.passwordResetToken.update({ where: { id }, data: { used: true } })
+    })
 };
 
 module.exports = tokenRepository;

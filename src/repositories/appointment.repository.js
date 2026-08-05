@@ -47,6 +47,16 @@ const appointmentRepository = {
   updateStatus: (id, status) =>
     prisma.appointment.update({ where: { id }, data: { status }, include: includeShape }),
 
+  updateSchedule: (id, { scheduledAt, durationMinutes }) =>
+    prisma.appointment.update({
+      where: { id },
+      data: {
+        scheduledAt,
+        durationMinutes: durationMinutes ?? undefined
+      },
+      include: includeShape
+    }),
+
   // ── Reminders (Phase 3) ─────────────────────────────────
   dueForReminder: (windowStart, windowEnd) =>
     prisma.appointment.findMany({

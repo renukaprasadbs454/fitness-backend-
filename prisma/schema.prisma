@@ -132,7 +132,7 @@ model User {
   profile        UserProfile?
   coach          Coach?
   refreshTokens  RefreshToken[]
-  passwordResets PasswordResetToken[]
+  otpCodes       OtpCode[]
   media          Media[]
 
   bmiLogs           BmiLog[]
@@ -142,6 +142,7 @@ model User {
   weightLogs        WeightLog[]
   bodyMeasurements  BodyMeasurement[]
   workoutCompletions WorkoutCompletion[]
+  scheduledWorkouts ScheduledWorkout[]
   appointments      Appointment[]
   notifications     Notification[]
   deviceTokens      DeviceToken[]
@@ -170,16 +171,23 @@ model RefreshToken {
   @@index([userId])
 }
 
-model PasswordResetToken {
-  id        String   @id @default(uuid())
-  tokenHash String   @unique @map("token_hash")
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime @map("expires_at")
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
+enum OtpPurpose {
+  REGISTRATION
+  PASSWORD_RESET
+}
 
-  @@map("password_reset_tokens")
+model OtpCode {
+  id        String     @id @default(uuid())
+  codeHash  String     @map("code_hash")
+  userId    String     @map("user_id")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   OtpPurpose
+  expiresAt DateTime   @map("expires_at")
+  used      Boolean    @default(false)
+  attempts  Int        @default(0)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@map("otp_codes")
   @@index([userId])
 }
 
@@ -224,6 +232,7 @@ model Coach {
   chatRooms    ChatRoom[]
 
   @@map("coaches")
+  @@index([experienceYears])
 }
 
 model CoachAvailability {
@@ -390,15 +399,19 @@ model WorkoutPlan {
   durationMinutes Int                @map("duration_minutes")
   difficulty      WorkoutDifficulty
   accentColor     String             @map("accent_color")
+  imageUrl        String?            @map("image_url")
+  videoUrl        String?            @map("video_url")
   isActive        Boolean            @default(true) @map("is_active")
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
 
   exercises   WorkoutPlanExercise[]
   completions WorkoutCompletion[]
+  schedules   ScheduledWorkout[]
 
   @@map("workout_plans")
   @@index([categoryKey])
+  @@index([isActive, categoryKey, difficulty])
 }
 
 model WorkoutPlanExercise {
@@ -426,6 +439,31 @@ model WorkoutCompletion {
 
   @@map("workout_completions")
   @@index([userId, completedAt])
+}
+
+enum ScheduledWorkoutStatus {
+  SCHEDULED
+  COMPLETED
+  SKIPPED
+}
+
+// A user's plan to do a specific WorkoutPlan at a specific future time —
+// distinct from WorkoutCompletion (a historical record of one already done).
+// This is what powers the Calendar's "workout schedule" alongside appointments.
+model ScheduledWorkout {
+  id             String                 @id @default(uuid())
+  userId         String                 @map("user_id")
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId         String                 @map("plan_id")
+  plan           WorkoutPlan            @relation(fields: [planId], references: [id], onDelete: Cascade)
+  scheduledAt    DateTime               @map("scheduled_at")
+  status         ScheduledWorkoutStatus @default(SCHEDULED)
+  reminderSentAt DateTime?              @map("reminder_sent_at")
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+
+  @@map("scheduled_workouts")
+  @@index([userId, scheduledAt])
 }
 
 // ────────────────────────────────────────────────────────────

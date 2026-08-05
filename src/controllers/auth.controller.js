@@ -5,8 +5,23 @@ const httpStatus = require("../constants/httpStatus");
 const env = require("../config/env");
 
 const register = asyncHandler(async (req, res) => {
-  const result = await authService.register(req.body, req.ip);
-  return ApiResponse.success(res, httpStatus.CREATED, "Account created successfully", result);
+  const result = await authService.register(req.body);
+  return ApiResponse.success(
+    res,
+    httpStatus.CREATED,
+    "Account created. Check your email for a verification code.",
+    result
+  );
+});
+
+const verifyEmail = asyncHandler(async (req, res) => {
+  const result = await authService.verifyEmail(req.body);
+  return ApiResponse.success(res, httpStatus.OK, "Email verified successfully", result);
+});
+
+const resendOtp = asyncHandler(async (req, res) => {
+  await authService.resendOtp(req.body);
+  return ApiResponse.success(res, httpStatus.OK, "If an account with that email exists, a new code has been sent", null);
 });
 
 const login = asyncHandler(async (req, res) => {
@@ -26,18 +41,27 @@ const logout = asyncHandler(async (req, res) => {
 
 const forgotPassword = asyncHandler(async (req, res) => {
   const result = await authService.forgotPassword(req.body.email);
-  const data = env.nodeEnv !== "production" ? result : null; // resetLink only surfaced outside prod
+  const data = env.nodeEnv !== "production" ? result : null; // otpCode only surfaced outside prod
   return ApiResponse.success(
     res,
     httpStatus.OK,
-    "If an account with that email exists, a reset link has been sent",
+    "If an account with that email exists, a verification code has been sent",
     data
   );
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
-  await authService.resetPassword(req.body.token, req.body.newPassword);
+  await authService.resetPassword(req.body);
   return ApiResponse.success(res, httpStatus.OK, "Password has been reset successfully", null);
 });
 
-module.exports = { register, login, refresh, logout, forgotPassword, resetPassword };
+module.exports = {
+  register,
+  verifyEmail,
+  resendOtp,
+  login,
+  refresh,
+  logout,
+  forgotPassword,
+  resetPassword
+};

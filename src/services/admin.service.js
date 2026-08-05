@@ -5,6 +5,7 @@ const adminRepository = require("../repositories/admin.repository");
 const ApiError = require("../utils/ApiError");
 const { hashPassword } = require("../utils/password");
 const { parsePagination, buildMeta } = require("../utils/pagination");
+const { toIstIsoString } = require("../utils/timezone");
 
 // ── Dashboard ────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ async function dashboardStats() {
     totals: { users: totalUsers, coaches: totalCoaches, admins, activeUsers },
     newRegistrations: { last7Days: newLast7d, last30Days: newLast30d },
     recentUsers,
-    systemStatus: { database: "connected", timestamp: new Date().toISOString() }
+    systemStatus: { database: "connected", timestamp: toIstIsoString(new Date()) }
   };
 }
 

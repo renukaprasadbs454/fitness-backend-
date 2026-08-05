@@ -30,6 +30,11 @@ const env = {
     urlBase: process.env.PASSWORD_RESET_URL_BASE || "http://localhost:3000/reset-password"
   },
 
+  otp: {
+    expiresMin: parseInt(process.env.OTP_EXPIRES_MIN || "10", 10),
+    maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || "5", 10)
+  },
+
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || "12", 10),
 
   corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS || "")
@@ -48,14 +53,27 @@ const env = {
     localUploadDir: process.env.LOCAL_UPLOAD_DIR || "uploads",
     maxUploadSizeMb: parseInt(process.env.MAX_UPLOAD_SIZE_MB || "5", 10),
     aws: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-      region: process.env.AWS_REGION || "ap-south-1",
-      bucket: process.env.AWS_S3_BUCKET || "",
-      endpoint: process.env.AWS_S3_ENDPOINT || "",
-      forcePathStyle: process.env.AWS_S3_FORCE_PATH_STYLE === "true",
-      publicUrlTemplate: process.env.AWS_S3_PUBLIC_URL_TEMPLATE || ""
+      // Reads the S3_* names (not AWS_*) since that's what's actually
+      // configured — this project uses Tigris (t3.storage.dev), an
+      // S3-compatible provider, not real AWS S3.
+      accessKeyId: process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || "",
+      region: process.env.S3_REGION || process.env.AWS_REGION || "auto",
+      bucket: process.env.S3_BUCKET || process.env.AWS_S3_BUCKET || "",
+      endpoint: process.env.S3_ENDPOINT || process.env.AWS_S3_ENDPOINT || "",
+      // Non-AWS S3-compatible endpoints (Tigris, MinIO, R2, etc.) need
+      // path-style addressing (endpoint/bucket/key) by default — virtual-
+      // hosted style (bucket.endpoint/key) is an AWS-specific convention.
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE
+        ? process.env.S3_FORCE_PATH_STYLE === "true"
+        : Boolean(process.env.S3_ENDPOINT || process.env.AWS_S3_ENDPOINT),
+      publicUrlTemplate: process.env.S3_PUBLIC_URL_TEMPLATE || process.env.AWS_S3_PUBLIC_URL_TEMPLATE || ""
     }
+  },
+
+  email: {
+    resendApiKey: process.env.RESEND_API_KEY || "",
+    fromAddress: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"
   },
 
   logLevel: process.env.LOG_LEVEL || "info",

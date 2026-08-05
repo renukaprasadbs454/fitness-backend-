@@ -4,9 +4,16 @@ const coachRepository = {
   create: (data) => prisma.coach.create({ data }),
 
   findByUserId: (userId) =>
-    prisma.coach.findUnique({ where: { userId }, include: { availability: true } }),
+    prisma.coach.findUnique({
+      where: { userId },
+      include: { user: { select: { fullName: true, email: true } }, availability: true }
+    }),
 
-  findById: (id) => prisma.coach.findUnique({ where: { id }, include: { availability: true } }),
+  findById: (id) =>
+    prisma.coach.findUnique({
+      where: { id },
+      include: { user: { select: { fullName: true, email: true } }, availability: true }
+    }),
 
   update: (id, data) => prisma.coach.update({ where: { id }, data }),
 

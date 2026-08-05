@@ -21,4 +21,11 @@ function hashToken(rawToken) {
   return crypto.createHash("sha256").update(rawToken).digest("hex");
 }
 
-module.exports = { hashPassword, comparePassword, generateResetToken, hashToken };
+/** Generates a 6-digit numeric OTP code and its SHA-256 hash (for storing OTP records). */
+function generateOtpCode() {
+  const code = crypto.randomInt(100000, 1000000).toString();
+  const codeHash = hashToken(code);
+  return { code, codeHash };
+}
+
+module.exports = { hashPassword, comparePassword, generateResetToken, hashToken, generateOtpCode };

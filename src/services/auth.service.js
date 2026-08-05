@@ -1,8 +1,10 @@
 const userRepository = require("../repositories/user.repository");
+const otpRepository = require("../repositories/otp.repository");
 const tokenRepository = require("../repositories/token.repository");
 const coachRepository = require("../repositories/coach.repository");
 const tokenService = require("./token.service");
-const { hashPassword, comparePassword, generateResetToken, hashToken } = require("../utils/password");
+const { hashPassword, comparePassword, generateOtpCode, hashToken } = require("../utils/password");
+const { sendEmail } = require("../utils/email");
 const ApiError = require("../utils/ApiError");
 const env = require("../config/env");
 const logger = require("../config/logger");
@@ -13,7 +15,63 @@ function sanitizeUser(user) {
   return safe;
 }
 
-async function register({ fullName, email, phone, password, role }, ip) {
+const OTP_EMAIL_COPY = {
+  REGISTRATION: {
+    subject: "Verify your FitNerve account",
+    heading: "Welcome to FitNerve!",
+    body: "Use the code below to verify your email and finish creating your account."
+  },
+  PASSWORD_RESET: {
+    subject: "Your FitNerve password reset code",
+    heading: "Reset your password",
+    body: "Use the code below to reset your FitNerve password. If you didn't request this, you can safely ignore this email."
+  }
+};
+
+async function issueOtp(userId, purpose, email) {
+  await otpRepository.invalidateActive(userId, purpose);
+  const { code, codeHash } = generateOtpCode();
+  await otpRepository.createOtpCode({
+    codeHash,
+    userId,
+    purpose,
+    expiresAt: new Date(Date.now() + env.otp.expiresMin * 60 * 1000)
+  });
+  logger.info(`[otp] (dev) ${purpose} OTP for ${email}: ${code}`);
+
+  const copy = OTP_EMAIL_COPY[purpose];
+  await sendEmail({
+    to: email,
+    subject: copy.subject,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2>${copy.heading}</h2>
+        <p>${copy.body}</p>
+        <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 24px 0;">${code}</p>
+        <p style="color: #64748B; font-size: 13px;">This code expires in ${env.otp.expiresMin} minutes.</p>
+      </div>
+    `
+  });
+
+  return code;
+}
+
+async function consumeOtp(userId, purpose, code) {
+  const record = await otpRepository.findValidOtpCode(userId, purpose);
+  if (!record) throw ApiError.badRequest("OTP is invalid or has expired");
+  if (record.attempts >= env.otp.maxAttempts) {
+    throw ApiError.badRequest("Too many incorrect attempts. Please request a new code.");
+  }
+
+  if (hashToken(code) !== record.codeHash) {
+    await otpRepository.incrementAttempts(record.id);
+    throw ApiError.badRequest("Invalid or expired verification code");
+  }
+
+  await otpRepository.markOtpCodeUsed(record.id);
+}
+
+async function register({ fullName, email, phone, password, role }) {
   const existing = await userRepository.findByEmail(email);
   if (existing) throw ApiError.conflict("An account with this email already exists");
 
@@ -30,9 +88,29 @@ async function register({ fullName, email, phone, password, role }, ip) {
     await coachRepository.create({ userId: user.id, specialties: [] });
   }
 
-  const tokens = await tokenService.issueTokenPair(user, ip);
-  logger.info(`New ${role} registered: ${user.email}`);
-  return { user: sanitizeUser(user), ...tokens };
+  await issueOtp(user.id, "REGISTRATION", user.email);
+  logger.info(`New ${role} registered (pending verification): ${user.email}`);
+  return { user: sanitizeUser(user), requiresVerification: true };
+}
+
+async function verifyEmail({ email, code }) {
+  const user = await userRepository.findByEmail(email);
+  if (!user) throw ApiError.badRequest("Invalid or expired verification code");
+
+  await consumeOtp(user.id, "REGISTRATION", code);
+  await userRepository.markEmailVerified(user.id);
+
+  const verifiedUser = { ...user, isEmailVerified: true };
+  const tokens = await tokenService.issueTokenPair(verifiedUser, null);
+  return { user: sanitizeUser(verifiedUser), ...tokens };
+}
+
+async function resendOtp({ email, purpose }) {
+  const user = await userRepository.findByEmail(email);
+  // Always no-op silently if the user doesn't exist, to avoid leaking which emails are registered.
+  if (!user) return;
+
+  await issueOtp(user.id, purpose, user.email);
 }
 
 async function login({ email, password }, ip) {
@@ -65,29 +143,29 @@ async function forgotPassword(email) {
   // Always respond success-shaped to avoid leaking which emails are registered.
   if (!user) return;
 
-  const { rawToken, tokenHash } = generateResetToken();
-  await tokenRepository.createPasswordResetToken({
-    tokenHash,
-    userId: user.id,
-    expiresAt: new Date(Date.now() + env.passwordReset.tokenExpiresMin * 60 * 1000)
-  });
-
-  const resetLink = `${env.passwordReset.urlBase}?token=${rawToken}`;
-  // Email delivery is out of Phase 1 infra scope — log so it's testable end-to-end now
-  // and swap in a real mailer (SES/SendGrid) without touching this service's contract.
-  logger.info(`Password reset link for ${email}: ${resetLink}`);
-  return { resetLink }; // returned only for dev/testing convenience
+  const otpCode = await issueOtp(user.id, "PASSWORD_RESET", email);
+  return { otpCode }; // returned only for dev/testing convenience
 }
 
-async function resetPassword(rawToken, newPassword) {
-  const tokenHash = hashToken(rawToken);
-  const record = await tokenRepository.findValidPasswordResetToken(tokenHash);
-  if (!record) throw ApiError.badRequest("Reset token is invalid or has expired");
+async function resetPassword({ email, code, newPassword }) {
+  const user = await userRepository.findByEmail(email);
+  if (!user) throw ApiError.badRequest("OTP is invalid or has expired");
+
+  await consumeOtp(user.id, "PASSWORD_RESET", code);
 
   const passwordHash = await hashPassword(newPassword);
-  await userRepository.updatePassword(record.userId, passwordHash);
-  await tokenRepository.markPasswordResetTokenUsed(record.id);
-  await tokenRepository.revokeAllUserTokens(record.userId); // force re-login everywhere
+  await userRepository.updatePassword(user.id, passwordHash);
+  await tokenRepository.revokeAllUserTokens(user.id); // force re-login everywhere
 }
 
-module.exports = { register, login, refresh, logout, forgotPassword, resetPassword, sanitizeUser };
+module.exports = {
+  register,
+  verifyEmail,
+  resendOtp,
+  login,
+  refresh,
+  logout,
+  forgotPassword,
+  resetPassword,
+  sanitizeUser
+};

@@ -58,12 +58,19 @@ async function saveS3(file, subfolder) {
       ContentType: file.mimetype
     })
     .promise();
-  let url = `https://${bucket}.s3.${env.storage.aws.region}.amazonaws.com/${key}`;
+
+  let url;
   if (env.storage.aws.publicUrlTemplate) {
-    url = env.storage.aws.publicUrlTemplate
-      .replace("{bucket}", bucket)
-      .replace("{key}", key);
+    url = env.storage.aws.publicUrlTemplate.replace("{bucket}", bucket).replace("{key}", key);
+  } else if (env.storage.aws.endpoint) {
+    // Non-AWS S3-compatible endpoint (Tigris, MinIO, R2, ...) — path-style
+    // public URL. Real AWS S3 (no custom endpoint) keeps its own domain
+    // pattern below since amazonaws.com virtual-hosted URLs still apply there.
+    url = `${env.storage.aws.endpoint.replace(/\/$/, "")}/${bucket}/${key}`;
+  } else {
+    url = `https://${bucket}.s3.${env.storage.aws.region}.amazonaws.com/${key}`;
   }
+
   return { url, storageKey: key };
 }
 
@@ -72,6 +79,36 @@ async function saveFile(file, subfolder) {
     return saveS3(file, subfolder);
   }
   return saveLocal(file, subfolder);
+}
+
+// The bucket behind this endpoint is private (confirmed: uploads succeed but
+// unauthenticated GETs 403, and canned ACLs like public-read are silently
+// ignored — common for providers that gate access via bucket policy, not
+// per-object ACL). Presigned URLs are the standard, provider-agnostic fix:
+// they work regardless of the bucket's public/private setting.
+const SIGNED_URL_EXPIRES_SECONDS = 24 * 60 * 60; // 24h — plenty for a client session
+
+function s3KeyFromStoredUrl(storedUrl) {
+  if (env.storage.driver !== "s3" || !env.storage.aws.endpoint) return null;
+
+  const prefix = `${env.storage.aws.endpoint.replace(/\/$/, "")}/${env.storage.aws.bucket}/`;
+  if (!storedUrl || !storedUrl.startsWith(prefix)) return null;
+
+  return storedUrl.slice(prefix.length);
+}
+
+/** Re-signs one of our own stored S3 URLs into a fresh, time-limited GET URL.
+ * Returns the input unchanged if it isn't one of ours (e.g. local /uploads
+ * paths, or driver isn't "s3") — safe to call on any string. */
+function resolveReadUrl(storedUrl) {
+  const key = s3KeyFromStoredUrl(storedUrl);
+  if (!key) return storedUrl;
+
+  return getS3().getSignedUrl("getObject", {
+    Bucket: env.storage.aws.bucket,
+    Key: key,
+    Expires: SIGNED_URL_EXPIRES_SECONDS
+  });
 }
 
 async function deleteFile(storageKey) {
@@ -88,4 +125,4 @@ async function deleteFile(storageKey) {
   }
 }
 
-module.exports = { saveFile, deleteFile };
+module.exports = { saveFile, deleteFile, resolveReadUrl };

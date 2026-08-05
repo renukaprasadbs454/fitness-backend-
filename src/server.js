@@ -1,3 +1,5 @@
+require("./utils/timezone"); // must load first — patches Date#toJSON to render IST everywhere
+
 const http = require("http");
 const { Server } = require("socket.io");
 const app = require("./app");
