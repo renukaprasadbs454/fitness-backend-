@@ -74,6 +74,15 @@ const listAuditLogs = {
   })
 };
 
+const listPayments = {
+  query: z.object({
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+    status: z.enum(["PENDING", "SUCCESS", "FAILED", "REFUNDED"]).optional(),
+    purpose: z.enum(["COACH_SESSION", "SUBSCRIPTION", "CUSTOM_WORKOUT_PLAN", "OTHER"]).optional()
+  })
+};
+
 const broadcastAnnouncement = {
   body: z.object({
     title: z.string().trim().min(2).max(150),
@@ -92,5 +101,6 @@ module.exports = {
   createCoach,
   updateCoach,
   listAuditLogs,
+  listPayments,
   broadcastAnnouncement
 };

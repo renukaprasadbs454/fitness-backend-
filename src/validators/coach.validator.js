@@ -39,4 +39,12 @@ const upsertAvailability = {
   })
 };
 
-module.exports = { idParam, createOrUpdateCoach, listCoaches, upsertAvailability };
+const listMyAppointments = {
+  query: z.object({
+    status: z.enum(["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]).optional(),
+    page: z.coerce.number().int().positive().optional(),
+    limit: z.coerce.number().int().positive().max(100).optional()
+  })
+};
+
+module.exports = { idParam, createOrUpdateCoach, listCoaches, upsertAvailability, listMyAppointments };

@@ -82,6 +82,12 @@ const listAuditLogs = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Audit logs retrieved", items, meta);
 });
 
+// ── Payments ───────────────────────────────────────────────
+const listPayments = asyncHandler(async (req, res) => {
+  const { items, meta } = await adminService.listPayments(req.query);
+  return ApiResponse.success(res, httpStatus.OK, "Payments retrieved", items, meta);
+});
+
 const broadcastAnnouncement = asyncHandler(async (req, res) => {
   const { title, body, role } = req.body;
   const result = await notificationService.broadcastAnnouncement(title, body, { role });
@@ -113,6 +119,11 @@ const deleteModelRow = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Row deleted", null);
 });
 
+const getRelationOptions = asyncHandler(async (req, res) => {
+  const options = await adminService.getRelationOptions(req.params.modelName);
+  return ApiResponse.success(res, httpStatus.OK, "Relation options retrieved", options);
+});
+
 module.exports = {
   dashboardStats,
   listUsers,
@@ -128,11 +139,13 @@ module.exports = {
   updateCoach,
   deleteCoach,
   listAuditLogs,
+  listPayments,
   broadcastAnnouncement,
   getDatabaseSchema,
   getModelData,
   createModelRow,
   updateModelRow,
-  deleteModelRow
+  deleteModelRow,
+  getRelationOptions
 };
 

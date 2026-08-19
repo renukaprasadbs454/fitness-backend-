@@ -12,7 +12,7 @@ const SUBFOLDER_BY_TYPE = {
   CONTENT_IMAGE: "content"
 };
 
-async function uploadImage(userId, file, type) {
+async function uploadImage(userId, file, type, extra = {}) {
   if (!file) throw ApiError.badRequest("No file provided");
 
   const subfolder = SUBFOLDER_BY_TYPE[type];
@@ -24,7 +24,8 @@ async function uploadImage(userId, file, type) {
     url,
     storageKey,
     mimeType: file.mimetype,
-    sizeBytes: file.size
+    sizeBytes: file.size,
+    ...extra
   });
 
   // Keep the denormalized "current" image URL on the owning profile in sync

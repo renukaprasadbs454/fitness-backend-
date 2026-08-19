@@ -84,6 +84,13 @@ app.get(["/admin", "/admin/*"], (req, res) => {
   res.sendFile(path.join(adminDir, "admin.html"));
 });
 
+// ── Coach portal served from backend under /coach ───────
+const coachDir = path.join(__dirname, "../coach");
+app.use("/coach", express.static(coachDir, { index: false }));
+app.get(["/coach", "/coach/*"], (req, res) => {
+  res.sendFile(path.join(coachDir, "coach.html"));
+});
+
 // ── API docs ─────────────────────────────────────────────
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -91,7 +98,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(`/api/${env.apiVersion}`, signS3Urls(), v1Routes);
 
 app.get("/", (req, res) => {
-  res.json({ success: true, message: "FitNerve API is running", docs: "/api-docs", admin: "/admin" });
+  res.json({ success: true, message: "FitNerve API is running", docs: "/api-docs", admin: "/admin", coach: "/coach" });
 });
 
 // ── 404 + centralized error handling (must be last) ─────

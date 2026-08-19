@@ -110,17 +110,33 @@ async function assertParticipant(roomId, currentUser) {
   if (!isUserSide && !isCoachSide) {
     throw ApiError.forbidden("You are not a participant in this chat room");
   }
-  return room;
+  return { room, isUserSide };
 }
 
 async function listMessages(roomId, currentUser, query) {
-  await assertParticipant(roomId, currentUser);
+  const { room, isUserSide } = await assertParticipant(roomId, currentUser);
+  const after = isUserSide ? room.userClearedAt : room.coachClearedAt;
+
   const { page, limit, skip } = parsePagination(query, { defaultLimit: 30, maxLimit: 100 });
   const [items, total] = await Promise.all([
-    chatRepository.listMessages(roomId, { skip, take: limit }),
-    chatRepository.countMessages(roomId)
+    chatRepository.listMessages(roomId, { skip, take: limit, after }),
+    chatRepository.countMessages(roomId, after)
   ]);
   return { items: items.map(toMessageDto).reverse(), meta: buildMeta(page, limit, total) };
+}
+
+/**
+ * Per-viewer "clear chat" — hides history on the caller's side only,
+ * matching the ChatRoom schema comment. Does not delete anything or
+ * affect what the other participant sees.
+ */
+async function clearMessages(roomId, currentUser) {
+  const { isUserSide } = await assertParticipant(roomId, currentUser);
+  if (isUserSide) {
+    await chatRepository.clearForUser(roomId);
+  } else {
+    await chatRepository.clearForCoach(roomId);
+  }
 }
 
 /**
@@ -129,7 +145,7 @@ async function listMessages(roomId, currentUser, query) {
  * regardless of transport.
  */
 async function sendMessage(roomId, sender, { type = "TEXT", body, imageBuffer, imageMime, imageOriginalName }) {
-  const room = await assertParticipant(roomId, sender);
+  const { room } = await assertParticipant(roomId, sender);
 
   let imageUrl = null;
   if (type === "IMAGE") {
@@ -181,6 +197,7 @@ module.exports = {
   sendMessage,
   markDelivered,
   markSeen,
+  clearMessages,
   assertParticipant,
   toMessageDto
 };

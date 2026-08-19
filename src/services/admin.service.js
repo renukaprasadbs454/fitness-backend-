@@ -15,7 +15,7 @@ async function dashboardStats() {
   const since30d = new Date();
   since30d.setDate(since30d.getDate() - 30);
 
-  const [totalUsers, totalCoaches, activeUsers, newLast7d, newLast30d, admins, recentUsers] =
+  const [totalUsers, totalCoaches, activeUsers, newLast7d, newLast30d, admins, recentUsers, payments] =
     await Promise.all([
       userRepository.countByRole("USER"),
       coachRepository.count(), // no specialty filter → all coaches
@@ -23,13 +23,15 @@ async function dashboardStats() {
       userRepository.countCreatedSince(since7d),
       userRepository.countCreatedSince(since30d),
       userRepository.countByRole("ADMIN"),
-      userRepository.recent(5)
+      userRepository.recent(5),
+      adminRepository.paymentTotals()
     ]);
 
   return {
     totals: { users: totalUsers, coaches: totalCoaches, admins, activeUsers },
     newRegistrations: { last7Days: newLast7d, last30Days: newLast30d },
     recentUsers,
+    payments,
     systemStatus: { database: "connected", timestamp: toIstIsoString(new Date()) }
   };
 }
@@ -175,30 +177,23 @@ async function listAuditLogs(query) {
   return { items, meta: buildMeta(page, limit, total) };
 }
 
+// ── Payments ─────────────────────────────────────────────
+
+async function listPayments(query) {
+  const { page, limit, skip } = parsePagination(query);
+  const filters = { status: query.status, purpose: query.purpose };
+  const [items, total] = await Promise.all([
+    adminRepository.listPayments({ skip, take: limit, ...filters }),
+    adminRepository.countPayments(filters)
+  ]);
+  return { items, meta: buildMeta(page, limit, total) };
+}
+
 // ── Dynamic Database Schema & Table Explorer (Prisma Studio integration) ──
 
-const { Prisma } = require("@prisma/client");
 const prisma = require("../database/prismaClient");
-
-function getDatabaseSchema() {
-  const models = Prisma.dmmf.datamodel.models;
-  return models.map((m) => {
-    const delegateName = m.name.charAt(0).toLowerCase() + m.name.slice(1);
-    return {
-      name: m.name,
-      delegateName,
-      tableName: m.dbName || m.name.toLowerCase() + "s",
-      fields: m.fields.map((f) => ({
-        name: f.name,
-        type: f.type,
-        isId: f.isId,
-        isRequired: f.isRequired,
-        isList: f.isList,
-        kind: f.kind
-      }))
-    };
-  });
-}
+const { getDatabaseSchema } = require("../utils/dbIntrospection");
+const { resolveRelationLabels, getRelationOptions } = require("../utils/dbRelationLabels");
 
 async function getModelData(modelName, query = {}) {
   const models = getDatabaseSchema();
@@ -223,7 +218,7 @@ async function getModelData(modelName, query = {}) {
     selectObj[f.name] = true;
   });
 
-  const [items, total] = await Promise.all([
+  const [rawItems, total] = await Promise.all([
     delegate
       .findMany({
         skip,
@@ -234,6 +229,8 @@ async function getModelData(modelName, query = {}) {
       .catch(() => delegate.findMany({ skip, take: limit, select: selectObj })),
     delegate.count().catch(() => 0)
   ]);
+
+  const items = await resolveRelationLabels(prisma, modelInfo, rawItems);
 
   return {
     model: modelInfo,
@@ -323,6 +320,13 @@ async function deleteModelRow(modelName, id) {
   return delegate.delete({ where: { [idField]: id } });
 }
 
+// {id, label} options for a related model, so the Insert/Edit Row form can
+// render a foreign-key column as a searchable picker instead of a raw-UUID
+// text box.
+async function getRelationOptionsFor(modelName) {
+  return getRelationOptions(prisma, modelName);
+}
+
 module.exports = {
   dashboardStats,
   listUsers,
@@ -337,10 +341,12 @@ module.exports = {
   updateCoach,
   deleteCoach,
   listAuditLogs,
+  listPayments,
   getDatabaseSchema,
   getModelData,
   createModelRow,
   updateModelRow,
-  deleteModelRow
+  deleteModelRow,
+  getRelationOptions: getRelationOptionsFor
 };
 

@@ -44,4 +44,9 @@ const markSeen = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Messages marked as seen", null);
 });
 
-module.exports = { openRoom, listRooms, listMessages, sendMessage, markSeen };
+const clearMessages = asyncHandler(async (req, res) => {
+  await chatService.clearMessages(req.params.roomId, req.user);
+  return ApiResponse.success(res, httpStatus.OK, "Chat cleared", null);
+});
+
+module.exports = { openRoom, listRooms, listMessages, sendMessage, markSeen, clearMessages };

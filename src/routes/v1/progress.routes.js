@@ -56,10 +56,30 @@ router.post(
  *             type: object
  *             properties:
  *               file: { type: string, format: binary }
+ *               angle: { type: string, enum: [FRONT, BACK, LEFT, RIGHT] }
+ *               sessionId: { type: string }
  *     responses:
  *       201: { description: Progress photo uploaded }
  */
-router.post("/photo", authenticate, upload.single("file"), progressController.logPhoto);
+router.post(
+  "/photo",
+  authenticate,
+  upload.single("file"),
+  validate(schemas.logPhoto),
+  progressController.logPhoto
+);
+
+/**
+ * @swagger
+ * /progress/photo-sessions:
+ *   get:
+ *     summary: List past transformation-photo upload sessions, newest first
+ *     tags: [Progress]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Progress photo sessions retrieved }
+ */
+router.get("/photo-sessions", authenticate, progressController.photoSessions);
 
 /**
  * @swagger

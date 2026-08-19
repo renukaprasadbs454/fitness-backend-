@@ -19,8 +19,24 @@ async function logMeasurement(userId, data) {
   });
 }
 
-async function logPhoto(userId, file) {
-  return mediaService.uploadImage(userId, file, "PROGRESS_IMAGE");
+async function logPhoto(userId, file, { angle, sessionId }) {
+  return mediaService.uploadImage(userId, file, "PROGRESS_IMAGE", { angle, sessionId });
+}
+
+async function photoSessions(userId) {
+  const photos = await progressRepository.progressPhotoSessions(userId);
+
+  const sessionsById = new Map();
+  for (const photo of photos) {
+    if (!sessionsById.has(photo.sessionId)) {
+      sessionsById.set(photo.sessionId, { sessionId: photo.sessionId, createdAt: photo.createdAt, photos: [] });
+    }
+    const session = sessionsById.get(photo.sessionId);
+    session.photos.push({ id: photo.id, angle: photo.angle, url: photo.url, createdAt: photo.createdAt });
+    if (photo.createdAt < session.createdAt) session.createdAt = photo.createdAt;
+  }
+
+  return [...sessionsById.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 function daysForRange(range) {
@@ -66,4 +82,4 @@ async function report(userId, { range = "weekly" } = {}) {
   };
 }
 
-module.exports = { logWeight, logMeasurement, logPhoto, report };
+module.exports = { logWeight, logMeasurement, logPhoto, photoSessions, report };

@@ -1,5 +1,6 @@
 const bmiRepository = require("../repositories/bmi.repository");
 const userRepository = require("../repositories/user.repository");
+const progressRepository = require("../repositories/progress.repository");
 const activityFeed = require("./activityFeed.service");
 const { parsePagination, buildMeta } = require("../utils/pagination");
 
@@ -31,6 +32,11 @@ async function calculate(userId, { heightCm, weightKg }) {
   // Keep the profile's latest height/weight in sync so other modules
   // (calorie calculator defaults, dashboard stats) stay accurate.
   await userRepository.upsertProfile(userId, { heightCm, weightKg });
+
+  // BMI entries carry a weight reading too, so feed it into the same weight-log
+  // history the Progress Tracker's weight trend chart reads from — users
+  // shouldn't have to log their weight twice.
+  await progressRepository.createWeightLog(userId, { weightKg });
 
   await activityFeed.record(userId, "BMI_LOGGED", `Logged BMI: ${bmi} (${category})`);
 

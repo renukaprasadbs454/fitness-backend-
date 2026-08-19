@@ -21,7 +21,36 @@ const adminRepository = {
   countAuditLogs: ({ targetType, targetId }) =>
     prisma.adminAuditLog.count({
       where: { targetType: targetType || undefined, targetId: targetId || undefined }
-    })
+    }),
+
+  // ── Payments ─────────────────────────────────────────────
+  listPayments: ({ skip, take, status, purpose }) =>
+    prisma.payment.findMany({
+      where: { status: status || undefined, purpose: purpose || undefined },
+      include: { user: { select: { fullName: true, email: true } } },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take
+    }),
+
+  countPayments: ({ status, purpose }) =>
+    prisma.payment.count({ where: { status: status || undefined, purpose: purpose || undefined } }),
+
+  paymentTotals: async () => {
+    const [succeeded, pending, refunded, failed] = await Promise.all([
+      prisma.payment.aggregate({ where: { status: "SUCCESS" }, _sum: { amount: true }, _count: true }),
+      prisma.payment.count({ where: { status: "PENDING" } }),
+      prisma.payment.count({ where: { status: "REFUNDED" } }),
+      prisma.payment.count({ where: { status: "FAILED" } })
+    ]);
+    return {
+      totalRevenue: succeeded._sum.amount || 0,
+      successfulCount: succeeded._count,
+      pendingCount: pending,
+      refundedCount: refunded,
+      failedCount: failed
+    };
+  }
 };
 
 module.exports = adminRepository;

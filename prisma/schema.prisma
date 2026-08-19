@@ -44,6 +44,13 @@ enum MediaType {
   CONTENT_IMAGE
 }
 
+enum PhotoAngle {
+  FRONT
+  BACK
+  LEFT
+  RIGHT
+}
+
 enum DayOfWeek {
   MONDAY
   TUESDAY
@@ -117,58 +124,60 @@ enum DevicePlatform {
 // ────────────────────────────────────────────────────────────
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  phone         String?  @unique
-  passwordHash  String   @map("password_hash")
-  fullName      String   @map("full_name")
-  role          Role     @default(USER)
-  isActive      Boolean  @default(true) @map("is_active")
-  isEmailVerified Boolean @default(false) @map("is_email_verified")
-  lastLoginAt   DateTime? @map("last_login_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(uuid())
+  email           String    @unique
+  phone           String?   @unique
+  passwordHash    String    @map("password_hash")
+  fullName        String    @map("full_name")
+  role            Role      @default(USER)
+  isActive        Boolean   @default(true) @map("is_active")
+  isEmailVerified Boolean   @default(false) @map("is_email_verified")
+  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  profile        UserProfile?
-  coach          Coach?
-  refreshTokens  RefreshToken[]
-  otpCodes       OtpCode[]
-  media          Media[]
+  profile       UserProfile?
+  coach         Coach?
+  refreshTokens RefreshToken[]
+  otpCodes      OtpCode[]
+  media         Media[]
 
-  bmiLogs           BmiLog[]
-  calorieLogs       CalorieLog[]
-  stepLogs          StepLog[]
-  activityLogs      ActivityLog[]
-  weightLogs        WeightLog[]
-  bodyMeasurements  BodyMeasurement[]
-  workoutCompletions WorkoutCompletion[]
-  scheduledWorkouts ScheduledWorkout[]
-  appointments      Appointment[]
-  notifications     Notification[]
-  deviceTokens      DeviceToken[]
-  adminAuditLogs    AdminAuditLog[]
-  chatRoomsAsUser   ChatRoom[]      @relation("ChatRoomsAsUser")
-  chatMessagesSent  ChatMessage[]   @relation("ChatMessagesSent")
+  bmiLogs                BmiLog[]
+  calorieLogs            CalorieLog[]
+  stepLogs               StepLog[]
+  activityLogs           ActivityLog[]
+  weightLogs             WeightLog[]
+  bodyMeasurements       BodyMeasurement[]
+  workoutCompletions     WorkoutCompletion[]
+  scheduledWorkouts      ScheduledWorkout[]
+  appointments           Appointment[]
+  notifications          Notification[]
+  deviceTokens           DeviceToken[]
+  adminAuditLogs         AdminAuditLog[]
+  chatRoomsAsUser        ChatRoom[]              @relation("ChatRoomsAsUser")
+  chatMessagesSent       ChatMessage[]           @relation("ChatMessagesSent")
   notificationPreference NotificationPreference?
-  contentPosts      ContentPost[]
+  contentPosts           ContentPost[]
+  customWorkouts         CustomWorkout[]
+  payments               Payment[]
 
-  @@map("users")
   @@index([role])
+  @@map("users")
 }
 
 model RefreshToken {
-  id         String   @id @default(uuid())
-  token      String   @unique
-  userId     String   @map("user_id")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt  DateTime @map("expires_at")
-  revoked    Boolean  @default(false)
-  replacedByToken String? @map("replaced_by_token")
-  createdByIp String? @map("created_by_ip")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id              String   @id @default(uuid())
+  token           String   @unique
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt       DateTime @map("expires_at")
+  revoked         Boolean  @default(false)
+  replacedByToken String?  @map("replaced_by_token")
+  createdByIp     String?  @map("created_by_ip")
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  @@map("refresh_tokens")
   @@index([userId])
+  @@map("refresh_tokens")
 }
 
 enum OtpPurpose {
@@ -187,8 +196,8 @@ model OtpCode {
   attempts  Int        @default(0)
   createdAt DateTime   @default(now()) @map("created_at")
 
-  @@map("otp_codes")
   @@index([userId])
+  @@map("otp_codes")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -196,17 +205,17 @@ model OtpCode {
 // ────────────────────────────────────────────────────────────
 
 model UserProfile {
-  id        String   @id @default(uuid())
-  userId    String   @unique @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  heightCm  Decimal? @map("height_cm") @db.Decimal(5, 2)
-  weightKg  Decimal? @map("weight_kg") @db.Decimal(5, 2)
-  age       Int?
-  gender    Gender?
-  goal      Goal?
-  profileImageUrl String? @map("profile_image_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  heightCm        Decimal? @map("height_cm") @db.Decimal(5, 2)
+  weightKg        Decimal? @map("weight_kg") @db.Decimal(5, 2)
+  age             Int?
+  gender          Gender?
+  goal            Goal?
+  profileImageUrl String?  @map("profile_image_url")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("user_profiles")
 }
@@ -216,23 +225,23 @@ model UserProfile {
 // ────────────────────────────────────────────────────────────
 
 model Coach {
-  id              String   @id @default(uuid())
-  userId          String   @unique @map("user_id")
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bio             String?
-  specialties     String[] @default([])
-  experienceYears Int?     @map("experience_years")
-  profileImageUrl String?  @map("profile_image_url")
-  isAcceptingClients Boolean @default(true) @map("is_accepting_clients")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(uuid())
+  userId             String   @unique @map("user_id")
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio                String?
+  specialties        String[] @default([])
+  experienceYears    Int?     @map("experience_years")
+  profileImageUrl    String?  @map("profile_image_url")
+  isAcceptingClients Boolean  @default(true) @map("is_accepting_clients")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   availability CoachAvailability[]
   appointments Appointment[]
   chatRooms    ChatRoom[]
 
-  @@map("coaches")
   @@index([experienceYears])
+  @@map("coaches")
 }
 
 model CoachAvailability {
@@ -241,13 +250,13 @@ model CoachAvailability {
   coach     Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
   dayOfWeek DayOfWeek @map("day_of_week")
   startTime String    @map("start_time") // "HH:mm" 24h
-  endTime   String    @map("end_time")   // "HH:mm" 24h
+  endTime   String    @map("end_time") // "HH:mm" 24h
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  @@map("coach_availability")
   @@unique([coachId, dayOfWeek, startTime])
   @@index([coachId])
+  @@map("coach_availability")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -255,18 +264,21 @@ model CoachAvailability {
 // ────────────────────────────────────────────────────────────
 
 model Media {
-  id        String    @id @default(uuid())
-  userId    String    @map("user_id")
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      MediaType
-  url       String
-  storageKey String   @map("storage_key") // S3 key or local relative path
-  mimeType  String?   @map("mime_type")
-  sizeBytes Int?      @map("size_bytes")
-  createdAt DateTime  @default(now()) @map("created_at")
+  id         String      @id @default(uuid())
+  userId     String      @map("user_id")
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       MediaType
+  url        String
+  storageKey String      @map("storage_key") // S3 key or local relative path
+  mimeType   String?     @map("mime_type")
+  sizeBytes  Int?        @map("size_bytes")
+  angle      PhotoAngle? // set only for PROGRESS_IMAGE uploads
+  sessionId  String?     @map("session_id") // groups a set of PROGRESS_IMAGE uploads taken together
+  createdAt  DateTime    @default(now()) @map("created_at")
 
-  @@map("media")
   @@index([userId, type])
+  @@index([userId, type, sessionId])
+  @@map("media")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -283,8 +295,8 @@ model BmiLog {
   category  String
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@map("bmi_logs")
   @@index([userId, createdAt])
+  @@map("bmi_logs")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -292,22 +304,22 @@ model BmiLog {
 // ────────────────────────────────────────────────────────────
 
 model CalorieLog {
-  id              String        @id @default(uuid())
-  userId          String        @map("user_id")
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  age             Int
-  gender          Gender
-  heightCm        Decimal       @map("height_cm") @db.Decimal(5, 2)
-  weightKg        Decimal       @map("weight_kg") @db.Decimal(5, 2)
-  activityLevel   ActivityLevel @map("activity_level")
-  goal            Goal
-  bmr             Decimal       @db.Decimal(6, 1)
-  tdee            Decimal       @db.Decimal(6, 1)
-  targetCalories  Decimal       @map("target_calories") @db.Decimal(6, 1)
-  createdAt       DateTime      @default(now()) @map("created_at")
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age            Int
+  gender         Gender
+  heightCm       Decimal       @map("height_cm") @db.Decimal(5, 2)
+  weightKg       Decimal       @map("weight_kg") @db.Decimal(5, 2)
+  activityLevel  ActivityLevel @map("activity_level")
+  goal           Goal
+  bmr            Decimal       @db.Decimal(6, 1)
+  tdee           Decimal       @db.Decimal(6, 1)
+  targetCalories Decimal       @map("target_calories") @db.Decimal(6, 1)
+  createdAt      DateTime      @default(now()) @map("created_at")
 
-  @@map("calorie_logs")
   @@index([userId, createdAt])
+  @@map("calorie_logs")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -326,9 +338,9 @@ model StepLog {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  @@map("step_logs")
   @@unique([userId, date])
   @@index([userId, date])
+  @@map("step_logs")
 }
 
 model ActivityLog {
@@ -339,8 +351,8 @@ model ActivityLog {
   description String
   createdAt   DateTime     @default(now()) @map("created_at")
 
-  @@map("activity_logs")
   @@index([userId, createdAt])
+  @@map("activity_logs")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -354,23 +366,23 @@ model WeightLog {
   weightKg Decimal  @map("weight_kg") @db.Decimal(5, 2)
   loggedAt DateTime @default(now()) @map("logged_at")
 
-  @@map("weight_logs")
   @@index([userId, loggedAt])
+  @@map("weight_logs")
 }
 
 model BodyMeasurement {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chestCm   Decimal? @map("chest_cm") @db.Decimal(5, 2)
-  waistCm   Decimal? @map("waist_cm") @db.Decimal(5, 2)
-  hipCm     Decimal? @map("hip_cm") @db.Decimal(5, 2)
-  armCm     Decimal? @map("arm_cm") @db.Decimal(5, 2)
-  thighCm   Decimal? @map("thigh_cm") @db.Decimal(5, 2)
-  loggedAt  DateTime @default(now()) @map("logged_at")
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chestCm  Decimal? @map("chest_cm") @db.Decimal(5, 2)
+  waistCm  Decimal? @map("waist_cm") @db.Decimal(5, 2)
+  hipCm    Decimal? @map("hip_cm") @db.Decimal(5, 2)
+  armCm    Decimal? @map("arm_cm") @db.Decimal(5, 2)
+  thighCm  Decimal? @map("thigh_cm") @db.Decimal(5, 2)
+  loggedAt DateTime @default(now()) @map("logged_at")
 
-  @@map("body_measurements")
   @@index([userId, loggedAt])
+  @@map("body_measurements")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -378,13 +390,13 @@ model BodyMeasurement {
 // ────────────────────────────────────────────────────────────
 
 model Exercise {
-  id            String   @id @default(uuid())
-  name          String
-  description   String?
-  muscleGroup   String?  @map("muscle_group")
-  equipment     String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  muscleGroup String?  @map("muscle_group")
+  equipment   String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   planLinks WorkoutPlanExercise[]
 
@@ -409,9 +421,9 @@ model WorkoutPlan {
   completions WorkoutCompletion[]
   schedules   ScheduledWorkout[]
 
-  @@map("workout_plans")
   @@index([categoryKey])
   @@index([isActive, categoryKey, difficulty])
+  @@map("workout_plans")
 }
 
 model WorkoutPlanExercise {
@@ -424,9 +436,9 @@ model WorkoutPlanExercise {
   sets       Int?
   reps       Int?
 
-  @@map("workout_plan_exercises")
   @@unique([planId, exerciseId])
   @@index([planId])
+  @@map("workout_plan_exercises")
 }
 
 model WorkoutCompletion {
@@ -437,8 +449,8 @@ model WorkoutCompletion {
   plan        WorkoutPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   completedAt DateTime    @default(now()) @map("completed_at")
 
-  @@map("workout_completions")
   @@index([userId, completedAt])
+  @@map("workout_completions")
 }
 
 enum ScheduledWorkoutStatus {
@@ -462,8 +474,47 @@ model ScheduledWorkout {
   createdAt      DateTime               @default(now()) @map("created_at")
   updatedAt      DateTime               @updatedAt @map("updated_at")
 
-  @@map("scheduled_workouts")
   @@index([userId, scheduledAt])
+  @@map("scheduled_workouts")
+}
+
+// ────────────────────────────────────────────────────────────
+// USER-AUTHORED CUSTOM WORKOUTS (distinct from the admin-curated
+// WorkoutPlan catalog above — never shared, never cached, always
+// scoped to the owning user).
+// ────────────────────────────────────────────────────────────
+
+model CustomWorkout {
+  id              String              @id @default(uuid())
+  userId          String              @map("user_id")
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  durationMinutes Int?                @map("duration_minutes")
+  difficulty      WorkoutDifficulty?
+  categoryKey     WorkoutCategoryKey? @map("category_key")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  exercises CustomWorkoutExercise[]
+
+  @@index([userId])
+  @@map("custom_workouts")
+}
+
+model CustomWorkoutExercise {
+  id              String        @id @default(uuid())
+  customWorkoutId String        @map("custom_workout_id")
+  customWorkout   CustomWorkout @relation(fields: [customWorkoutId], references: [id], onDelete: Cascade)
+  name            String
+  muscleGroup     String?       @map("muscle_group")
+  equipment       String?
+  sets            Int?
+  reps            Int?
+  sortOrder       Int           @default(0) @map("sort_order")
+
+  @@index([customWorkoutId])
+  @@map("custom_workout_exercises")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -485,9 +536,55 @@ model Appointment {
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
-  @@map("appointments")
   @@index([coachId, scheduledAt])
   @@index([userId, scheduledAt])
+  @@map("appointments")
+}
+
+// ────────────────────────────────────────────────────────────
+// PHASE 3 — PAYMENTS
+// ────────────────────────────────────────────────────────────
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  UPI
+  NETBANKING
+  WALLET
+  CASH
+}
+
+enum PaymentPurpose {
+  COACH_SESSION
+  SUBSCRIPTION
+  CUSTOM_WORKOUT_PLAN
+  OTHER
+}
+
+model Payment {
+  id            String         @id @default(uuid())
+  userId        String         @map("user_id")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Decimal        @db.Decimal(10, 2)
+  currency      String         @default("INR")
+  status        PaymentStatus  @default(PENDING)
+  method        PaymentMethod?
+  purpose       PaymentPurpose @default(OTHER)
+  referenceId   String?        @map("reference_id") // e.g. related appointmentId
+  transactionId String?        @unique @map("transaction_id")
+  paidAt        DateTime?      @map("paid_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@map("payments")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -504,8 +601,8 @@ model Notification {
   isRead    Boolean          @default(false) @map("is_read")
   createdAt DateTime         @default(now()) @map("created_at")
 
-  @@map("notifications")
   @@index([userId, isRead, createdAt])
+  @@map("notifications")
 }
 
 model DeviceToken {
@@ -517,8 +614,8 @@ model DeviceToken {
   createdAt DateTime       @default(now()) @map("created_at")
   updatedAt DateTime       @updatedAt @map("updated_at")
 
-  @@map("device_tokens")
   @@index([userId])
+  @@map("device_tokens")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -547,9 +644,9 @@ model AdminAuditLog {
   metadata   Json?
   createdAt  DateTime    @default(now()) @map("created_at")
 
-  @@map("admin_audit_logs")
   @@index([adminId, createdAt])
   @@index([targetType, targetId])
+  @@map("admin_audit_logs")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -570,21 +667,27 @@ enum MessageType {
 // One room per (user, coach) pair. Created lazily on first message
 // or when a user opens a coach's chat for the first time.
 model ChatRoom {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  user          User     @relation("ChatRoomsAsUser", fields: [userId], references: [id], onDelete: Cascade)
-  coachId       String   @map("coach_id")
-  coach         Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  lastMessageAt DateTime? @map("last_message_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  user           User      @relation("ChatRoomsAsUser", fields: [userId], references: [id], onDelete: Cascade)
+  coachId        String    @map("coach_id")
+  coach          Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  lastMessageAt  DateTime? @map("last_message_at")
+  // "Clear chat" is per-viewer, not destructive: each side can hide the
+  // history on their end (like WhatsApp) without deleting it for the other
+  // participant. Messages created at/before this timestamp are hidden from
+  // that side's message list.
+  userClearedAt  DateTime? @map("user_cleared_at")
+  coachClearedAt DateTime? @map("coach_cleared_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   messages ChatMessage[]
 
-  @@map("chat_rooms")
   @@unique([userId, coachId])
   @@index([userId, lastMessageAt])
   @@index([coachId, lastMessageAt])
+  @@map("chat_rooms")
 }
 
 model ChatMessage {
@@ -601,8 +704,8 @@ model ChatMessage {
   seenAt      DateTime?     @map("seen_at")
   createdAt   DateTime      @default(now()) @map("created_at")
 
-  @@map("chat_messages")
   @@index([roomId, createdAt])
+  @@map("chat_messages")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -610,14 +713,14 @@ model ChatMessage {
 // ────────────────────────────────────────────────────────────
 
 model NotificationPreference {
-  id                    String   @id @default(uuid())
-  userId                String   @unique @map("user_id")
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workoutReminders      Boolean  @default(true) @map("workout_reminders")
-  appointmentReminders  Boolean  @default(true) @map("appointment_reminders")
-  coachMessages         Boolean  @default(true) @map("coach_messages")
-  announcements         Boolean  @default(true) @map("announcements")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutReminders     Boolean  @default(true) @map("workout_reminders")
+  appointmentReminders Boolean  @default(true) @map("appointment_reminders")
+  coachMessages        Boolean  @default(true) @map("coach_messages")
+  announcements        Boolean  @default(true) @map("announcements")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@map("notification_preferences")
 }
@@ -640,10 +743,10 @@ enum ContentStatus {
 }
 
 model ContentCategory {
-  id        String        @id @default(uuid())
-  name      String        @unique
-  slug      String        @unique
-  createdAt DateTime      @default(now()) @map("created_at")
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
 
   posts ContentPost[]
 
@@ -651,25 +754,25 @@ model ContentCategory {
 }
 
 model ContentPost {
-  id            String        @id @default(uuid())
+  id            String           @id @default(uuid())
   type          ContentType
   title         String
-  slug          String        @unique
+  slug          String           @unique
   summary       String?
   body          String?
-  videoUrl      String?       @map("video_url")
-  coverImageUrl String?       @map("cover_image_url")
-  status        ContentStatus @default(DRAFT)
-  categoryId    String?       @map("category_id")
+  videoUrl      String?          @map("video_url")
+  coverImageUrl String?          @map("cover_image_url")
+  status        ContentStatus    @default(DRAFT)
+  categoryId    String?          @map("category_id")
   category      ContentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  authorId      String        @map("author_id")
-  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  viewCount     Int           @default(0) @map("view_count")
-  publishedAt   DateTime?     @map("published_at")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  authorId      String           @map("author_id")
+  author        User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  viewCount     Int              @default(0) @map("view_count")
+  publishedAt   DateTime?        @map("published_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
 
-  @@map("content_posts")
   @@index([type, status, publishedAt])
   @@index([categoryId])
+  @@map("content_posts")
 }

@@ -82,6 +82,28 @@ router.delete("/me", invalidate(CACHE_PREFIX), authenticate, requireRole(ROLES.C
 
 /**
  * @swagger
+ * /coaches/me/appointments:
+ *   get:
+ *     summary: List appointments booked with the logged-in coach (as the coach, not the booker)
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [PENDING, CONFIRMED, COMPLETED, CANCELLED] }
+ *     responses:
+ *       200: { description: Appointments retrieved }
+ */
+router.get(
+  "/me/appointments",
+  authenticate,
+  requireRole(ROLES.COACH),
+  validate(schemas.listMyAppointments),
+  coachController.listMyAppointments
+);
+
+/**
+ * @swagger
  * /coaches/{id}:
  *   get:
  *     summary: Get a coach's public profile by id
@@ -127,5 +149,96 @@ router.post(
   validate(schemas.upsertAvailability),
   coachController.upsertAvailability
 );
+
+// ── Database explorer ────────────────────────────────────────
+// Mirrors the admin one (full CRUD), but excludes User/Coach/Payment —
+// see src/services/coachDb.service.js for the full rationale.
+
+/**
+ * @swagger
+ * /coaches/db/tables:
+ *   get:
+ *     summary: List database tables the coach may browse
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Database schema retrieved }
+ */
+router.get("/db/tables", authenticate, requireRole(ROLES.COACH), coachController.listDbTables);
+
+/**
+ * @swagger
+ * /coaches/db/tables/{tableName}:
+ *   get:
+ *     summary: Paginated rows for a table (User/Coach/Payment excluded)
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: tableName
+ *         required: true
+ *         schema: { type: string }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer }
+ *     responses:
+ *       200: { description: Table data retrieved }
+ *       404: { description: Table not found or not visible to coaches }
+ */
+router.get("/db/tables/:tableName", authenticate, requireRole(ROLES.COACH), coachController.getDbTableData);
+
+/**
+ * @swagger
+ * /coaches/db/tables/{tableName}:
+ *   post:
+ *     summary: Insert a row into a table (User/Coach/Payment excluded)
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       201: { description: Row created }
+ *       404: { description: Table not found or not visible to coaches }
+ */
+router.post("/db/tables/:tableName", authenticate, requireRole(ROLES.COACH), coachController.createDbRow);
+
+/**
+ * @swagger
+ * /coaches/db/tables/{tableName}/{id}:
+ *   put:
+ *     summary: Update a row in a table (User/Coach/Payment excluded)
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Row updated }
+ *       404: { description: Table not found or not visible to coaches }
+ */
+router.put("/db/tables/:tableName/:id", authenticate, requireRole(ROLES.COACH), coachController.updateDbRow);
+
+/**
+ * @swagger
+ * /coaches/db/tables/{tableName}/{id}:
+ *   delete:
+ *     summary: Delete a row from a table (User/Coach/Payment excluded)
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Row deleted }
+ *       404: { description: Table not found or not visible to coaches }
+ */
+router.delete("/db/tables/:tableName/:id", authenticate, requireRole(ROLES.COACH), coachController.deleteDbRow);
+
+/**
+ * @swagger
+ * /coaches/db/relation-options/{modelName}:
+ *   get:
+ *     summary: "{id, label} options for a related model, for a foreign-key picker"
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Relation options retrieved }
+ */
+router.get("/db/relation-options/:modelName", authenticate, requireRole(ROLES.COACH), coachController.getDbRelationOptions);
 
 module.exports = router;

@@ -130,4 +130,33 @@ async function reschedule(userId, userRole, id, { scheduledAt, durationMinutes }
   return appointmentRepository.updateSchedule(id, { scheduledAt: new Date(scheduledAt), durationMinutes });
 }
 
-module.exports = { create, list, getById, updateStatus, reschedule };
+async function updateDetails(userId, userRole, id, { title, notes }) {
+  const appointment = await appointmentRepository.findById(id);
+  if (!appointment) throw ApiError.notFound("Appointment not found");
+
+  const isOwner = appointment.userId === userId;
+  const isCoachOnAppointment = appointment.coach?.userId === userId;
+  if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
+    throw ApiError.forbidden("You cannot modify this appointment");
+  }
+
+  return appointmentRepository.updateDetails(id, { title, notes });
+}
+
+async function remove(userId, userRole, id) {
+  const appointment = await appointmentRepository.findById(id);
+  if (!appointment) throw ApiError.notFound("Appointment not found");
+
+  const isOwner = appointment.userId === userId;
+  const isCoachOnAppointment = appointment.coach?.userId === userId;
+  if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
+    throw ApiError.forbidden("You cannot delete this appointment");
+  }
+  if (appointment.status !== "CANCELLED" && appointment.status !== "COMPLETED") {
+    throw ApiError.badRequest("Only cancelled or completed appointments can be deleted");
+  }
+
+  await appointmentRepository.remove(id);
+}
+
+module.exports = { create, list, getById, updateStatus, reschedule, updateDetails, remove };

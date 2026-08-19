@@ -123,7 +123,10 @@ async function login({ email, password }, ip) {
 
   await userRepository.updateLastLogin(user.id);
   const tokens = await tokenService.issueTokenPair(user, ip);
-  return { user: sanitizeUser(user), ...tokens };
+  // Include the profile relation (photo, height/weight/age/gender) so the
+  // client has it immediately, rather than only after a later GET /users/me.
+  const userWithProfile = await userRepository.findByIdWithProfile(user.id);
+  return { user: sanitizeUser(userWithProfile), ...tokens };
 }
 
 async function refresh(refreshToken, ip) {

@@ -284,10 +284,45 @@ async function seedContent(coachRecords) {
   }
 }
 
+async function seedPayments(coachRecords) {
+  const coaches = Object.values(coachRecords);
+  if (coaches.length === 0) return;
+
+  const existing = await prisma.payment.count();
+  if (existing > 0) {
+    console.log("Skipping payments — already seeded");
+    return;
+  }
+
+  const samples = [
+    { amount: "999.00", status: "SUCCESS", method: "UPI", purpose: "COACH_SESSION" },
+    { amount: "1499.00", status: "SUCCESS", method: "CARD", purpose: "SUBSCRIPTION" },
+    { amount: "499.00", status: "PENDING", method: "NETBANKING", purpose: "COACH_SESSION" },
+    { amount: "1499.00", status: "FAILED", method: "CARD", purpose: "SUBSCRIPTION" },
+    { amount: "999.00", status: "REFUNDED", method: "UPI", purpose: "COACH_SESSION" }
+  ];
+
+  for (const [i, sample] of samples.entries()) {
+    const coach = coaches[i % coaches.length];
+    await prisma.payment.create({
+      data: {
+        userId: coach.userId,
+        amount: sample.amount,
+        status: sample.status,
+        method: sample.method,
+        purpose: sample.purpose,
+        paidAt: sample.status === "SUCCESS" || sample.status === "REFUNDED" ? new Date() : null
+      }
+    });
+  }
+  console.log(`Seeded ${samples.length} sample payments`);
+}
+
 async function main() {
   await seedWorkoutPlans();
   const coachRecords = await seedCoaches();
   await seedContent(coachRecords);
+  await seedPayments(coachRecords);
 }
 
 main()

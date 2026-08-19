@@ -94,6 +94,24 @@ router.post(
 
 /**
  * @swagger
+ * /chat/rooms/{roomId}/messages:
+ *   delete:
+ *     summary: Clear this room's chat history on the caller's side only (does not delete anything for the other participant)
+ *     tags: [Chat]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Chat cleared }
+ *       403: { description: Not a participant in this room }
+ */
+router.delete(
+  "/rooms/:roomId/messages",
+  authenticate,
+  validate(schemas.roomIdParam),
+  chatController.clearMessages
+);
+
+/**
+ * @swagger
  * /chat/rooms/{roomId}/seen:
  *   patch:
  *     summary: Mark all of the counterpart's messages in this room as seen

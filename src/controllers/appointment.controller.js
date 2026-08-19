@@ -38,4 +38,19 @@ const reschedule = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Appointment rescheduled", appointment);
 });
 
-module.exports = { create, list, getById, updateStatus, reschedule };
+const updateDetails = asyncHandler(async (req, res) => {
+  const appointment = await appointmentService.updateDetails(
+    req.user.id,
+    req.user.role,
+    req.params.id,
+    req.body
+  );
+  return ApiResponse.success(res, httpStatus.OK, "Appointment updated", appointment);
+});
+
+const remove = asyncHandler(async (req, res) => {
+  await appointmentService.remove(req.user.id, req.user.role, req.params.id);
+  return ApiResponse.success(res, httpStatus.OK, "Appointment deleted", null);
+});
+
+module.exports = { create, list, getById, updateStatus, reschedule, updateDetails, remove };

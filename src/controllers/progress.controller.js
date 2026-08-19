@@ -16,8 +16,13 @@ const logMeasurement = asyncHandler(async (req, res) => {
 
 const logPhoto = asyncHandler(async (req, res) => {
   if (!req.file) throw ApiError.badRequest("No file provided");
-  const result = await progressService.logPhoto(req.user.id, req.file);
+  const result = await progressService.logPhoto(req.user.id, req.file, req.body);
   return ApiResponse.success(res, httpStatus.CREATED, "Progress photo uploaded", result);
+});
+
+const photoSessions = asyncHandler(async (req, res) => {
+  const result = await progressService.photoSessions(req.user.id);
+  return ApiResponse.success(res, httpStatus.OK, "Progress photo sessions retrieved", result);
 });
 
 const report = asyncHandler(async (req, res) => {
@@ -25,4 +30,4 @@ const report = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Progress report retrieved", result);
 });
 
-module.exports = { logWeight, logMeasurement, logPhoto, report };
+module.exports = { logWeight, logMeasurement, logPhoto, photoSessions, report };

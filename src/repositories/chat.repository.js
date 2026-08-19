@@ -48,15 +48,22 @@ const chatRepository = {
 
   createMessage: (data) => prisma.chatMessage.create({ data }),
 
-  listMessages: (roomId, { skip, take }) =>
+  listMessages: (roomId, { skip, take, after }) =>
     prisma.chatMessage.findMany({
-      where: { roomId },
+      where: { roomId, createdAt: after ? { gt: after } : undefined },
       orderBy: { createdAt: "desc" },
       skip,
       take
     }),
 
-  countMessages: (roomId) => prisma.chatMessage.count({ where: { roomId } }),
+  countMessages: (roomId, after) =>
+    prisma.chatMessage.count({ where: { roomId, createdAt: after ? { gt: after } : undefined } }),
+
+  // "Clear chat" is per-viewer — hides history on one side without
+  // deleting it for the other participant (see ChatRoom schema comment).
+  clearForUser: (roomId) => prisma.chatRoom.update({ where: { id: roomId }, data: { userClearedAt: new Date() } }),
+
+  clearForCoach: (roomId) => prisma.chatRoom.update({ where: { id: roomId }, data: { coachClearedAt: new Date() } }),
 
   markDelivered: (roomId, recipientId) =>
     prisma.chatMessage.updateMany({

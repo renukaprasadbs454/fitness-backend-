@@ -1,5 +1,6 @@
 const coachRepository = require("../repositories/coach.repository");
 const ApiError = require("../utils/ApiError");
+const { parsePagination, buildMeta } = require("../utils/pagination");
 
 async function getMyCoachProfile(userId) {
   const coach = await coachRepository.findByUserId(userId);
@@ -53,6 +54,18 @@ async function listAvailability(coachId) {
   return coachRepository.listAvailability(coachId);
 }
 
+async function listMyAppointments(userId, query) {
+  const coach = await coachRepository.findByUserId(userId);
+  if (!coach) throw ApiError.notFound("Coach profile not found for this account");
+
+  const { page, limit, skip } = parsePagination(query);
+  const [items, total] = await Promise.all([
+    coachRepository.listAppointmentsForCoach(coach.id, { skip, take: limit, status: query.status }),
+    coachRepository.countAppointmentsForCoach(coach.id, query.status)
+  ]);
+  return { items, meta: buildMeta(page, limit, total) };
+}
+
 module.exports = {
   getMyCoachProfile,
   updateMyCoachProfile,
@@ -60,5 +73,6 @@ module.exports = {
   listCoaches,
   deleteMyCoachProfile,
   setAvailability,
-  listAvailability
+  listAvailability,
+  listMyAppointments
 };

@@ -205,6 +205,27 @@ router.delete("/coaches/:id", validate(schemas.idParam), adminController.deleteC
  */
 router.get("/audit-logs", validate(schemas.listAuditLogs), adminController.listAuditLogs);
 
+// ── Payments ─────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /admin/payments:
+ *   get:
+ *     summary: List/filter/paginate payments
+ *     tags: [Admin]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [PENDING, SUCCESS, FAILED, REFUNDED] }
+ *       - in: query
+ *         name: purpose
+ *         schema: { type: string, enum: [COACH_SESSION, SUBSCRIPTION, CUSTOM_WORKOUT_PLAN, OTHER] }
+ *     responses:
+ *       200: { description: Payments retrieved }
+ */
+router.get("/payments", validate(schemas.listPayments), adminController.listPayments);
+
 // ── Announcements (Phase 3) ─────────────────────────────────
 
 /**
@@ -240,6 +261,7 @@ router.get("/db/tables/:tableName", adminController.getModelData);
 router.post("/db/tables/:tableName", adminController.createModelRow);
 router.put("/db/tables/:tableName/:id", adminController.updateModelRow);
 router.delete("/db/tables/:tableName/:id", adminController.deleteModelRow);
+router.get("/db/relation-options/:modelName", adminController.getRelationOptions);
 
 module.exports = router;
 

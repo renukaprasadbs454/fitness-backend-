@@ -302,6 +302,19 @@
           <button @click="goUsers(); mobileNavOpen = false" :class="(currentView === 'users' || currentView === 'user-detail') ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Users</button>
           <button @click="currentView = 'coaches'; mobileNavOpen = false" :class="currentView === 'coaches' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Coaches</button>
           <button @click="currentView = 'audit-logs'; mobileNavOpen = false" :class="currentView === 'audit-logs' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Audit Logs</button>
+          <button @click="currentView = 'payments'; mobileNavOpen = false" :class="currentView === 'payments' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Payments</button>
+
+          <div class="px-3 pt-4 pb-1.5">
+            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Database Tables</span>
+          </div>
+          <template x-for="t in dbSchema" :key="t.name">
+            <button @click="selectTable(t.name); mobileNavOpen = false"
+              :class="currentView === 'db-explorer' && activeTableName === t.name ? 'bg-primary/15 text-primary' : 'text-slate-500 hover:text-white hover:bg-white/5'"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors">
+              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 18h18M3 6h18"/></svg>
+              <span class="truncate font-mono" x-text="t.tableName || t.name"></span>
+            </button>
+          </template>
         </nav>
       </aside>
     </div>
@@ -474,7 +487,7 @@
                   <template x-for="row in filteredTableRows()" :key="row.id || JSON.stringify(row)">
                     <tr class="hover:bg-white/5 transition-colors">
                       <template x-for="col in tableColumns()" :key="col">
-                        <td class="px-4 py-2.5 max-w-xs truncate" :title="String(row[col] ?? '')" x-text="row[col] === null ? 'NULL' : typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col])"></td>
+                        <td class="px-4 py-2.5 max-w-xs truncate" :title="String(row[col] ?? '')" x-text="cellDisplay(row, col)"></td>
                       </template>
                       <td class="px-4 py-2.5 text-right whitespace-nowrap">
                         <button @click="openEditRow(row)" class="px-2 py-1 bg-white/5 hover:bg-white/10 text-slate-300 rounded-md transition-colors mr-1">Edit</button>
@@ -528,7 +541,7 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
             <div class="stat-card p-5">
               <div class="flex items-center justify-between mb-3">
                 <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -538,6 +551,17 @@
               </div>
               <div class="text-3xl font-extrabold tracking-tight" x-text="dashboard.totals.users"></div>
               <div class="text-slate-400 text-xs font-medium mt-1">Total Users Account</div>
+            </div>
+
+            <div class="stat-card p-5">
+              <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <span class="badge badge-green">Revenue</span>
+              </div>
+              <div class="text-3xl font-extrabold tracking-tight text-emerald-400" x-text="formatCurrency(dashboard.payments.totalRevenue, 'INR')"></div>
+              <div class="text-slate-400 text-xs font-medium mt-1"><span x-text="dashboard.payments.successfulCount"></span> successful payments</div>
             </div>
 
             <div class="stat-card p-5">
@@ -626,6 +650,7 @@
               <button @click="goUsers()" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Manage Users</button>
               <button @click="currentView = 'coaches'" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Manage Coaches</button>
               <button @click="currentView = 'audit-logs'" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">View Audit Logs</button>
+              <button @click="currentView = 'payments'" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">View Payments</button>
               <button disabled class="px-4 py-2 bg-dark-muted text-slate-500 text-sm font-medium rounded-lg cursor-not-allowed">System Health (soon)</button>
             </div>
           </div>
@@ -676,12 +701,6 @@
               <input type="search" x-model="usersFilters.search" @input.debounce.350ms="usersFilters.page = 1" placeholder="Search name, email, phone…"
                 class="w-full pl-8 pr-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary">
             </div>
-            <select x-model="usersFilters.role" @change="usersFilters.page = 1" class="px-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white sm:w-40 focus:outline-none focus:border-primary">
-              <option value="ALL">All roles</option>
-              <option value="USER">User</option>
-              <option value="COACH">Coach</option>
-              <option value="ADMIN">Admin</option>
-            </select>
             <select x-model="usersFilters.status" @change="usersFilters.page = 1" class="px-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white sm:w-40 focus:outline-none focus:border-primary">
               <option value="ALL">All statuses</option>
               <option value="ACTIVE">Active</option>
@@ -690,14 +709,15 @@
           </div>
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
-            <table class="w-full text-sm">
+            <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[640px]">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase cursor-pointer select-none" @click="toggleUserSort('fullName')">Name</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Email</th>
+                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Email</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Role</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Status</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase cursor-pointer select-none" @click="toggleUserSort('createdAt')">Joined</th>
+                  <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase cursor-pointer select-none" @click="toggleUserSort('createdAt')">Joined</th>
                   <th class="w-20 px-4 py-3"></th>
                 </tr>
               </thead>
@@ -707,15 +727,18 @@
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0" x-text="initials(u.fullName)"></div>
-                        <span class="font-medium" x-text="u.fullName"></span>
+                        <div class="min-w-0">
+                          <span class="font-medium block truncate" x-text="u.fullName"></span>
+                          <span class="sm:hidden text-xs text-slate-500 block truncate" x-text="u.email"></span>
+                        </div>
                       </div>
                     </td>
-                    <td class="px-4 py-3 text-slate-400" x-text="u.email"></td>
+                    <td class="hidden sm:table-cell px-4 py-3 text-slate-400" x-text="u.email"></td>
                     <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="u.role"></span></td>
                     <td class="px-4 py-3">
-                      <span class="px-2 py-0.5 rounded text-xs" :class="u.isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'" x-text="u.isActive ? 'Active' : 'Suspended'"></span>
+                      <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="u.isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'" x-text="u.isActive ? 'Active' : 'Suspended'"></span>
                     </td>
-                    <td class="px-4 py-3 text-slate-400" x-text="formatDate(u.createdAt)"></td>
+                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDate(u.createdAt)"></td>
                     <td class="px-4 py-3" @click.stop>
                       <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
@@ -738,6 +761,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
             <div class="flex items-center justify-between px-4 py-3 border-t border-dark-border" x-show="pagedUsers.meta.total > 0">
               <p class="text-xs text-slate-500">Page <span x-text="pagedUsers.meta.page"></span> of <span x-text="pagedUsers.meta.totalPages"></span> · <span x-text="pagedUsers.meta.total"></span> total</p>
               <div class="flex items-center gap-2">
@@ -835,12 +859,14 @@
           </div>
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
-            <table class="w-full text-sm">
+            <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[720px]">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Coach</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Specialties</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Experience</th>
+                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Role</th>
+                  <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Specialties</th>
+                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Experience</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Accepting</th>
                   <th class="w-24 px-4 py-3"></th>
                 </tr>
@@ -851,30 +877,35 @@
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-accent/15 flex items-center justify-center text-xs font-bold text-accent flex-shrink-0" x-text="initials(c.user.fullName)"></div>
-                        <div>
-                          <p class="font-medium" x-text="c.user.fullName"></p>
-                          <p class="text-xs text-slate-500" x-text="c.user.email"></p>
+                        <div class="min-w-0">
+                          <p class="font-medium truncate" x-text="c.user.fullName"></p>
+                          <p class="text-xs text-slate-500 truncate" x-text="c.user.email"></p>
+                          <p class="sm:hidden text-xs text-slate-500 mt-0.5" x-text="(c.experienceYears ?? 0) + ' yrs experience'"></p>
                         </div>
                       </div>
                     </td>
-                    <td class="px-4 py-3 text-slate-400">
+                    <td class="hidden sm:table-cell px-4 py-3">
+                      <span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="c.user.role || 'COACH'"></span>
+                    </td>
+                    <td class="hidden md:table-cell px-4 py-3 text-slate-400">
                       <div class="flex flex-wrap gap-1">
                         <template x-for="s in c.specialties" :key="s">
                           <span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="s"></span>
                         </template>
                       </div>
                     </td>
-                    <td class="px-4 py-3 text-slate-300" x-text="(c.experienceYears ?? 0) + ' yrs'"></td>
+                    <td class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="(c.experienceYears ?? 0) + ' yrs'"></td>
                     <td class="px-4 py-3">
-                      <span class="px-2 py-0.5 rounded text-xs" :class="c.isAcceptingClients ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'" x-text="c.isAcceptingClients ? 'Yes' : 'No'"></span>
+                      <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="c.isAcceptingClients ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'" x-text="c.isAcceptingClients ? 'Yes' : 'No'"></span>
                     </td>
                     <td class="px-4 py-3">
                       <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
                         </button>
-                        <div x-show="open" x-cloak x-transition class="absolute right-0 mt-1 w-40 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden z-30 text-sm">
+                        <div x-show="open" x-cloak x-transition class="absolute right-0 mt-1 w-44 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden z-30 text-sm">
                           <button @click="open=false; openEditCoach(c)" class="w-full text-left px-3 py-2 hover:bg-white/5">Edit</button>
+                          <button @click="open=false; openChangeRole({ id: c.userId, role: c.user.role, fullName: c.user.fullName })" class="w-full text-left px-3 py-2 hover:bg-white/5">Change role</button>
                           <button @click="open=false; openConfirm('delete-coach', c)" class="w-full text-left px-3 py-2 text-red-400 hover:bg-red-500/10 border-t border-dark-border">Remove</button>
                         </div>
                       </div>
@@ -882,10 +913,11 @@
                   </tr>
                 </template>
                 <tr x-show="pagedCoaches.data.length === 0">
-                  <td colspan="5" class="px-4 py-12 text-center text-slate-500">No coaches found</td>
+                  <td colspan="6" class="px-4 py-12 text-center text-slate-500">No coaches found</td>
                 </tr>
               </tbody>
             </table>
+            </div>
             <div class="flex items-center justify-between px-4 py-3 border-t border-dark-border" x-show="pagedCoaches.meta.total > 0">
               <p class="text-xs text-slate-500">Page <span x-text="pagedCoaches.meta.page"></span> of <span x-text="pagedCoaches.meta.totalPages"></span> · <span x-text="pagedCoaches.meta.total"></span> total</p>
               <div class="flex items-center gap-2">
@@ -904,29 +936,31 @@
           </div>
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
-            <table class="w-full text-sm">
+            <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[560px]">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Admin</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Action</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Target</th>
-                  <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">When</th>
+                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Target</th>
+                  <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">When</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-dark-border/50">
                 <template x-for="log in pagedAuditLogs.data" :key="log.id">
                   <tr class="hover:bg-white/[0.02]">
                     <td class="px-4 py-3">
-                      <p class="font-medium" x-text="log.admin.fullName"></p>
-                      <p class="text-xs text-slate-500" x-text="log.admin.email"></p>
+                      <p class="font-medium truncate" x-text="log.admin.fullName"></p>
+                      <p class="text-xs text-slate-500 truncate" x-text="log.admin.email"></p>
+                      <p class="md:hidden text-xs text-slate-500 mt-0.5" x-text="formatDateTime(log.createdAt)"></p>
                     </td>
                     <td class="px-4 py-3">
-                      <span class="px-2 py-0.5 rounded text-xs font-medium" :class="actionBadgeClass(log.action)" x-text="log.action.replace(/_/g, ' ')"></span>
+                      <span class="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" :class="actionBadgeClass(log.action)" x-text="log.action.replace(/_/g, ' ')"></span>
                     </td>
-                    <td class="px-4 py-3 text-xs text-slate-400">
+                    <td class="hidden sm:table-cell px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
                       <span x-text="log.targetType"></span> · <span class="font-mono" x-text="log.targetId.slice(0, 8) + '…'"></span>
                     </td>
-                    <td class="px-4 py-3 text-slate-400" x-text="formatDateTime(log.createdAt)"></td>
+                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDateTime(log.createdAt)"></td>
                   </tr>
                 </template>
                 <tr x-show="pagedAuditLogs.data.length === 0">
@@ -934,11 +968,92 @@
                 </tr>
               </tbody>
             </table>
+            </div>
             <div class="flex items-center justify-between px-4 py-3 border-t border-dark-border" x-show="pagedAuditLogs.meta.total > 0">
               <p class="text-xs text-slate-500">Page <span x-text="pagedAuditLogs.meta.page"></span> of <span x-text="pagedAuditLogs.meta.totalPages"></span> · <span x-text="pagedAuditLogs.meta.total"></span> total</p>
               <div class="flex items-center gap-2">
                 <button :disabled="pagedAuditLogs.meta.page <= 1" @click="auditPage--" class="px-3 py-1.5 text-xs bg-dark-muted hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors">Prev</button>
                 <button :disabled="pagedAuditLogs.meta.page >= pagedAuditLogs.meta.totalPages" @click="auditPage++" class="px-3 py-1.5 text-xs bg-dark-muted hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PAYMENTS VIEW ===== -->
+        <div x-show="currentView === 'payments'">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
+            <div>
+              <h1 class="text-2xl font-bold">Payments</h1>
+              <p class="text-slate-400 text-sm mt-0.5">Every payment recorded across coach sessions, subscriptions, and plans.</p>
+            </div>
+            <select x-model="paymentsFilters.status" @change="paymentsFilters.page = 1" class="px-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white sm:w-44 focus:outline-none focus:border-primary">
+              <option value="ALL">All statuses</option>
+              <option value="SUCCESS">Success</option>
+              <option value="PENDING">Pending</option>
+              <option value="FAILED">Failed</option>
+              <option value="REFUNDED">Refunded</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            <div class="bg-dark-card border border-dark-border rounded-xl p-4">
+              <p class="text-xs text-slate-500 uppercase tracking-wide">Revenue</p>
+              <p class="text-lg font-bold text-emerald-400 mt-1" x-text="formatCurrency(dashboard.payments.totalRevenue, 'INR')"></p>
+            </div>
+            <div class="bg-dark-card border border-dark-border rounded-xl p-4">
+              <p class="text-xs text-slate-500 uppercase tracking-wide">Successful</p>
+              <p class="text-lg font-bold mt-1" x-text="dashboard.payments.successfulCount"></p>
+            </div>
+            <div class="bg-dark-card border border-dark-border rounded-xl p-4">
+              <p class="text-xs text-slate-500 uppercase tracking-wide">Pending</p>
+              <p class="text-lg font-bold text-orange-400 mt-1" x-text="dashboard.payments.pendingCount"></p>
+            </div>
+            <div class="bg-dark-card border border-dark-border rounded-xl p-4">
+              <p class="text-xs text-slate-500 uppercase tracking-wide">Failed / Refunded</p>
+              <p class="text-lg font-bold text-red-400 mt-1" x-text="`${dashboard.payments.failedCount} / ${dashboard.payments.refundedCount}`"></p>
+            </div>
+          </div>
+
+          <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
+            <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[720px]">
+              <thead>
+                <tr class="border-b border-dark-border">
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">User</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Amount</th>
+                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Purpose</th>
+                  <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Method</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Status</th>
+                  <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">When</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-dark-border/50">
+                <template x-for="p in pagedPayments.data" :key="p.id">
+                  <tr class="hover:bg-white/[0.02]">
+                    <td class="px-4 py-3">
+                      <p class="font-medium truncate" x-text="p.user?.fullName || '—'"></p>
+                      <p class="text-xs text-slate-500 truncate" x-text="p.user?.email || ''"></p>
+                    </td>
+                    <td class="px-4 py-3 font-mono text-slate-300 whitespace-nowrap" x-text="formatCurrency(p.amount, p.currency)"></td>
+                    <td class="hidden sm:table-cell px-4 py-3 text-slate-400 text-xs" x-text="(p.purpose || '').replace(/_/g, ' ')"></td>
+                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 text-xs" x-text="p.method || '—'"></td>
+                    <td class="px-4 py-3">
+                      <span class="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" :class="paymentStatusBadgeClass(p.status)" x-text="p.status"></span>
+                    </td>
+                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDateTime(p.createdAt)"></td>
+                  </tr>
+                </template>
+                <tr x-show="pagedPayments.data.length === 0">
+                  <td colspan="6" class="px-4 py-10 text-center text-slate-500">No payments recorded yet.</td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+            <div class="flex items-center justify-between px-4 py-3 border-t border-dark-border" x-show="pagedPayments.meta.total > 0">
+              <p class="text-xs text-slate-500">Page <span x-text="pagedPayments.meta.page"></span> of <span x-text="pagedPayments.meta.totalPages"></span> · <span x-text="pagedPayments.meta.total"></span> total</p>
+              <div class="flex items-center gap-2">
+                <button :disabled="pagedPayments.meta.page <= 1" @click="paymentsFilters.page--" class="px-3 py-1.5 text-xs bg-dark-muted hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors">Prev</button>
+                <button :disabled="pagedPayments.meta.page >= pagedPayments.meta.totalPages" @click="paymentsFilters.page++" class="px-3 py-1.5 text-xs bg-dark-muted hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors">Next</button>
               </div>
             </div>
           </div>
@@ -1216,8 +1331,20 @@
               </select>
             </template>
 
+            <!-- Foreign-key picker: shows a readable label, submits the id -->
+            <template x-if="field.isRelation">
+              <select x-model="field.value"
+                class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white font-sans focus:outline-none focus:border-primary transition-colors">
+                <option value="">— none —</option>
+                <template x-for="opt in (relationOptionsCache[field.relatedModel] || [])" :key="opt.id">
+                  <option :value="opt.id" x-text="opt.label"></option>
+                </template>
+              </select>
+              <p x-show="!(relationOptionsCache[field.relatedModel] || []).length" class="text-[10px] text-slate-600 mt-1">Loading options…</p>
+            </template>
+
             <!-- Text / String / JSON fallback -->
-            <template x-if="field.type === 'String' || (field.type !== 'Boolean' && field.type !== 'Int' && field.type !== 'Float' && field.type !== 'DateTime' && field.kind !== 'enum')">
+            <template x-if="!field.isRelation && (field.type === 'String' || (field.type !== 'Boolean' && field.type !== 'Int' && field.type !== 'Float' && field.type !== 'DateTime' && field.kind !== 'enum'))">
               <input type="text" x-model="field.value"
                 :placeholder="field.name"
                 class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary transition-colors">
@@ -1274,6 +1401,13 @@
       UPDATE_COACH: "bg-dark-muted text-slate-300",
     };
 
+    const PAYMENT_STATUS_BADGE = {
+      SUCCESS: "bg-emerald-500/15 text-emerald-400",
+      PENDING: "bg-orange-500/15 text-orange-400",
+      FAILED: "bg-red-500/15 text-red-400",
+      REFUNDED: "bg-indigo-500/15 text-indigo-400",
+    };
+
     function adminApp() {
       return {
         // ---- Auth ----
@@ -1295,6 +1429,7 @@
         users: [],
         coaches: [],
         auditLogs: [],
+        payments: [],
         liveDashboard: null,
         loadingData: false,
 
@@ -1310,9 +1445,10 @@
         activeRowData: null,
         rowFormJson: "{}",
         rowFormFields: [],
+        relationOptionsCache: {},
 
         // ---- Users view state ----
-        usersFilters: { search: "", role: "ALL", status: "ALL", page: 1, sortBy: "createdAt", sortOrder: "desc" },
+        usersFilters: { search: "", status: "ALL", page: 1, sortBy: "createdAt", sortOrder: "desc" },
         selectedUser: null,
 
         // ---- Coaches view state ----
@@ -1320,6 +1456,9 @@
 
         // ---- Audit log view state ----
         auditPage: 1,
+
+        // ---- Payments view state ----
+        paymentsFilters: { status: "ALL", page: 1 },
 
         // ---- Modals ----
         modals: { addUser: false, editUser: false, changeRole: false, resetPassword: false, createCoach: false, editCoach: false, confirm: false, dbInsert: false, dbEdit: false },
@@ -1361,13 +1500,23 @@
             this.apiRequest("GET", "/api/v1/admin/users?limit=100").catch(() => null),
             this.apiRequest("GET", "/api/v1/admin/coaches?limit=100").catch(() => null),
             this.apiRequest("GET", "/api/v1/admin/audit-logs?limit=100").catch(() => null),
+            this.apiRequest("GET", "/api/v1/admin/payments?limit=100").catch(() => null),
             this.apiRequest("GET", "/api/v1/admin/db/tables").catch(() => null),
-          ]).then(([dashData, usersRes, coachesRes, auditRes, dbSchemaRes]) => {
+          ]).then(([dashData, usersRes, coachesRes, auditRes, paymentsRes, dbSchemaRes]) => {
             this.loadingData = false;
             if (dashData) this.liveDashboard = dashData;
-            if (usersRes?.items) this.users = usersRes.items;
-            if (coachesRes?.items) this.coaches = coachesRes.items;
-            if (auditRes?.items) this.auditLogs = auditRes.items;
+            // Admin list endpoints respond with `data` as the raw array
+            // itself (see ApiResponse.success: data = items, meta is a
+            // sibling field) — not `{ items: [...] }`. Accept both shapes
+            // defensively, same as fetchTableRows() below.
+            if (Array.isArray(usersRes)) this.users = usersRes;
+            else if (usersRes?.items) this.users = usersRes.items;
+            if (Array.isArray(coachesRes)) this.coaches = coachesRes;
+            else if (coachesRes?.items) this.coaches = coachesRes.items;
+            if (Array.isArray(auditRes)) this.auditLogs = auditRes;
+            else if (auditRes?.items) this.auditLogs = auditRes.items;
+            if (Array.isArray(paymentsRes)) this.payments = paymentsRes;
+            else if (paymentsRes?.items) this.payments = paymentsRes.items;
             if (Array.isArray(dbSchemaRes)) {
               // Sort tables alphabetically by their display (table) name
               this.dbSchema = dbSchemaRes.slice().sort((a, b) => {
@@ -1437,6 +1586,23 @@
           return this.tableRows.filter((row) => JSON.stringify(row).toLowerCase().includes(search));
         },
 
+        // Foreign-key columns (e.g. userId, coachId) show a resolved
+        // readable label — "Jane Doe (jane@x.com)" — instead of the raw
+        // UUID, when the server was able to resolve one. The raw id is
+        // still available via the cell's title tooltip.
+        relationFor(col) {
+          return (this.activeModelInfo?.relations || []).find((r) => r.fkField === col);
+        },
+
+        cellDisplay(row, col) {
+          if (this.relationFor(col)) {
+            const label = row[`${col}__label`];
+            if (label) return label;
+          }
+          const val = row[col];
+          return val === null ? 'NULL' : typeof val === 'object' ? JSON.stringify(val) : String(val);
+        },
+
         // Build a structured fields array from a data object or model info
         _buildFormFields(initialData) {
           const fields = [];
@@ -1449,6 +1615,7 @@
                 if (f.type === 'DateTime' && value) {
                   try { value = new Date(value).toISOString().slice(0, 16); } catch (_) {}
                 }
+                const relation = this.relationFor(f.name);
                 fields.push({
                   name: f.name,
                   type: f.type,
@@ -1456,7 +1623,10 @@
                   required: f.isRequired && !f.hasDefaultValue,
                   enumValues: f.enumValues || [],
                   value,
+                  isRelation: Boolean(relation),
+                  relatedModel: relation?.relatedModel || null,
                 });
+                if (relation) this.fetchRelationOptions(relation.relatedModel);
               }
             });
           } else if (initialData) {
@@ -1489,6 +1659,19 @@
             }
           });
           return data;
+        },
+
+        // Loads {id, label} options for a foreign-key picker dropdown, once
+        // per related model (cached — every relation field pointing at the
+        // same model, e.g. two userId columns, shares one fetch).
+        fetchRelationOptions(modelName) {
+          if (this.relationOptionsCache[modelName]) return;
+          this.relationOptionsCache[modelName] = [];
+          this.apiRequest("GET", `/api/v1/admin/db/relation-options/${modelName}`)
+            .then((options) => {
+              this.relationOptionsCache[modelName] = options || [];
+            })
+            .catch(() => {});
         },
 
         openInsertRow() {
@@ -1633,7 +1816,7 @@
         },
 
         breadcrumbLabel() {
-          return { users: "Users", "user-detail": "User Detail", coaches: "Coaches", "audit-logs": "Audit Logs" }[this.currentView] || "";
+          return { users: "Users", "user-detail": "User Detail", coaches: "Coaches", "audit-logs": "Audit Logs", payments: "Payments" }[this.currentView] || "";
         },
 
         refreshAdminData() {
@@ -1653,15 +1836,24 @@
               totals: this.liveDashboard.totals || { users: 0, coaches: 0, admins: 0, activeUsers: 0 },
               newRegistrations: this.liveDashboard.newRegistrations || { last7Days: 0, last30Days: 0 },
               recentUsers: this.liveDashboard.recentUsers || [],
+              payments: this.liveDashboard.payments || { totalRevenue: 0, successfulCount: 0, pendingCount: 0, refundedCount: 0, failedCount: 0 },
               systemStatus: this.liveDashboard.systemStatus || { database: "connected", timestamp: new Date().toISOString() }
             };
           }
           const admins = (this.users || []).filter((u) => u.role === "ADMIN").length;
           const activeUsers = (this.users || []).filter((u) => u.isActive).length;
+          const successfulPayments = (this.payments || []).filter((p) => p.status === "SUCCESS");
           return {
             totals: { users: (this.users || []).length, coaches: (this.coaches || []).length, admins, activeUsers },
             newRegistrations: { last7Days: 0, last30Days: 0 },
             recentUsers: [],
+            payments: {
+              totalRevenue: successfulPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0),
+              successfulCount: successfulPayments.length,
+              pendingCount: (this.payments || []).filter((p) => p.status === "PENDING").length,
+              refundedCount: (this.payments || []).filter((p) => p.status === "REFUNDED").length,
+              failedCount: (this.payments || []).filter((p) => p.status === "FAILED").length
+            },
             systemStatus: { database: "Live DB", timestamp: new Date().toISOString() },
           };
         },
@@ -1687,8 +1879,11 @@
         get pagedUsers() {
           const f = this.usersFilters;
           const search = f.search.toLowerCase();
+          // The Users page is scoped to plain end-user accounts only —
+          // admin/coach accounts are managed elsewhere (Coaches view,
+          // direct DB access), never mixed into this list.
           let filtered = this.users.filter((u) => {
-            const roleMatch = f.role === "ALL" || u.role === f.role;
+            const roleMatch = u.role === "USER";
             const statusMatch = f.status === "ALL" || (f.status === "ACTIVE" ? u.isActive : !u.isActive);
             const textMatch = !search || `${u.fullName} ${u.email} ${u.phone ?? ""}`.toLowerCase().includes(search);
             return roleMatch && statusMatch && textMatch;
@@ -1738,6 +1933,28 @@
 
         actionBadgeClass(action) {
           return ACTION_BADGE[action] || "bg-dark-muted text-slate-300";
+        },
+
+        // ================= COMPUTED: PAYMENTS =================
+        get pagedPayments() {
+          const f = this.paymentsFilters;
+          let filtered = this.payments.filter((p) => f.status === "ALL" || p.status === f.status);
+          filtered = [...filtered].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          const limit = 20;
+          const total = filtered.length;
+          const totalPages = Math.max(1, Math.ceil(total / limit));
+          const page = Math.min(f.page, totalPages);
+          const data = filtered.slice((page - 1) * limit, page * limit);
+          return { data, meta: { page, limit, total, totalPages } };
+        },
+
+        paymentStatusBadgeClass(status) {
+          return PAYMENT_STATUS_BADGE[status] || "bg-dark-muted text-slate-300";
+        },
+
+        formatCurrency(amount, currency) {
+          const value = Number(amount) || 0;
+          return `${currency || "INR"} ${value.toFixed(2)}`;
         },
 
         // ================= AUDIT LOG WRITER =================

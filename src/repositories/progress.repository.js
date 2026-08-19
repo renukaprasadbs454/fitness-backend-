@@ -34,6 +34,12 @@ const progressRepository = {
       take
     }),
 
+  progressPhotoSessions: (userId) =>
+    prisma.media.findMany({
+      where: { userId, type: "PROGRESS_IMAGE", sessionId: { not: null } },
+      orderBy: { createdAt: "desc" }
+    }),
+
   activityTimelineSince: (userId, since, take = 10) =>
     prisma.activityLog.findMany({
       where: { userId, createdAt: { gte: since } },

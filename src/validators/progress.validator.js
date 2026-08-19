@@ -23,10 +23,17 @@ const logMeasurement = {
     )
 };
 
+const logPhoto = {
+  body: z.object({
+    angle: z.enum(["FRONT", "BACK", "LEFT", "RIGHT"]),
+    sessionId: z.string().min(1).max(100)
+  })
+};
+
 const report = {
   query: z.object({
     range: z.enum(["weekly", "monthly"]).optional()
   })
 };
 
-module.exports = { logWeight, logMeasurement, report };
+module.exports = { logWeight, logMeasurement, logPhoto, report };

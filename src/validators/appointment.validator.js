@@ -35,4 +35,23 @@ const rescheduleAppointment = {
   })
 };
 
-module.exports = { idParam, createAppointment, listAppointments, updateStatus, rescheduleAppointment };
+const updateAppointmentDetails = {
+  params: idParam.params,
+  body: z
+    .object({
+      title: z.string().trim().min(2).max(150).optional(),
+      notes: z.string().max(1000).optional()
+    })
+    .refine((data) => data.title !== undefined || data.notes !== undefined, {
+      message: "Provide at least one of title or notes"
+    })
+};
+
+module.exports = {
+  idParam,
+  createAppointment,
+  listAppointments,
+  updateStatus,
+  rescheduleAppointment,
+  updateAppointmentDetails
+};

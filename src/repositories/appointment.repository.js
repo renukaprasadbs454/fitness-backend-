@@ -57,6 +57,18 @@ const appointmentRepository = {
       include: includeShape
     }),
 
+  updateDetails: (id, { title, notes }) =>
+    prisma.appointment.update({
+      where: { id },
+      data: {
+        title: title ?? undefined,
+        notes: notes ?? undefined
+      },
+      include: includeShape
+    }),
+
+  remove: (id) => prisma.appointment.delete({ where: { id } }),
+
   // ── Reminders (Phase 3) ─────────────────────────────────
   dueForReminder: (windowStart, windowEnd) =>
     prisma.appointment.findMany({
