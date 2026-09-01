@@ -1,4 +1,5 @@
 const workoutService = require("../services/workout.service");
+const assignedWorkoutService = require("../services/assignedWorkout.service");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiResponse = require("../utils/ApiResponse");
 const httpStatus = require("../constants/httpStatus");
@@ -78,6 +79,11 @@ const cancelSchedule = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Scheduled workout cancelled", null);
 });
 
+const listAssigned = asyncHandler(async (req, res) => {
+  const items = await assignedWorkoutService.listAssignedForUser(req.user.id);
+  return ApiResponse.success(res, httpStatus.OK, "Assigned workouts retrieved", items);
+});
+
 module.exports = {
   listPlans,
   getPlanById,
@@ -93,5 +99,6 @@ module.exports = {
   scheduleWorkout,
   listSchedule,
   updateScheduleStatus,
-  cancelSchedule
+  cancelSchedule,
+  listAssigned
 };

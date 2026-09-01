@@ -152,8 +152,10 @@ async function remove(userId, userRole, id) {
   if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
     throw ApiError.forbidden("You cannot delete this appointment");
   }
-  if (appointment.status !== "CANCELLED" && appointment.status !== "COMPLETED") {
-    throw ApiError.badRequest("Only cancelled or completed appointments can be deleted");
+  const isResolved = appointment.status === "CANCELLED" || appointment.status === "COMPLETED";
+  const isPast = new Date(appointment.scheduledAt).getTime() < Date.now();
+  if (!isResolved && !isPast) {
+    throw ApiError.badRequest("Only cancelled, completed, or past appointments can be deleted");
   }
 
   await appointmentRepository.remove(id);

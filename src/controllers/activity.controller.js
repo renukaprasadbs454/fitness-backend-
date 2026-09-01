@@ -18,4 +18,9 @@ const report = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Activity report retrieved", result);
 });
 
-module.exports = { logSteps, listSteps, report };
+const listFeed = asyncHandler(async (req, res) => {
+  const { items, meta } = await activityService.listFeed(req.user.id, req.query);
+  return ApiResponse.success(res, httpStatus.OK, "Activity feed retrieved", items, meta);
+});
+
+module.exports = { logSteps, listSteps, report, listFeed };

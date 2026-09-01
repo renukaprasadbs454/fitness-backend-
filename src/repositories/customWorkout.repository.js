@@ -1,7 +1,8 @@
 const prisma = require("../database/prismaClient");
 
 const workoutInclude = {
-  exercises: { orderBy: { sortOrder: "asc" } }
+  exercises: { orderBy: { sortOrder: "asc" } },
+  assignedByUser: { select: { id: true, fullName: true } }
 };
 
 const customWorkoutRepository = {

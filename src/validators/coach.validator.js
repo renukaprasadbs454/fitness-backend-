@@ -47,4 +47,10 @@ const listMyAppointments = {
   })
 };
 
-module.exports = { idParam, createOrUpdateCoach, listCoaches, upsertAvailability, listMyAppointments };
+module.exports = {
+  idParam,
+  createOrUpdateCoach,
+  listCoaches,
+  upsertAvailability,
+  listMyAppointments
+};

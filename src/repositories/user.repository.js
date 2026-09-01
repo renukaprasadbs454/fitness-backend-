@@ -120,7 +120,23 @@ const userRepository = {
   countCreatedBetween: (from, to) =>
     prisma.user.count({ where: { createdAt: { gte: from, lt: to } } }),
 
-  countByRoleActive: (role) => prisma.user.count({ where: { role, isActive: true } })
+  countByRoleActive: (role) => prisma.user.count({ where: { role, isActive: true } }),
+
+  // ── Coach: lightweight client picker (name/email only, no sensitive fields) ──
+  searchLite: ({ search, take = 20 }) =>
+    prisma.user.findMany({
+      where: search
+        ? {
+            OR: [
+              { fullName: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } }
+            ]
+          }
+        : undefined,
+      select: { id: true, fullName: true, email: true, role: true },
+      take,
+      orderBy: { fullName: "asc" }
+    })
 };
 
 module.exports = userRepository;

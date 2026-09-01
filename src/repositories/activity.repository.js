@@ -44,7 +44,17 @@ const activityRepository = {
       where: { userId },
       orderBy: { createdAt: "desc" },
       take
-    })
+    }),
+
+  listActivityFeed: (userId, { skip, take }) =>
+    prisma.activityLog.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take
+    }),
+
+  countActivityFeed: (userId) => prisma.activityLog.count({ where: { userId } })
 };
 
 module.exports = activityRepository;

@@ -25,4 +25,11 @@ const report = {
   })
 };
 
-module.exports = { logSteps, listSteps, report };
+const listFeed = {
+  query: z.object({
+    page: z.coerce.number().int().positive().optional(),
+    limit: z.coerce.number().int().positive().max(100).optional()
+  })
+};
+
+module.exports = { logSteps, listSteps, report, listFeed };

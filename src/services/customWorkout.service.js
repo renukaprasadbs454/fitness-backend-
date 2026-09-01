@@ -11,6 +11,7 @@ function toDto(workout) {
     categoryKey: workout.categoryKey,
     createdAt: workout.createdAt,
     updatedAt: workout.updatedAt,
+    assignedBy: workout.assignedByUser ? { id: workout.assignedByUser.id, fullName: workout.assignedByUser.fullName } : null,
     exercises: workout.exercises.map((e) => ({
       id: e.id,
       name: e.name,
@@ -51,4 +52,4 @@ async function remove(userId, id) {
   await customWorkoutRepository.delete(id);
 }
 
-module.exports = { listMine, getMine, create, update, remove };
+module.exports = { listMine, getMine, create, update, remove, toDto };

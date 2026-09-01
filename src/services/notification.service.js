@@ -8,6 +8,7 @@ const logger = require("../config/logger");
 // SYSTEM notifications have no opt-out — they're account/security related.
 const TYPE_TO_PREFERENCE_FIELD = {
   WORKOUT_REMINDER: "workoutReminders",
+  WORKOUT_ASSIGNED: "workoutReminders",
   APPOINTMENT_REMINDER: "appointmentReminders",
   COACH_MESSAGE: "coachMessages",
   ANNOUNCEMENT: "announcements"

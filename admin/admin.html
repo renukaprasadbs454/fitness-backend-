@@ -301,6 +301,7 @@
           <button @click="currentView = 'dashboard'; mobileNavOpen = false" :class="currentView === 'dashboard' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Dashboard</button>
           <button @click="goUsers(); mobileNavOpen = false" :class="(currentView === 'users' || currentView === 'user-detail') ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Users</button>
           <button @click="currentView = 'coaches'; mobileNavOpen = false" :class="currentView === 'coaches' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Coaches</button>
+          <button @click="goAssignWorkouts(); mobileNavOpen = false" :class="currentView === 'assign-workouts' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Assign Workouts</button>
           <button @click="currentView = 'audit-logs'; mobileNavOpen = false" :class="currentView === 'audit-logs' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Audit Logs</button>
           <button @click="currentView = 'payments'; mobileNavOpen = false" :class="currentView === 'payments' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Payments</button>
 
@@ -649,6 +650,7 @@
             <div class="flex flex-wrap gap-3">
               <button @click="goUsers()" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Manage Users</button>
               <button @click="currentView = 'coaches'" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Manage Coaches</button>
+              <button @click="goAssignWorkouts()" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Assign Workouts</button>
               <button @click="currentView = 'audit-logs'" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">View Audit Logs</button>
               <button @click="currentView = 'payments'" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">View Payments</button>
               <button disabled class="px-4 py-2 bg-dark-muted text-slate-500 text-sm font-medium rounded-lg cursor-not-allowed">System Health (soon)</button>
@@ -923,6 +925,164 @@
               <div class="flex items-center gap-2">
                 <button :disabled="pagedCoaches.meta.page <= 1" @click="coachesFilters.page--" class="px-3 py-1.5 text-xs bg-dark-muted hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors">Prev</button>
                 <button :disabled="pagedCoaches.meta.page >= pagedCoaches.meta.totalPages" @click="coachesFilters.page++" class="px-3 py-1.5 text-xs bg-dark-muted hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== ASSIGN WORKOUTS VIEW ===== -->
+        <div x-show="currentView === 'assign-workouts'">
+          <div class="mb-5">
+            <h1 class="text-2xl font-bold">Assign Workouts</h1>
+            <p class="text-slate-400 text-sm mt-0.5">Send a workout — from the library or built from scratch — to any user.</p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+            <!-- New assignment form -->
+            <div class="bg-dark-card border border-dark-border rounded-xl p-5">
+              <h2 class="font-semibold mb-4">New Assignment</h2>
+
+              <div class="mb-4">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Send to</label>
+                <template x-if="!assignForm.selectedUser">
+                  <div class="space-y-2">
+                    <input x-model="assignForm.search" placeholder="Search users by name or email… (or just pick from the list)" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                    <div class="max-h-56 overflow-y-auto rounded-lg border border-dark-border divide-y divide-dark-border">
+                      <template x-for="u in assignCandidateUsers()" :key="u.id">
+                        <button @click="assignForm.selectedUser = u" class="w-full flex items-center px-3 py-2 text-left text-sm hover:bg-white/5">
+                          <span class="min-w-0"><span class="font-medium" x-text="u.fullName"></span> <span class="text-slate-500" x-text="'· ' + u.email"></span></span>
+                        </button>
+                      </template>
+                      <p x-show="assignCandidateUsers().length === 0" class="p-3 text-center text-xs text-slate-500">No matching users.</p>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="assignForm.selectedUser">
+                  <div class="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/5 px-3 py-2.5">
+                    <span class="text-sm"><span class="font-medium" x-text="assignForm.selectedUser.fullName"></span> <span class="text-slate-500" x-text="'· ' + assignForm.selectedUser.email"></span></span>
+                    <button @click="assignForm.selectedUser = null" class="text-xs text-primary hover:underline">Change</button>
+                  </div>
+                </template>
+              </div>
+
+              <div class="mb-4 flex gap-2">
+                <button @click="assignForm.mode = 'CATALOG'" class="flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" :class="assignForm.mode === 'CATALOG' ? 'bg-primary text-dark' : 'bg-dark-muted text-slate-300 hover:bg-dark-border'">From Library</button>
+                <button @click="assignForm.mode = 'CUSTOM'" class="flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" :class="assignForm.mode === 'CUSTOM' ? 'bg-primary text-dark' : 'bg-dark-muted text-slate-300 hover:bg-dark-border'">Build Custom</button>
+              </div>
+
+              <template x-if="assignForm.mode === 'CATALOG'">
+                <div class="space-y-3">
+                  <div class="max-h-52 overflow-y-auto rounded-lg border border-dark-border divide-y divide-dark-border">
+                    <template x-for="p in workoutPlans" :key="p.id">
+                      <button @click="assignForm.selectedPlanId = p.id" class="w-full flex items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-white/5" :class="assignForm.selectedPlanId === p.id ? 'bg-primary/10' : ''">
+                        <span class="min-w-0">
+                          <span class="font-medium block truncate" x-text="p.title"></span>
+                          <span class="block text-xs text-slate-500 truncate" x-text="`${(p.category || '').replace(/_/g,' ')} · ${p.duration} · ${p.difficulty}`"></span>
+                        </span>
+                        <svg x-show="assignForm.selectedPlanId === p.id" class="w-4 h-4 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                      </button>
+                    </template>
+                    <p x-show="!workoutPlans.length" class="p-3 text-center text-xs text-slate-500">No catalog plans found.</p>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Note (optional)</label>
+                    <textarea x-model="assignForm.note" rows="2" placeholder="Anything they should know" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary"></textarea>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="assignForm.mode === 'CUSTOM'">
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Title</label>
+                    <input x-model="assignForm.title" placeholder="e.g. Push Day" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Description</label>
+                    <input x-model="assignForm.description" placeholder="Optional notes" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-slate-300 mb-1">Duration (min)</label>
+                      <input type="number" min="0" x-model="assignForm.durationMinutes" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-slate-300 mb-1">Difficulty</label>
+                      <select x-model="assignForm.difficulty" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                        <option value="BEGINNER">Beginner</option>
+                        <option value="INTERMEDIATE">Intermediate</option>
+                        <option value="ADVANCED">Advanced</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Category</label>
+                    <select x-model="assignForm.categoryKey" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                      <option value="WEIGHT_LOSS">Weight Loss</option>
+                      <option value="MUSCLE_GAIN">Muscle Gain</option>
+                      <option value="STRENGTH">Strength</option>
+                      <option value="CARDIO">Cardio</option>
+                      <option value="YOGA">Yoga</option>
+                      <option value="GENERAL_FITNESS">General Fitness</option>
+                    </select>
+                  </div>
+
+                  <div class="flex items-center justify-between pt-1">
+                    <label class="text-xs font-medium text-slate-300">Exercises</label>
+                    <button @click="addAssignExerciseRow()" class="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold rounded-lg transition-colors">+ Add</button>
+                  </div>
+                  <template x-for="(row, idx) in assignForm.exercises" :key="idx">
+                    <div class="rounded-lg border border-dark-border p-3 space-y-2">
+                      <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500" x-text="`Exercise ${idx + 1}`"></span>
+                        <button x-show="assignForm.exercises.length > 1" @click="removeAssignExerciseRow(idx)" class="text-red-400 hover:text-red-300 text-xs">Remove</button>
+                      </div>
+                      <input x-model="row.name" placeholder="Name (e.g. Bench Press)" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                      <input x-model="row.muscleGroup" placeholder="Muscle group" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                      <div class="grid grid-cols-2 gap-2">
+                        <input type="number" x-model="row.sets" placeholder="Sets" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                        <input type="number" x-model="row.reps" placeholder="Reps" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <p x-show="assignFormError" x-text="assignFormError" class="mt-3 text-xs text-orange-400"></p>
+              <button @click="submitAssignWorkout()" :disabled="assignFormSaving" class="w-full mt-4 px-4 py-2.5 bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                <span x-show="assignFormSaving" class="loader" style="border-top-color:#0c1210;border-color:rgba(12,18,16,0.3)"></span>
+                <span x-text="assignFormSaving ? 'Sending…' : 'Assign Workout'"></span>
+              </button>
+            </div>
+
+            <!-- Sent assignments -->
+            <div class="bg-dark-card border border-dark-border rounded-xl p-5">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="font-semibold">Sent by You</h2>
+                <button @click="fetchSentAssignments()" class="text-xs text-slate-400 hover:text-white">Refresh</button>
+              </div>
+              <div class="space-y-2 max-h-[560px] overflow-y-auto">
+                <template x-for="a in sentAssignments" :key="a.id">
+                  <div class="rounded-lg border border-dark-border p-3">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium truncate" x-text="a.title || 'Workout'"></p>
+                        <p class="text-xs text-slate-500 truncate" x-text="`To ${a.user?.fullName || 'user'} · ${formatDateTime(a.createdAt)}`"></p>
+                        <p x-show="a.note" class="text-xs text-slate-400 mt-1" x-text="a.note"></p>
+                        <span class="inline-block mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium" :class="a.type === 'custom' ? 'bg-indigo-500/15 text-indigo-300' : 'bg-primary/15 text-primary'" x-text="a.type === 'custom' ? 'Custom' : 'Catalog'"></span>
+                      </div>
+                      <div class="flex gap-1 flex-shrink-0">
+                        <button @click="openEditSentAssignment(a)" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        </button>
+                        <button @click="deleteSentAssignment(a)" class="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <p x-show="!sentAssignments.length" class="text-center text-sm text-slate-500 py-8">No workouts assigned yet.</p>
               </div>
             </div>
           </div>
@@ -1261,6 +1421,66 @@
     </div>
   </div>
 
+  <!-- Edit Assignment -->
+  <div x-show="modals.editAssignment" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="modals.editAssignment = false"></div>
+    <div class="relative bg-dark-card border border-dark-border rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <h3 class="text-lg font-semibold mb-1" x-text="editingAssignment?.type === 'custom' ? 'Edit Custom Workout' : 'Edit Note'"></h3>
+      <template x-if="editingAssignment">
+        <p class="text-sm text-slate-400 mb-4" x-text="editingAssignment.title"></p>
+      </template>
+
+      <!-- Plan assignment: just the note -->
+      <template x-if="editingAssignment?.type !== 'custom'">
+        <textarea x-model="editAssignmentNote" rows="3" placeholder="Add a note" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary"></textarea>
+      </template>
+
+      <!-- Custom workout: full editable fields -->
+      <template x-if="editingAssignment?.type === 'custom'">
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Title</label>
+            <input x-model="editCustomForm.title" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Description</label>
+            <input x-model="editCustomForm.description" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Duration (min)</label>
+              <input type="number" min="0" x-model="editCustomForm.durationMinutes" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Difficulty</label>
+              <select x-model="editCustomForm.difficulty" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+                <option value="BEGINNER">Beginner</option>
+                <option value="INTERMEDIATE">Intermediate</option>
+                <option value="ADVANCED">Advanced</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Category</label>
+            <select x-model="editCustomForm.categoryKey" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+              <option value="WEIGHT_LOSS">Weight Loss</option>
+              <option value="MUSCLE_GAIN">Muscle Gain</option>
+              <option value="STRENGTH">Strength</option>
+              <option value="CARDIO">Cardio</option>
+              <option value="YOGA">Yoga</option>
+              <option value="GENERAL_FITNESS">General Fitness</option>
+            </select>
+          </div>
+        </div>
+      </template>
+
+      <div class="flex justify-end gap-2 mt-5">
+        <button @click="modals.editAssignment = false" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
+        <button @click="submitEditSentAssignment()" class="px-4 py-2 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors">Save changes</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Confirm Dialog -->
   <div x-show="modals.confirm" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60" @click="modals.confirm = false"></div>
@@ -1433,6 +1653,20 @@
         liveDashboard: null,
         loadingData: false,
 
+        // ---- Assign Workouts view state ----
+        workoutPlans: [],
+        sentAssignments: [],
+        assignForm: {
+          search: "", selectedUser: null, mode: "CATALOG", selectedPlanId: null, note: "",
+          title: "", description: "", durationMinutes: "", difficulty: "BEGINNER", categoryKey: "GENERAL_FITNESS",
+          exercises: [{ name: "", muscleGroup: "", sets: "", reps: "" }]
+        },
+        assignFormError: "",
+        assignFormSaving: false,
+        editingAssignment: null,
+        editAssignmentNote: "",
+        editCustomForm: { title: "", description: "", durationMinutes: "", difficulty: "BEGINNER", categoryKey: "GENERAL_FITNESS" },
+
         // ---- DB Explorer State ----
         dbSchema: [],
         activeTableName: "users",
@@ -1461,7 +1695,7 @@
         paymentsFilters: { status: "ALL", page: 1 },
 
         // ---- Modals ----
-        modals: { addUser: false, editUser: false, changeRole: false, resetPassword: false, createCoach: false, editCoach: false, confirm: false, dbInsert: false, dbEdit: false },
+        modals: { addUser: false, editUser: false, changeRole: false, resetPassword: false, createCoach: false, editCoach: false, editAssignment: false, confirm: false, dbInsert: false, dbEdit: false },
         addUserForm: { fullName: "", email: "", phone: "", role: "USER" },
         editingUser: null,
         editForm: { fullName: "", email: "", phone: "" },
@@ -1502,7 +1736,8 @@
             this.apiRequest("GET", "/api/v1/admin/audit-logs?limit=100").catch(() => null),
             this.apiRequest("GET", "/api/v1/admin/payments?limit=100").catch(() => null),
             this.apiRequest("GET", "/api/v1/admin/db/tables").catch(() => null),
-          ]).then(([dashData, usersRes, coachesRes, auditRes, paymentsRes, dbSchemaRes]) => {
+            this.apiRequest("GET", "/api/v1/workouts?limit=100").catch(() => null),
+          ]).then(([dashData, usersRes, coachesRes, auditRes, paymentsRes, dbSchemaRes, workoutsRes]) => {
             this.loadingData = false;
             if (dashData) this.liveDashboard = dashData;
             // Admin list endpoints respond with `data` as the raw array
@@ -1528,7 +1763,15 @@
                 this.fetchTableRows(this.activeTableName);
               }
             }
+            if (Array.isArray(workoutsRes)) this.workoutPlans = workoutsRes;
+            else if (workoutsRes?.items) this.workoutPlans = workoutsRes.items;
+            this.fetchSentAssignments();
           });
+        },
+
+        goAssignWorkouts() {
+          this.currentView = "assign-workouts";
+          this.fetchSentAssignments();
         },
 
         selectTable(tableName) {
@@ -1816,7 +2059,7 @@
         },
 
         breadcrumbLabel() {
-          return { users: "Users", "user-detail": "User Detail", coaches: "Coaches", "audit-logs": "Audit Logs", payments: "Payments" }[this.currentView] || "";
+          return { users: "Users", "user-detail": "User Detail", coaches: "Coaches", "assign-workouts": "Assign Workouts", "audit-logs": "Audit Logs", payments: "Payments" }[this.currentView] || "";
         },
 
         refreshAdminData() {
@@ -2149,6 +2392,7 @@
             activate: { title: "Activate this user?", description: `${target.fullName} will be able to log in again.`, confirmLabel: "Activate" },
             delete: { title: "Delete this user?", description: `This permanently deletes ${target.fullName} and all of their data. This cannot be undone.`, confirmLabel: "Delete" },
             "delete-coach": { title: "Remove this coach?", description: `This removes ${target.user?.fullName || 'this coach'}'s profile. Their user account is not affected.`, confirmLabel: "Remove" },
+            "delete-assignment": { title: "Remove this assignment?", description: `This removes "${target.title || 'this workout'}" from ${target.user?.fullName || "the recipient's"} account.`, confirmLabel: "Remove" },
           };
           this.confirmAction = { type, target, ...map[type] };
           this.modals.confirm = true;
@@ -2166,11 +2410,19 @@
               promise = this.apiRequest("DELETE", `/api/v1/admin/users/${target.id}`).then(() => "User deleted");
             } else if (type === "delete-coach") {
               promise = this.apiRequest("DELETE", `/api/v1/admin/coaches/${target.id}`).then(() => "Coach removed");
+            } else if (type === "delete-assignment") {
+              promise = target.type === "custom"
+                ? this.apiRequest("DELETE", `/api/v1/admin/db/tables/custom_workouts/${target.id}`).then(() => "Custom workout removed")
+                : this.apiRequest("DELETE", `/api/v1/workout-assignments/${target.id}`).then(() => "Assignment removed");
             }
 
             if (promise) {
               promise.then((msg) => {
-                this.fetchLiveData();
+                if (type === "delete-assignment") {
+                  this.fetchSentAssignments();
+                } else {
+                  this.fetchLiveData();
+                }
                 this.modals.confirm = false;
                 this.showToast(msg);
                 if (type === "delete" && this.currentView === "user-detail") this.goUsers();
@@ -2301,6 +2553,169 @@
             this.modals.editCoach = false;
             this.showToast("Coach updated");
           }
+        },
+
+        // ================= ASSIGN WORKOUTS =================
+        assignCandidateUsers() {
+          const search = this.assignForm.search.toLowerCase().trim();
+          return this.users
+            .filter((u) => u.role === "USER")
+            .filter((u) => !search || `${u.fullName} ${u.email}`.toLowerCase().includes(search));
+        },
+
+        resetAssignForm() {
+          this.assignForm = {
+            search: "", selectedUser: null, mode: "CATALOG", selectedPlanId: null, note: "",
+            title: "", description: "", durationMinutes: "", difficulty: "BEGINNER", categoryKey: "GENERAL_FITNESS",
+            exercises: [{ name: "", muscleGroup: "", sets: "", reps: "" }]
+          };
+          this.assignFormError = "";
+        },
+
+        addAssignExerciseRow() {
+          this.assignForm.exercises.push({ name: "", muscleGroup: "", sets: "", reps: "" });
+        },
+
+        removeAssignExerciseRow(idx) {
+          if (this.assignForm.exercises.length > 1) this.assignForm.exercises.splice(idx, 1);
+        },
+
+        submitAssignWorkout() {
+          this.assignFormError = "";
+          const f = this.assignForm;
+
+          if (!f.selectedUser) {
+            this.assignFormError = "Pick who you're sending this workout to.";
+            return;
+          }
+
+          if (f.mode === "CATALOG") {
+            if (!f.selectedPlanId) {
+              this.assignFormError = "Choose a workout from the library.";
+              return;
+            }
+            this.assignFormSaving = true;
+            this.apiRequest("POST", `/api/v1/workout-assignments/${f.selectedUser.id}/plan`, {
+              planId: f.selectedPlanId,
+              note: f.note.trim() || undefined
+            }).then(() => {
+              this.showToast(`Sent to ${f.selectedUser.fullName}.`);
+              this.resetAssignForm();
+              this.fetchSentAssignments();
+            }).catch((err) => {
+              this.assignFormError = err.message || "Unable to assign this workout. Please try again.";
+            }).finally(() => {
+              this.assignFormSaving = false;
+            });
+            return;
+          }
+
+          if (!f.title.trim()) {
+            this.assignFormError = "Give the workout a title.";
+            return;
+          }
+          const validExercises = f.exercises.filter((row) => row.name.trim());
+          if (validExercises.length === 0) {
+            this.assignFormError = "Add at least one exercise.";
+            return;
+          }
+
+          this.assignFormSaving = true;
+          this.apiRequest("POST", `/api/v1/workout-assignments/${f.selectedUser.id}/custom`, {
+            title: f.title.trim(),
+            description: f.description.trim() || undefined,
+            durationMinutes: f.durationMinutes ? Number(f.durationMinutes) : undefined,
+            difficulty: f.difficulty,
+            categoryKey: f.categoryKey,
+            exercises: validExercises.map((row) => ({
+              name: row.name.trim(),
+              muscleGroup: row.muscleGroup.trim() || undefined,
+              sets: row.sets ? Number(row.sets) : undefined,
+              reps: row.reps ? Number(row.reps) : undefined
+            }))
+          }).then(() => {
+            this.showToast(`Sent to ${f.selectedUser.fullName}.`);
+            this.resetAssignForm();
+            this.fetchSentAssignments();
+          }).catch((err) => {
+            this.assignFormError = err.message || "Unable to assign this workout. Please try again.";
+          }).finally(() => {
+            this.assignFormSaving = false;
+          });
+        },
+
+        fetchSentAssignments() {
+          if (!this.isAuthenticated) return;
+          this.apiRequest("GET", "/api/v1/workout-assignments/mine?limit=100")
+            .then((res) => {
+              const plans = (res?.planAssignments?.items || []).map((a) => ({ ...a, type: "plan", title: a.plan?.title }));
+              const customs = (res?.customAssignments?.items || []).map((a) => ({ ...a, type: "custom" }));
+              this.sentAssignments = [...plans, ...customs].sort(
+                (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+              );
+            })
+            .catch((err) => {
+              this.showToast(err.message || "Failed to load sent workouts", "error");
+            });
+        },
+
+        openEditSentAssignment(a) {
+          this.editingAssignment = a;
+          if (a.type === "custom") {
+            this.editCustomForm = {
+              title: a.title || "",
+              description: a.description || "",
+              durationMinutes: a.durationMinutes ?? "",
+              difficulty: a.difficulty || "BEGINNER",
+              categoryKey: a.categoryKey || "GENERAL_FITNESS"
+            };
+          } else {
+            this.editAssignmentNote = a.note || "";
+          }
+          this.modals.editAssignment = true;
+        },
+
+        submitEditSentAssignment() {
+          const a = this.editingAssignment;
+          if (!a) return;
+
+          if (a.type === "custom") {
+            const f = this.editCustomForm;
+            if (!f.title.trim()) {
+              this.showToast("Title can't be empty", "error");
+              return;
+            }
+            this.apiRequest("PUT", `/api/v1/admin/db/tables/custom_workouts/${a.id}`, {
+              title: f.title.trim(),
+              description: f.description.trim() || null,
+              durationMinutes: f.durationMinutes ? Number(f.durationMinutes) : null,
+              difficulty: f.difficulty,
+              categoryKey: f.categoryKey
+            })
+              .then(() => {
+                this.showToast("Custom workout updated");
+                this.modals.editAssignment = false;
+                this.fetchSentAssignments();
+              })
+              .catch((err) => {
+                this.showToast(err.message || "Failed to update workout", "error");
+              });
+            return;
+          }
+
+          this.apiRequest("PATCH", `/api/v1/workout-assignments/${a.id}`, { note: this.editAssignmentNote.trim() || null })
+            .then(() => {
+              this.showToast("Note updated");
+              this.modals.editAssignment = false;
+              this.fetchSentAssignments();
+            })
+            .catch((err) => {
+              this.showToast(err.message || "Failed to update note", "error");
+            });
+        },
+
+        deleteSentAssignment(a) {
+          this.openConfirm("delete-assignment", a);
         },
 
         // ================= UTILITIES =================

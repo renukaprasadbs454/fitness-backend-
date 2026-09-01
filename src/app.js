@@ -44,12 +44,19 @@ app.use(
 app.use(
   cors({
     origin: (origin, callback) => {
+      // CORS only applies to browser requests, which always send an Origin
+      // header. Requests with no Origin (native mobile fetch, curl, health
+      // checks, server-to-server calls) aren't a CORS scenario at all and
+      // must always be let through, in every environment.
+      if (!origin) {
+        return callback(null, true);
+      }
+
       // Expo's web dev server picks whatever port is free (8081, 8082, ...),
       // so hardcoding one port in CORS_ALLOWED_ORIGINS breaks the moment it
       // picks a different one. In dev, allow any localhost/127.0.0.1 origin
       // regardless of port; production still enforces the explicit allowlist.
-      const isLocalhostDev =
-        env.nodeEnv !== "production" && (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin));
+      const isLocalhostDev = env.nodeEnv !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 
       if (isLocalhostDev || !env.corsAllowedOrigins.length || env.corsAllowedOrigins.includes(origin)) {
         return callback(null, true);

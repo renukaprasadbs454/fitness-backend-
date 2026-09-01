@@ -290,5 +290,6 @@ module.exports = {
   listSchedule,
   updateScheduleStatus,
   cancelSchedule,
-  toScheduleDto
+  toScheduleDto,
+  toPlanDto
 };

@@ -85,4 +85,13 @@ async function report(userId, { range = "weekly" } = {}) {
   };
 }
 
-module.exports = { logSteps, listSteps, report };
+async function listFeed(userId, query) {
+  const { page, limit, skip } = parsePagination(query);
+  const [items, total] = await Promise.all([
+    activityRepository.listActivityFeed(userId, { skip, take: limit }),
+    activityRepository.countActivityFeed(userId)
+  ]);
+  return { items, meta: buildMeta(page, limit, total) };
+}
+
+module.exports = { logSteps, listSteps, report, listFeed };

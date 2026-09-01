@@ -27,4 +27,23 @@ const schemas = require("../../validators/activity.validator");
  */
 router.get("/report", authenticate, validate(schemas.report), activityController.report);
 
+/**
+ * @swagger
+ * /activity/feed:
+ *   get:
+ *     summary: Full paginated activity feed (steps milestones, workouts, appointments, etc.)
+ *     tags: [Activity]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer }
+ *     responses:
+ *       200: { description: Activity feed retrieved }
+ */
+router.get("/feed", authenticate, validate(schemas.listFeed), activityController.listFeed);
+
 module.exports = router;

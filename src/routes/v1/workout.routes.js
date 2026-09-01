@@ -100,6 +100,18 @@ router.delete(
 
 /**
  * @swagger
+ * /workouts/assigned:
+ *   get:
+ *     summary: List catalog workout plans assigned to the current user by a coach
+ *     tags: [Workouts]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Assigned workouts retrieved }
+ */
+router.get("/assigned", authenticate, workoutController.listAssigned);
+
+/**
+ * @swagger
  * /workouts/exercises:
  *   get:
  *     summary: List the exercise library (paginated, searchable)

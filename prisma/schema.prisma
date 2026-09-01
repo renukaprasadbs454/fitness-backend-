@@ -108,6 +108,7 @@ enum ActivityType {
 
 enum NotificationType {
   WORKOUT_REMINDER
+  WORKOUT_ASSIGNED
   APPOINTMENT_REMINDER
   COACH_MESSAGE
   ANNOUNCEMENT
@@ -159,6 +160,9 @@ model User {
   notificationPreference NotificationPreference?
   contentPosts           ContentPost[]
   customWorkouts         CustomWorkout[]
+  assignedCustomWorkouts CustomWorkout[]         @relation("UserAssignedCustomWorkouts")
+  assignedWorkoutPlans   AssignedWorkoutPlan[]   @relation("AssignedWorkoutPlanRecipient")
+  workoutPlansAssigned   AssignedWorkoutPlan[]   @relation("AssignedWorkoutPlanAssigner")
   payments               Payment[]
 
   @@index([role])
@@ -420,6 +424,7 @@ model WorkoutPlan {
   exercises   WorkoutPlanExercise[]
   completions WorkoutCompletion[]
   schedules   ScheduledWorkout[]
+  assignments AssignedWorkoutPlan[]
 
   @@index([categoryKey])
   @@index([isActive, categoryKey, difficulty])
@@ -485,20 +490,25 @@ model ScheduledWorkout {
 // ────────────────────────────────────────────────────────────
 
 model CustomWorkout {
-  id              String              @id @default(uuid())
-  userId          String              @map("user_id")
-  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title           String
-  description     String?
-  durationMinutes Int?                @map("duration_minutes")
-  difficulty      WorkoutDifficulty?
-  categoryKey     WorkoutCategoryKey? @map("category_key")
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
+  id               String              @id @default(uuid())
+  userId           String              @map("user_id")
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  durationMinutes  Int?                @map("duration_minutes")
+  difficulty       WorkoutDifficulty?
+  categoryKey      WorkoutCategoryKey? @map("category_key")
+  // Set when another user builds this workout for the owner (userId) —
+  // null for workouts users author for themselves.
+  assignedByUserId String?             @map("assigned_by_user_id")
+  assignedByUser   User?               @relation("UserAssignedCustomWorkouts", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
 
   exercises CustomWorkoutExercise[]
 
   @@index([userId])
+  @@index([assignedByUserId])
   @@map("custom_workouts")
 }
 
@@ -515,6 +525,25 @@ model CustomWorkoutExercise {
 
   @@index([customWorkoutId])
   @@map("custom_workout_exercises")
+}
+
+// One user pushing an existing catalog WorkoutPlan to another user —
+// distinct from ScheduledWorkout (a user's own plan to do a workout).
+model AssignedWorkoutPlan {
+  id               String      @id @default(uuid())
+  userId           String      @map("user_id")
+  user             User        @relation("AssignedWorkoutPlanRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  assignedByUserId String      @map("assigned_by_user_id")
+  assignedByUser   User        @relation("AssignedWorkoutPlanAssigner", fields: [assignedByUserId], references: [id], onDelete: Cascade)
+  planId           String      @map("plan_id")
+  plan             WorkoutPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  note             String?
+  scheduledAt      DateTime?   @map("scheduled_at")
+  createdAt        DateTime    @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([assignedByUserId])
+  @@map("assigned_workout_plans")
 }
 
 // ────────────────────────────────────────────────────────────
