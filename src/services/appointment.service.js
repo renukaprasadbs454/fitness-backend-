@@ -4,18 +4,27 @@ const ApiError = require("../utils/ApiError");
 const activityFeed = require("./activityFeed.service");
 const { parsePagination, buildMeta } = require("../utils/pagination");
 
-const DAY_NAMES = [
-  "SUNDAY",
-  "MONDAY",
-  "TUESDAY",
-  "WEDNESDAY",
-  "THURSDAY",
-  "FRIDAY",
-  "SATURDAY"
-];
+// Coach availability ("09:00"-"17:00") is entered assuming IST, so it must be
+// read back in IST too — using the server's local timezone (Date#getHours /
+// Date#getDay) works only by coincidence on a machine already set to IST and
+// silently breaks once deployed to a host running in UTC (e.g. Render).
+const IST_TIME_ZONE = "Asia/Kolkata";
+
+function getIstParts(date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: IST_TIME_ZONE,
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(date);
+  const get = (type) => parts.find((p) => p.type === type)?.value;
+  const hour = get("hour") === "24" ? "00" : get("hour");
+  return { dayOfWeek: get("weekday").toUpperCase(), hhmm: `${hour}:${get("minute")}` };
+}
 
 function toHHMM(date) {
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  return getIstParts(date).hhmm;
 }
 
 async function assertNoConflict(coachId, scheduledAt, durationMinutes, excludeAppointmentId) {
@@ -23,7 +32,7 @@ async function assertNoConflict(coachId, scheduledAt, durationMinutes, excludeAp
   const endsAt = new Date(startsAt.getTime() + durationMinutes * 60000);
 
   // Availability check: coach must have an active slot covering this window.
-  const dayOfWeek = DAY_NAMES[startsAt.getDay()];
+  const dayOfWeek = getIstParts(startsAt).dayOfWeek;
   const slots = await coachRepository.listAvailability(coachId);
   const withinAvailability = slots.some(
     (s) =>
