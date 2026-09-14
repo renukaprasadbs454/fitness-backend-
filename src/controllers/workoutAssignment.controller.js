@@ -9,12 +9,20 @@ const searchUsers = asyncHandler(async (req, res) => {
 });
 
 const assignWorkoutPlan = asyncHandler(async (req, res) => {
-  const assignment = await assignedWorkoutService.assignPlan(req.user.id, { userId: req.params.userId, ...req.body });
+  const assignment = await assignedWorkoutService.assignPlan(
+    req.user.id,
+    { userId: req.params.userId, ...req.body },
+    req.user.role
+  );
   return ApiResponse.success(res, httpStatus.CREATED, "Workout assigned", assignment);
 });
 
 const assignCustomWorkout = asyncHandler(async (req, res) => {
-  const workout = await assignedWorkoutService.assignCustom(req.user.id, { userId: req.params.userId, ...req.body });
+  const workout = await assignedWorkoutService.assignCustom(
+    req.user.id,
+    { userId: req.params.userId, ...req.body },
+    req.user.role
+  );
   return ApiResponse.success(res, httpStatus.CREATED, "Workout assigned", workout);
 });
 

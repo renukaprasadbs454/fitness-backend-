@@ -2,6 +2,7 @@ const assignedWorkoutRepository = require("../repositories/assignedWorkout.repos
 const customWorkoutRepository = require("../repositories/customWorkout.repository");
 const workoutRepository = require("../repositories/workout.repository");
 const userRepository = require("../repositories/user.repository");
+const coachRepository = require("../repositories/coach.repository");
 const notificationService = require("./notification.service");
 const customWorkoutService = require("./customWorkout.service");
 const ApiError = require("../utils/ApiError");
@@ -12,6 +13,23 @@ async function requireUser(userId) {
   const user = await userRepository.findById(userId);
   if (!user) throw ApiError.notFound("User not found");
   return user;
+}
+
+// Lets an ADMIN attribute an assignment to a specific coach (the app then
+// shows the workout as "Personalised workout from <coach>") instead of it
+// always coming from the admin's own account. Only ADMIN may do this, and
+// only onto an actual COACH.
+async function resolveEffectiveAssigner(callerId, callerRole, asCoachUserId) {
+  if (!asCoachUserId) return callerId;
+
+  if (callerRole !== "ADMIN") {
+    throw ApiError.forbidden("Only an admin can assign a workout on behalf of a coach");
+  }
+
+  const coach = await coachRepository.findByUserId(asCoachUserId);
+  if (!coach) throw ApiError.notFound("Coach not found");
+
+  return asCoachUserId;
 }
 
 function toPlanAssignmentDto(assignment) {
@@ -55,7 +73,8 @@ async function searchUsers(currentUserId, search) {
   return results.filter((u) => u.id !== currentUserId);
 }
 
-async function assignPlan(assignedByUserId, { userId, planId, note, scheduledAt }) {
+async function assignPlan(callerId, { userId, planId, note, scheduledAt, asCoachUserId }, callerRole) {
+  const assignedByUserId = await resolveEffectiveAssigner(callerId, callerRole, asCoachUserId);
   if (userId === assignedByUserId) throw ApiError.badRequest("You can't assign a workout to yourself");
   await requireUser(userId);
 
@@ -65,6 +84,7 @@ async function assignPlan(assignedByUserId, { userId, planId, note, scheduledAt 
   const assignment = await assignedWorkoutRepository.createPlanAssignment({
     userId,
     assignedByUserId,
+    createdByUserId: callerId,
     planId,
     note,
     scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined
@@ -96,13 +116,15 @@ async function updateAssignedPlan(actingUserId, id, { note, scheduledAt }) {
   return toPlanAssignmentDto(updated);
 }
 
-async function assignCustom(assignedByUserId, { userId, ...workoutData }) {
+async function assignCustom(callerId, { userId, asCoachUserId, ...workoutData }, callerRole) {
+  const assignedByUserId = await resolveEffectiveAssigner(callerId, callerRole, asCoachUserId);
   if (userId === assignedByUserId) throw ApiError.badRequest("You can't assign a workout to yourself");
   await requireUser(userId);
 
   const workout = await customWorkoutRepository.create(userId, {
     ...workoutData,
-    assignedByUserId
+    assignedByUserId,
+    createdByUserId: callerId
   });
 
   await notificationService.notify(userId, "WORKOUT_ASSIGNED", "New workout assigned", `You were sent a new workout: "${workout.title}".`);
@@ -110,14 +132,14 @@ async function assignCustom(assignedByUserId, { userId, ...workoutData }) {
   return customWorkoutService.toDto(workout);
 }
 
-async function listMyAssignments(assignedByUserId, query) {
+async function listMyAssignments(callerId, query) {
   const { page, limit, skip } = parsePagination(query);
 
   const [planItems, planTotal, customItems, customTotal] = await Promise.all([
-    assignedWorkoutRepository.listPlanAssignmentsForAssigner(assignedByUserId, { skip, take: limit }),
-    assignedWorkoutRepository.countPlanAssignmentsForAssigner(assignedByUserId),
-    assignedWorkoutRepository.listCustomAssignedByUser(assignedByUserId, { skip, take: limit }),
-    assignedWorkoutRepository.countCustomAssignedByUser(assignedByUserId)
+    assignedWorkoutRepository.listPlanAssignmentsForAssigner(callerId, { skip, take: limit }),
+    assignedWorkoutRepository.countPlanAssignmentsForAssigner(callerId),
+    assignedWorkoutRepository.listCustomAssignedByUser(callerId, { skip, take: limit }),
+    assignedWorkoutRepository.countCustomAssignedByUser(callerId)
   ]);
 
   return {

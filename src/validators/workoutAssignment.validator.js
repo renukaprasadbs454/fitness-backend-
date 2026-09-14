@@ -16,7 +16,8 @@ const assignWorkoutPlan = {
   body: z.object({
     planId: z.string().uuid("Invalid workout plan id"),
     note: z.string().trim().max(500).optional(),
-    scheduledAt: z.string().datetime().optional()
+    scheduledAt: z.string().datetime().optional(),
+    asCoachUserId: z.string().uuid("Invalid coach id").optional()
   })
 };
 
@@ -36,7 +37,8 @@ const assignCustomWorkout = {
     durationMinutes: z.number().int().positive().max(300).optional(),
     difficulty: z.enum(DIFFICULTIES).optional(),
     categoryKey: z.enum(CATEGORY_KEYS).optional(),
-    exercises: z.array(assignCustomWorkoutExercise).max(50).optional()
+    exercises: z.array(assignCustomWorkoutExercise).max(50).optional(),
+    asCoachUserId: z.string().uuid("Invalid coach id").optional()
   })
 };
 
