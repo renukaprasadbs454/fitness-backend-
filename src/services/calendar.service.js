@@ -1,10 +1,15 @@
 const appointmentRepository = require("../repositories/appointment.repository");
 const workoutRepository = require("../repositories/workout.repository");
+const googleCalendarService = require("./googleCalendar.service");
 
 async function upcoming(userId) {
-  const [appointments, scheduledWorkouts] = await Promise.all([
+  // googleCalendarService.upcomingEvents() always resolves (never rejects) —
+  // no connection or a Google API hiccup both just yield [], so the internal
+  // calendar stays usable regardless of Google Calendar's state.
+  const [appointments, scheduledWorkouts, googleEvents] = await Promise.all([
     appointmentRepository.upcomingForUser(userId, 20),
-    workoutRepository.upcomingScheduleForUser(userId, 20)
+    workoutRepository.upcomingScheduleForUser(userId, 20),
+    googleCalendarService.upcomingEvents(userId, 20)
   ]);
 
   const appointmentItems = appointments.map((a) => ({
@@ -27,7 +32,7 @@ async function upcoming(userId) {
     status: w.status
   }));
 
-  return [...appointmentItems, ...workoutItems]
+  return [...appointmentItems, ...workoutItems, ...googleEvents]
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
     .slice(0, 20);
 }

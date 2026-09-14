@@ -72,14 +72,30 @@ const env = {
   },
 
   email: {
-    resendApiKey: process.env.RESEND_API_KEY || "",
-    fromAddress: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"
+    smtpHost: process.env.SMTP_HOST || "",
+    smtpPort: parseInt(process.env.SMTP_PORT || "587", 10),
+    smtpUser: process.env.SMTP_USER || "",
+    smtpPass: process.env.SMTP_PASS || "",
+    fromAddress: process.env.EMAIL_FROM || "onboarding@example.com"
   },
 
   logLevel: process.env.LOG_LEVEL || "info",
 
   firebase: {
     serviceAccountBase64: process.env.FCM_SERVICE_ACCOUNT_BASE64 || ""
+  },
+
+  google: {
+    androidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID || "",
+    iosClientId: process.env.GOOGLE_IOS_CLIENT_ID || "",
+    webClientId: process.env.GOOGLE_WEB_CLIENT_ID || "",
+    // Only the Web client type is issued a secret by Google; Android/iOS
+    // clients are public and rely on PKCE instead. Leave unset unless the
+    // Web client is actually used for the exchange.
+    webClientSecret: process.env.GOOGLE_WEB_CLIENT_SECRET || "",
+    scopes: process.env.GOOGLE_CALENDAR_SCOPES || "https://www.googleapis.com/auth/calendar.readonly",
+    // 32-byte key, hex-encoded (64 hex chars) — generate with `openssl rand -hex 32`.
+    tokenEncryptionKey: process.env.GOOGLE_TOKEN_ENCRYPTION_KEY || ""
   },
 
   cron: {

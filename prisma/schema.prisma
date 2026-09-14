@@ -127,6 +127,7 @@ enum DevicePlatform {
 model User {
   id              String    @id @default(uuid())
   email           String    @unique
+  username        String    @unique
   phone           String?   @unique
   passwordHash    String    @map("password_hash")
   fullName        String    @map("full_name")
@@ -143,30 +144,51 @@ model User {
   otpCodes      OtpCode[]
   media         Media[]
 
-  bmiLogs                BmiLog[]
-  calorieLogs            CalorieLog[]
-  stepLogs               StepLog[]
-  activityLogs           ActivityLog[]
-  weightLogs             WeightLog[]
-  bodyMeasurements       BodyMeasurement[]
-  workoutCompletions     WorkoutCompletion[]
-  scheduledWorkouts      ScheduledWorkout[]
-  appointments           Appointment[]
-  notifications          Notification[]
-  deviceTokens           DeviceToken[]
-  adminAuditLogs         AdminAuditLog[]
-  chatRoomsAsUser        ChatRoom[]              @relation("ChatRoomsAsUser")
-  chatMessagesSent       ChatMessage[]           @relation("ChatMessagesSent")
-  notificationPreference NotificationPreference?
-  contentPosts           ContentPost[]
-  customWorkouts         CustomWorkout[]
-  assignedCustomWorkouts CustomWorkout[]         @relation("UserAssignedCustomWorkouts")
-  assignedWorkoutPlans   AssignedWorkoutPlan[]   @relation("AssignedWorkoutPlanRecipient")
-  workoutPlansAssigned   AssignedWorkoutPlan[]   @relation("AssignedWorkoutPlanAssigner")
-  payments               Payment[]
+  bmiLogs                  BmiLog[]
+  calorieLogs              CalorieLog[]
+  stepLogs                 StepLog[]
+  activityLogs             ActivityLog[]
+  weightLogs               WeightLog[]
+  bodyMeasurements         BodyMeasurement[]
+  workoutCompletions       WorkoutCompletion[]
+  scheduledWorkouts        ScheduledWorkout[]
+  appointments             Appointment[]
+  notifications            Notification[]
+  deviceTokens             DeviceToken[]
+  adminAuditLogs           AdminAuditLog[]
+  chatRoomsAsUser          ChatRoom[]                @relation("ChatRoomsAsUser")
+  chatMessagesSent         ChatMessage[]             @relation("ChatMessagesSent")
+  notificationPreference   NotificationPreference?
+  contentPosts             ContentPost[]
+  customWorkouts           CustomWorkout[]
+  assignedCustomWorkouts   CustomWorkout[]           @relation("UserAssignedCustomWorkouts")
+  createdCustomWorkouts    CustomWorkout[]           @relation("UserCreatedCustomWorkouts")
+  assignedWorkoutPlans     AssignedWorkoutPlan[]     @relation("AssignedWorkoutPlanRecipient")
+  workoutPlansAssigned     AssignedWorkoutPlan[]     @relation("AssignedWorkoutPlanAssigner")
+  workoutPlansCreated      AssignedWorkoutPlan[]     @relation("AssignedWorkoutPlanCreator")
+  payments                 Payment[]
+  googleCalendarConnection GoogleCalendarConnection?
 
   @@index([role])
   @@map("users")
+}
+
+model GoogleCalendarConnection {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  googleAccountId String?   @map("google_account_id")
+  accessToken     String?   @map("access_token")
+  refreshToken    String?   @map("refresh_token")
+  expiresAt       DateTime? @map("expires_at")
+  scope           String?
+  tokenType       String?   @map("token_type")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("google_calendar_connections")
 }
 
 model RefreshToken {
@@ -499,9 +521,13 @@ model CustomWorkout {
   difficulty       WorkoutDifficulty?
   categoryKey      WorkoutCategoryKey? @map("category_key")
   // Set when another user builds this workout for the owner (userId) —
-  // null for workouts users author for themselves.
+  // null for workouts users author for themselves. When an admin sends this
+  // "as" a coach, this holds the coach's id (for attribution to the owner),
+  // while createdByUserId holds the admin's own id (who actually sent it).
   assignedByUserId String?             @map("assigned_by_user_id")
   assignedByUser   User?               @relation("UserAssignedCustomWorkouts", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+  createdByUserId  String?             @map("created_by_user_id")
+  createdByUser    User?               @relation("UserCreatedCustomWorkouts", fields: [createdByUserId], references: [id], onDelete: SetNull)
   createdAt        DateTime            @default(now()) @map("created_at")
   updatedAt        DateTime            @updatedAt @map("updated_at")
 
@@ -509,6 +535,7 @@ model CustomWorkout {
 
   @@index([userId])
   @@index([assignedByUserId])
+  @@index([createdByUserId])
   @@map("custom_workouts")
 }
 
@@ -535,6 +562,11 @@ model AssignedWorkoutPlan {
   user             User        @relation("AssignedWorkoutPlanRecipient", fields: [userId], references: [id], onDelete: Cascade)
   assignedByUserId String      @map("assigned_by_user_id")
   assignedByUser   User        @relation("AssignedWorkoutPlanAssigner", fields: [assignedByUserId], references: [id], onDelete: Cascade)
+  // Who actually sent this — equals assignedByUserId, except when an admin
+  // sends it "as" a coach, in which case assignedByUserId is the coach
+  // (shown to the recipient) and this is the admin who really did it.
+  createdByUserId  String?     @map("created_by_user_id")
+  createdByUser    User?       @relation("AssignedWorkoutPlanCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   planId           String      @map("plan_id")
   plan             WorkoutPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   note             String?
@@ -543,6 +575,7 @@ model AssignedWorkoutPlan {
 
   @@index([userId])
   @@index([assignedByUserId])
+  @@index([createdByUserId])
   @@map("assigned_workout_plans")
 }
 
