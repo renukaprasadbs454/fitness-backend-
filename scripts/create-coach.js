@@ -11,6 +11,7 @@
 require("dotenv").config();
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcrypt");
+const { generateUniqueUsername } = require("../src/utils/username");
 
 const prisma = new PrismaClient();
 
@@ -29,11 +30,13 @@ async function main() {
 
   const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS) || 12;
   const passwordHash = await bcrypt.hash(COACH_PASSWORD, saltRounds);
+  const username = await generateUniqueUsername(COACH_EMAIL);
 
   const user = await prisma.user.create({
     data: {
       fullName:        COACH_NAME,
       email:           COACH_EMAIL,
+      username,
       passwordHash,
       role:            "COACH",
       isActive:        true,

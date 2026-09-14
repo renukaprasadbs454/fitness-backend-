@@ -1,4 +1,5 @@
 const { z } = require("zod");
+const { usernameSchema } = require("./user.validator");
 
 const idParam = { params: z.object({ id: z.string().uuid() }) };
 
@@ -9,7 +10,7 @@ const listUsers = {
     search: z.string().trim().max(150).optional(),
     role: z.enum(["USER", "COACH", "ADMIN"]).optional(),
     isActive: z.coerce.boolean().optional(),
-    sortBy: z.enum(["createdAt", "fullName", "lastLoginAt"]).optional().default("createdAt"),
+    sortBy: z.enum(["createdAt", "fullName", "username", "lastLoginAt"]).optional().default("createdAt"),
     sortOrder: z.enum(["asc", "desc"]).optional().default("desc")
   })
 };
@@ -19,6 +20,7 @@ const updateUser = {
   body: z.object({
     fullName: z.string().trim().min(2).max(120).optional(),
     email: z.string().email().optional(),
+    username: usernameSchema.optional(),
     phone: z.string().trim().min(7).max(20).optional()
   })
 };

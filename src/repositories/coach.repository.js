@@ -6,13 +6,13 @@ const coachRepository = {
   findByUserId: (userId) =>
     prisma.coach.findUnique({
       where: { userId },
-      include: { user: { select: { fullName: true, email: true } }, availability: true }
+      include: { user: { select: { fullName: true, username: true, email: true } }, availability: true }
     }),
 
   findById: (id) =>
     prisma.coach.findUnique({
       where: { id },
-      include: { user: { select: { fullName: true, email: true } }, availability: true }
+      include: { user: { select: { fullName: true, username: true, email: true } }, availability: true }
     }),
 
   update: (id, data) => prisma.coach.update({ where: { id }, data }),
@@ -22,7 +22,7 @@ const coachRepository = {
   list: ({ skip, take, specialty, sortBy, sortOrder }) =>
     prisma.coach.findMany({
       where: specialty ? { specialties: { has: specialty } } : undefined,
-      include: { user: { select: { fullName: true, email: true } }, availability: true },
+      include: { user: { select: { fullName: true, username: true, email: true } }, availability: true },
       skip,
       take,
       orderBy: { [sortBy]: sortOrder }
@@ -54,7 +54,7 @@ const coachRepository = {
   listAppointmentsForCoach: (coachId, { skip, take, status }) =>
     prisma.appointment.findMany({
       where: { coachId, status: status || undefined },
-      include: { user: { select: { id: true, fullName: true, email: true } } },
+      include: { user: { select: { id: true, fullName: true, username: true, email: true } } },
       orderBy: { scheduledAt: "desc" },
       skip,
       take
@@ -71,11 +71,14 @@ const coachRepository = {
             OR: [
               { user: { fullName: { contains: search, mode: "insensitive" } } },
               { user: { email: { contains: search, mode: "insensitive" } } },
+              { user: { username: { contains: search, mode: "insensitive" } } },
               { specialties: { has: search } }
             ]
           }
         : undefined,
-      include: { user: { select: { id: true, fullName: true, email: true, isActive: true, role: true } } },
+      include: {
+        user: { select: { id: true, fullName: true, username: true, email: true, isActive: true, role: true } }
+      },
       skip,
       take,
       orderBy: { [sortBy]: sortOrder }
@@ -88,6 +91,7 @@ const coachRepository = {
             OR: [
               { user: { fullName: { contains: search, mode: "insensitive" } } },
               { user: { email: { contains: search, mode: "insensitive" } } },
+              { user: { username: { contains: search, mode: "insensitive" } } },
               { specialties: { has: search } }
             ]
           }

@@ -58,6 +58,14 @@ async function getUserById(id) {
 async function updateUser(adminId, id, data) {
   const existing = await userRepository.findById(id);
   if (!existing) throw ApiError.notFound("User not found");
+
+  if (data.username) {
+    const usernameOwner = await userRepository.findByUsername(data.username);
+    if (usernameOwner && usernameOwner.id !== id) {
+      throw ApiError.conflict("Username is already taken");
+    }
+  }
+
   const updated = await userRepository.updateBasicInfo(id, data);
   await adminRepository.createAuditLog(adminId, "UPDATE_USER", "USER", id, data);
   return updated;

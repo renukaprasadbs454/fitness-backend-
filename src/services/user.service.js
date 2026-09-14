@@ -10,11 +10,21 @@ async function getMe(userId) {
 }
 
 async function updateProfile(userId, data) {
-  const { fullName, ...profileFields } = data;
+  const { fullName, username, ...profileFields } = data;
 
-  if (fullName) {
+  if (username) {
+    const existing = await userRepository.findByUsername(username);
+    if (existing && existing.id !== userId) {
+      throw ApiError.conflict("Username is already taken");
+    }
+  }
+
+  if (fullName || username) {
     const prisma = require("../database/prismaClient");
-    await prisma.user.update({ where: { id: userId }, data: { fullName } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { ...(fullName ? { fullName } : {}), ...(username ? { username } : {}) }
+    });
   }
 
   if (Object.keys(profileFields).length === 0) {

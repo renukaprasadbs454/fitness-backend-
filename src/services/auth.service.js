@@ -3,6 +3,7 @@ const otpRepository = require("../repositories/otp.repository");
 const tokenRepository = require("../repositories/token.repository");
 const coachRepository = require("../repositories/coach.repository");
 const tokenService = require("./token.service");
+const { generateUniqueUsername } = require("../utils/username");
 const { hashPassword, comparePassword, generateOtpCode, hashToken } = require("../utils/password");
 const { sendEmail } = require("../utils/email");
 const ApiError = require("../utils/ApiError");
@@ -81,7 +82,8 @@ async function register({ fullName, email, phone, password, role }) {
   }
 
   const passwordHash = await hashPassword(password);
-  const user = await userRepository.create({ fullName, email, phone, passwordHash, role });
+  const username = await generateUniqueUsername(email);
+  const user = await userRepository.create({ fullName, email, phone, passwordHash, role, username });
   await userRepository.createProfile(user.id, {});
 
   if (role === "COACH") {
