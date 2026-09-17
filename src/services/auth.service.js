@@ -40,7 +40,7 @@ async function issueOtp(userId, purpose, email) {
   logger.info(`[otp] (dev) ${purpose} OTP for ${email}: ${code}`);
 
   const copy = OTP_EMAIL_COPY[purpose];
-  await sendEmail({
+  const delivery = await sendEmail({
     to: email,
     subject: copy.subject,
     html: `
@@ -52,6 +52,14 @@ async function issueOtp(userId, purpose, email) {
       </div>
     `
   });
+
+  // sendEmail() is best-effort and resolves { sent: false } on any SMTP failure.
+  // Outside production that is fine — the code is logged above and returned in the
+  // API response — but in production a caller must never be told a code was sent
+  // when it wasn't, or the user waits forever for an email that never arrives.
+  if (!delivery.sent && env.nodeEnv === "production") {
+    throw ApiError.internal("We couldn't send your verification email. Please try again in a moment.");
+  }
 
   return code;
 }

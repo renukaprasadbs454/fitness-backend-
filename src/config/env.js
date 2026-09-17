@@ -11,6 +11,19 @@ function required(key, fallback = undefined) {
   return value;
 }
 
+/**
+ * Builds the Nodemailer "from" header. SMTP_FROM_NAME is optional; when set the
+ * address becomes `FitNerve <account@gmail.com>`. Gmail rewrites the address to
+ * the authenticated account anyway, so the sender name is the only part that
+ * actually varies.
+ */
+function buildFromAddress() {
+  const address = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || "";
+  const name = process.env.SMTP_FROM_NAME || "";
+  if (!address) return "onboarding@example.com";
+  return name ? `${name} <${address}>` : address;
+}
+
 const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: parseInt(process.env.PORT || "4000", 10),
@@ -75,8 +88,11 @@ const env = {
     smtpHost: process.env.SMTP_HOST || "",
     smtpPort: parseInt(process.env.SMTP_PORT || "587", 10),
     smtpUser: process.env.SMTP_USER || "",
-    smtpPass: process.env.SMTP_PASS || "",
-    fromAddress: process.env.EMAIL_FROM || "onboarding@example.com"
+    // SMTP_PASSWORD / SMTP_FROM_EMAIL are the names used in .env; the shorter
+    // SMTP_PASS / EMAIL_FROM are accepted too so existing deployments that set
+    // either spelling keep working.
+    smtpPass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD || "",
+    fromAddress: buildFromAddress()
   },
 
   google: {
