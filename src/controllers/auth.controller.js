@@ -50,6 +50,11 @@ const forgotPassword = asyncHandler(async (req, res) => {
   );
 });
 
+const verifyResetCode = asyncHandler(async (req, res) => {
+  await authService.verifyResetCode(req.body);
+  return ApiResponse.success(res, httpStatus.OK, "Code verified", null);
+});
+
 const resetPassword = asyncHandler(async (req, res) => {
   await authService.resetPassword(req.body);
   return ApiResponse.success(res, httpStatus.OK, "Password has been reset successfully", null);
@@ -63,5 +68,6 @@ module.exports = {
   refresh,
   logout,
   forgotPassword,
+  verifyResetCode,
   resetPassword
 };

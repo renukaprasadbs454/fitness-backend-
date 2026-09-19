@@ -41,7 +41,7 @@ async function issueOtp(userId, purpose, email) {
   logger.info(`[otp] (dev) ${purpose} OTP for ${email}: ${code}`);
 
   const copy = OTP_EMAIL_COPY[purpose];
-  await sendEmail({
+  const delivery = await sendEmail({
     to: email,
     subject: copy.subject,
     html: `
@@ -54,10 +54,27 @@ async function issueOtp(userId, purpose, email) {
     `
   });
 
+  // sendEmail() is best-effort and resolves { sent: false } on any SMTP failure.
+  // Outside production that is fine — the code is logged above and returned in the
+  // API response — but in production a caller must never be told a code was sent
+  // when it wasn't, or the user waits forever for an email that never arrives.
+  if (!delivery.sent && env.nodeEnv === "production" && !env.otp.bypassCode) {
+    throw ApiError.internal("We couldn't send your verification email. Please try again in a moment.");
+  }
+
   return code;
 }
 
+function isBypassCode(code) {
+  return Boolean(env.otp.bypassCode) && code === env.otp.bypassCode;
+}
+
 async function consumeOtp(userId, purpose, code) {
+  if (isBypassCode(code)) {
+    await otpRepository.invalidateActive(userId, purpose);
+    return;
+  }
+
   const record = await otpRepository.findValidOtpCode(userId, purpose);
   if (!record) throw ApiError.badRequest("OTP is invalid or has expired");
   if (record.attempts >= env.otp.maxAttempts) {
@@ -145,11 +162,30 @@ async function logout(refreshToken) {
 
 async function forgotPassword(email) {
   const user = await userRepository.findByEmail(email);
-  // Always respond success-shaped to avoid leaking which emails are registered.
-  if (!user) return;
+  // Deliberately tells the caller when no account exists, so the app can say so
+  // instead of sending them to a code screen that can never succeed.
+  if (!user) throw ApiError.notFound("No account found with this email.");
 
   const otpCode = await issueOtp(user.id, "PASSWORD_RESET", email);
   return { otpCode }; // returned only for dev/testing convenience
+}
+
+/** Checks a password-reset code without consuming it, so the app can gate the new-password screen. */
+async function verifyResetCode({ email, code }) {
+  const user = await userRepository.findByEmail(email);
+  if (!user) throw ApiError.badRequest("OTP is invalid or has expired");
+  if (isBypassCode(code)) return;
+
+  const record = await otpRepository.findValidOtpCode(user.id, "PASSWORD_RESET");
+  if (!record) throw ApiError.badRequest("OTP is invalid or has expired");
+  if (record.attempts >= env.otp.maxAttempts) {
+    throw ApiError.badRequest("Too many incorrect attempts. Please request a new code.");
+  }
+
+  if (hashToken(code) !== record.codeHash) {
+    await otpRepository.incrementAttempts(record.id);
+    throw ApiError.badRequest("Invalid or expired verification code");
+  }
 }
 
 async function resetPassword({ email, code, newPassword }) {
@@ -171,6 +207,7 @@ module.exports = {
   refresh,
   logout,
   forgotPassword,
+  verifyResetCode,
   resetPassword,
   sanitizeUser
 };
