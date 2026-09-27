@@ -47,9 +47,6 @@ const coachRepository = {
   listAvailability: (coachId) =>
     prisma.coachAvailability.findMany({ where: { coachId }, orderBy: { dayOfWeek: "asc" } }),
 
-  deleteAvailabilitySlot: (id, coachId) =>
-    prisma.coachAvailability.deleteMany({ where: { id, coachId } }),
-
   // ── Appointments booked with this coach (as the coach, not the booker) ──
   listAppointmentsForCoach: (coachId, { skip, take, status }) =>
     prisma.appointment.findMany({

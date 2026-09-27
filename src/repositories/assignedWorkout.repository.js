@@ -13,9 +13,6 @@ const assignedWorkoutRepository = {
       include: planInclude
     }),
 
-  findPlanAssignmentByIdForAssigner: (id, assignedByUserId) =>
-    prisma.assignedWorkoutPlan.findFirst({ where: { id, assignedByUserId }, include: planInclude }),
-
   // Either side of the assignment — the sender (or whoever actually sent it,
   // if attributed to a coach), or the recipient — counts as a party to it,
   // so they can all view/modify/delete it.

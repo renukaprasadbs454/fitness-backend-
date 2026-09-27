@@ -122,11 +122,6 @@ const userRepository = {
     return users.map((u) => u.id);
   },
 
-  countCreatedBetween: (from, to) =>
-    prisma.user.count({ where: { createdAt: { gte: from, lt: to } } }),
-
-  countByRoleActive: (role) => prisma.user.count({ where: { role, isActive: true } }),
-
   // ── Coach: lightweight client picker (name/email only, no sensitive fields) ──
   searchLite: ({ search, take = 20 }) =>
     prisma.user.findMany({

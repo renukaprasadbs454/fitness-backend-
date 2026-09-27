@@ -1,7 +1,5 @@
 const userRepository = require("../repositories/user.repository");
 
-const USERNAME_REGEX = /^[a-z0-9_.]+$/;
-
 // Instagram-style handle derived from the email local-part (before the @):
 // lowercased, stripped to [a-z0-9_.], falling back to "user" if that leaves
 // nothing (e.g. an email starting with only symbols).
@@ -27,4 +25,4 @@ async function generateUniqueUsername(email) {
   return candidate;
 }
 
-module.exports = { generateUniqueUsername, baseUsernameFromEmail, USERNAME_REGEX };
+module.exports = { generateUniqueUsername, baseUsernameFromEmail };
