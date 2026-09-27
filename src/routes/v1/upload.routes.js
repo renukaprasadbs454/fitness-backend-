@@ -50,6 +50,18 @@ router.get("/", authenticate, uploadController.listMyMedia);
 
 /**
  * @swagger
+ * /uploads/profile-image:
+ *   delete:
+ *     summary: Remove the current user's profile image (deletes all stored PROFILE_IMAGE media and clears it from the profile)
+ *     tags: [Uploads]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Profile image removed }
+ */
+router.delete("/profile-image", authenticate, uploadController.deleteProfileImage);
+
+/**
+ * @swagger
  * /uploads/{id}:
  *   delete:
  *     summary: Delete an uploaded media item

@@ -26,4 +26,9 @@ const deleteMedia = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Media deleted", null);
 });
 
-module.exports = { uploadImage, listMyMedia, deleteMedia };
+const deleteProfileImage = asyncHandler(async (req, res) => {
+  const profile = await mediaService.removeProfileImage(req.user.id);
+  return ApiResponse.success(res, httpStatus.OK, "Profile image removed", profile);
+});
+
+module.exports = { uploadImage, listMyMedia, deleteMedia, deleteProfileImage };

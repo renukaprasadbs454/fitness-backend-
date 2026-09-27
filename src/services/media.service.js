@@ -53,4 +53,17 @@ async function deleteMedia(userId, mediaId) {
   await mediaRepository.delete(mediaId);
 }
 
-module.exports = { uploadImage, listMyMedia, deleteMedia };
+async function removeProfileImage(userId) {
+  const uploadedImages = await mediaRepository.listByUser(userId, "PROFILE_IMAGE");
+
+  await Promise.all(
+    uploadedImages.map(async (media) => {
+      await deleteFile(media.storageKey);
+      await mediaRepository.delete(media.id);
+    })
+  );
+
+  return userRepository.upsertProfile(userId, { profileImageUrl: null });
+}
+
+module.exports = { uploadImage, listMyMedia, deleteMedia, removeProfileImage };
