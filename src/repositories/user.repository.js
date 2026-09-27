@@ -5,6 +5,8 @@ const userRepository = {
 
   findByPhone: (phone) => prisma.user.findUnique({ where: { phone } }),
 
+  findByUsername: (username) => prisma.user.findUnique({ where: { username } }),
+
   findById: (id) => prisma.user.findUnique({ where: { id } }),
 
   findByIdWithProfile: (id) =>
@@ -40,7 +42,8 @@ const userRepository = {
               OR: [
                 { fullName: { contains: search, mode: "insensitive" } },
                 { email: { contains: search, mode: "insensitive" } },
-                { phone: { contains: search, mode: "insensitive" } }
+                { phone: { contains: search, mode: "insensitive" } },
+                { username: { contains: search, mode: "insensitive" } }
               ]
             }
           : {})
@@ -48,6 +51,7 @@ const userRepository = {
       select: {
         id: true,
         email: true,
+        username: true,
         phone: true,
         fullName: true,
         role: true,
@@ -71,7 +75,8 @@ const userRepository = {
               OR: [
                 { fullName: { contains: search, mode: "insensitive" } },
                 { email: { contains: search, mode: "insensitive" } },
-                { phone: { contains: search, mode: "insensitive" } }
+                { phone: { contains: search, mode: "insensitive" } },
+                { username: { contains: search, mode: "insensitive" } }
               ]
             }
           : {})
@@ -88,7 +93,7 @@ const userRepository = {
     prisma.user.update({
       where: { id },
       data,
-      select: { id: true, fullName: true, email: true, phone: true }
+      select: { id: true, fullName: true, email: true, username: true, phone: true }
     }),
 
   deleteById: (id) => prisma.user.delete({ where: { id } }),
@@ -106,7 +111,7 @@ const userRepository = {
     prisma.user.findMany({
       orderBy: { createdAt: "desc" },
       take,
-      select: { id: true, fullName: true, email: true, role: true, createdAt: true }
+      select: { id: true, fullName: true, email: true, username: true, role: true, createdAt: true }
     }),
 
   listActiveUserIdsByRole: async (role) => {
@@ -117,11 +122,6 @@ const userRepository = {
     return users.map((u) => u.id);
   },
 
-  countCreatedBetween: (from, to) =>
-    prisma.user.count({ where: { createdAt: { gte: from, lt: to } } }),
-
-  countByRoleActive: (role) => prisma.user.count({ where: { role, isActive: true } }),
-
   // ── Coach: lightweight client picker (name/email only, no sensitive fields) ──
   searchLite: ({ search, take = 20 }) =>
     prisma.user.findMany({
@@ -129,11 +129,12 @@ const userRepository = {
         ? {
             OR: [
               { fullName: { contains: search, mode: "insensitive" } },
-              { email: { contains: search, mode: "insensitive" } }
+              { email: { contains: search, mode: "insensitive" } },
+              { username: { contains: search, mode: "insensitive" } }
             ]
           }
         : undefined,
-      select: { id: true, fullName: true, email: true, role: true },
+      select: { id: true, fullName: true, email: true, username: true, role: true },
       take,
       orderBy: { fullName: "asc" }
     })

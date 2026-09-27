@@ -1,5 +1,18 @@
 require("dotenv").config();
 
+/**
+ * Builds the Nodemailer "from" header. SMTP_FROM_NAME is optional; when set the
+ * address becomes `FitNerve <account@gmail.com>`. Gmail rewrites the address to
+ * the authenticated account anyway, so the sender name is the only part that
+ * actually varies.
+ */
+function buildFromAddress() {
+  const address = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || "";
+  const name = process.env.SMTP_FROM_NAME || "";
+  if (!address) return "onboarding@example.com";
+  return name ? `${name} <${address}>` : address;
+}
+
 function required(key, fallback = undefined) {
   const value = process.env[key] ?? fallback;
   if (value === undefined) {
@@ -32,7 +45,10 @@ const env = {
 
   otp: {
     expiresMin: parseInt(process.env.OTP_EXPIRES_MIN || "10", 10),
-    maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || "5", 10)
+    maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || "5", 10),
+    // TEMPORARY escape hatch: when set, this code is accepted for ANY account in
+    // place of the emailed one. Leave unset (the default) to disable it.
+    bypassCode: (process.env.OTP_BYPASS_CODE || "").trim()
   },
 
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || "12", 10),
@@ -72,14 +88,33 @@ const env = {
   },
 
   email: {
-    resendApiKey: process.env.RESEND_API_KEY || "",
-    fromAddress: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"
+    smtpHost: process.env.SMTP_HOST || "",
+    smtpPort: parseInt(process.env.SMTP_PORT || "587", 10),
+    smtpUser: process.env.SMTP_USER || "",
+    // SMTP_PASSWORD / SMTP_FROM_EMAIL are the names used in .env; the shorter
+    // SMTP_PASS / EMAIL_FROM are accepted too so existing deployments that set
+    // either spelling keep working.
+    smtpPass: process.env.SMTP_PASS || process.env.SMTP_PASSWORD || "",
+    fromAddress: buildFromAddress()
   },
 
   logLevel: process.env.LOG_LEVEL || "info",
 
   firebase: {
     serviceAccountBase64: process.env.FCM_SERVICE_ACCOUNT_BASE64 || ""
+  },
+
+  google: {
+    androidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID || "",
+    iosClientId: process.env.GOOGLE_IOS_CLIENT_ID || "",
+    webClientId: process.env.GOOGLE_WEB_CLIENT_ID || "",
+    // Only the Web client type is issued a secret by Google; Android/iOS
+    // clients are public and rely on PKCE instead. Leave unset unless the
+    // Web client is actually used for the exchange.
+    webClientSecret: process.env.GOOGLE_WEB_CLIENT_SECRET || "",
+    scopes: process.env.GOOGLE_CALENDAR_SCOPES || "https://www.googleapis.com/auth/calendar.readonly",
+    // 32-byte key, hex-encoded (64 hex chars) — generate with `openssl rand -hex 32`.
+    tokenEncryptionKey: process.env.GOOGLE_TOKEN_ENCRYPTION_KEY || ""
   },
 
   cron: {

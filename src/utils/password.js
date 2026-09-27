@@ -10,13 +10,6 @@ async function comparePassword(plain, hash) {
   return bcrypt.compare(plain, hash);
 }
 
-/** Generates a URL-safe random token and its SHA-256 hash (for storing reset tokens). */
-function generateResetToken() {
-  const rawToken = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-  return { rawToken, tokenHash };
-}
-
 function hashToken(rawToken) {
   return crypto.createHash("sha256").update(rawToken).digest("hex");
 }
@@ -28,4 +21,4 @@ function generateOtpCode() {
   return { code, codeHash };
 }
 
-module.exports = { hashPassword, comparePassword, generateResetToken, hashToken, generateOtpCode };
+module.exports = { hashPassword, comparePassword, hashToken, generateOtpCode };

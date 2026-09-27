@@ -9,9 +9,6 @@ const progressRepository = {
       orderBy: { loggedAt: "asc" }
     }),
 
-  latestWeightLog: (userId) =>
-    prisma.weightLog.findFirst({ where: { userId }, orderBy: { loggedAt: "desc" } }),
-
   createMeasurement: (userId, data) =>
     prisma.bodyMeasurement.create({ data: { userId, ...data } }),
 

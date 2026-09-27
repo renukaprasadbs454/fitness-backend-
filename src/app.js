@@ -16,6 +16,13 @@ const { errorHandler, notFoundHandler } = require("./middlewares/error.middlewar
 
 const app = express();
 
+// Render (and most PaaS hosts) terminate TLS at a reverse proxy in front of
+// this app. Without this, Express's req.ip resolves to that proxy's address
+// for every request regardless of who actually sent it — so express-rate-limit
+// below ends up rate-limiting all users combined as if they were one client,
+// instead of per real client IP (read from X-Forwarded-For).
+app.set("trust proxy", 1);
+
 // ── Security & parsing ──────────────────────────────────
 app.use(
   helmet({

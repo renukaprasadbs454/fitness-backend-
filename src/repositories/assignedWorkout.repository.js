@@ -7,20 +7,21 @@ const planInclude = {
 };
 
 const assignedWorkoutRepository = {
-  createPlanAssignment: ({ userId, assignedByUserId, planId, note, scheduledAt }) =>
+  createPlanAssignment: ({ userId, assignedByUserId, createdByUserId, planId, note, scheduledAt }) =>
     prisma.assignedWorkoutPlan.create({
-      data: { userId, assignedByUserId, planId, note, scheduledAt },
+      data: { userId, assignedByUserId, createdByUserId, planId, note, scheduledAt },
       include: planInclude
     }),
 
-  findPlanAssignmentByIdForAssigner: (id, assignedByUserId) =>
-    prisma.assignedWorkoutPlan.findFirst({ where: { id, assignedByUserId }, include: planInclude }),
-
-  // Either side of the assignment — the sender or the recipient — counts as
-  // a party to it, so they can both view/modify/delete it.
+  // Either side of the assignment — the sender (or whoever actually sent it,
+  // if attributed to a coach), or the recipient — counts as a party to it,
+  // so they can all view/modify/delete it.
   findPlanAssignmentByIdForParty: (id, partyUserId) =>
     prisma.assignedWorkoutPlan.findFirst({
-      where: { id, OR: [{ assignedByUserId: partyUserId }, { userId: partyUserId }] },
+      where: {
+        id,
+        OR: [{ assignedByUserId: partyUserId }, { createdByUserId: partyUserId }, { userId: partyUserId }]
+      },
       include: planInclude
     }),
 
@@ -33,16 +34,22 @@ const assignedWorkoutRepository = {
 
   deletePlanAssignment: (id) => prisma.assignedWorkoutPlan.delete({ where: { id } }),
 
-  listPlanAssignmentsForAssigner: (assignedByUserId, { skip, take }) =>
+  // "Sent by" a user means they actually created it (createdByUserId), which
+  // falls back to assignedByUserId for rows predating that column so
+  // pre-existing history still shows up.
+  listPlanAssignmentsForAssigner: (userId, { skip, take }) =>
     prisma.assignedWorkoutPlan.findMany({
-      where: { assignedByUserId },
+      where: { OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] },
       include: planInclude,
       orderBy: { createdAt: "desc" },
       skip,
       take
     }),
 
-  countPlanAssignmentsForAssigner: (assignedByUserId) => prisma.assignedWorkoutPlan.count({ where: { assignedByUserId } }),
+  countPlanAssignmentsForAssigner: (userId) =>
+    prisma.assignedWorkoutPlan.count({
+      where: { OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] }
+    }),
 
   listPlanAssignmentsForUser: (userId) =>
     prisma.assignedWorkoutPlan.findMany({
@@ -54,9 +61,9 @@ const assignedWorkoutRepository = {
       orderBy: { createdAt: "desc" }
     }),
 
-  listCustomAssignedByUser: (assignedByUserId, { skip, take }) =>
+  listCustomAssignedByUser: (userId, { skip, take }) =>
     prisma.customWorkout.findMany({
-      where: { assignedByUserId },
+      where: { OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] },
       include: {
         exercises: { orderBy: { sortOrder: "asc" } },
         user: { select: { id: true, fullName: true, email: true } }
@@ -66,7 +73,10 @@ const assignedWorkoutRepository = {
       take
     }),
 
-  countCustomAssignedByUser: (assignedByUserId) => prisma.customWorkout.count({ where: { assignedByUserId } })
+  countCustomAssignedByUser: (userId) =>
+    prisma.customWorkout.count({
+      where: { OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] }
+    })
 };
 
 module.exports = assignedWorkoutRepository;

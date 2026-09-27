@@ -8,7 +8,15 @@
  */
 const { PrismaClient } = require("@prisma/client");
 const { hashPassword } = require("../src/utils/password");
+const { generateUniqueUsername } = require("../src/utils/username");
 const prisma = new PrismaClient();
+
+// Broad, near-all-day windows (7 AM - 10 PM, every day) so booking a slot
+// almost never hits "outside availability" during testing/demoing — real
+// per-coach schedules can be tightened later from the admin/coach panel.
+const ALL_DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+const WIDE_HOURS = { startTime: "07:00", endTime: "22:00" };
+const wideAvailability = () => ALL_DAYS.map((dayOfWeek) => ({ dayOfWeek, ...WIDE_HOURS }));
 
 const COACHES = [
   {
@@ -17,13 +25,7 @@ const COACHES = [
     bio: "Certified strength & conditioning coach with 8 years helping clients build sustainable strength.",
     specialties: ["Strength Training", "Weight Loss"],
     experienceYears: 8,
-    availability: [
-      { dayOfWeek: "MONDAY", startTime: "09:00", endTime: "17:00" },
-      { dayOfWeek: "TUESDAY", startTime: "09:00", endTime: "17:00" },
-      { dayOfWeek: "WEDNESDAY", startTime: "09:00", endTime: "17:00" },
-      { dayOfWeek: "THURSDAY", startTime: "09:00", endTime: "17:00" },
-      { dayOfWeek: "FRIDAY", startTime: "09:00", endTime: "17:00" }
-    ]
+    availability: wideAvailability()
   },
   {
     email: "priya.coach@fitnerve.com",
@@ -31,11 +33,7 @@ const COACHES = [
     bio: "Nutrition-focused coach specializing in fat loss and sustainable habit building.",
     specialties: ["Nutrition Consultation", "Fat Loss"],
     experienceYears: 6,
-    availability: [
-      { dayOfWeek: "MONDAY", startTime: "10:00", endTime: "16:00" },
-      { dayOfWeek: "WEDNESDAY", startTime: "10:00", endTime: "16:00" },
-      { dayOfWeek: "FRIDAY", startTime: "10:00", endTime: "16:00" }
-    ]
+    availability: wideAvailability()
   },
   {
     email: "alex.coach@fitnerve.com",
@@ -43,11 +41,47 @@ const COACHES = [
     bio: "Yoga and mobility specialist helping clients move better and recover faster.",
     specialties: ["Yoga", "Mobility", "Recovery"],
     experienceYears: 5,
-    availability: [
-      { dayOfWeek: "TUESDAY", startTime: "08:00", endTime: "14:00" },
-      { dayOfWeek: "THURSDAY", startTime: "08:00", endTime: "14:00" },
-      { dayOfWeek: "SATURDAY", startTime: "08:00", endTime: "14:00" }
-    ]
+    availability: wideAvailability()
+  },
+  {
+    email: "meera.coach@fitnerve.com",
+    fullName: "Meera Iyer",
+    bio: "Powerlifting coach focused on technique-first strength progressions for all levels.",
+    specialties: ["Powerlifting", "Strength Training"],
+    experienceYears: 7,
+    availability: wideAvailability()
+  },
+  {
+    email: "arjun.coach@fitnerve.com",
+    fullName: "Arjun Nair",
+    bio: "HIIT and conditioning coach helping clients build endurance and burn fat fast.",
+    specialties: ["HIIT", "Cardio", "Weight Loss"],
+    experienceYears: 4,
+    availability: wideAvailability()
+  },
+  {
+    email: "sneha.coach@fitnerve.com",
+    fullName: "Sneha Reddy",
+    bio: "Pre/postnatal and general mobility coach specializing in safe, sustainable movement.",
+    specialties: ["Mobility", "Pre/Postnatal Fitness"],
+    experienceYears: 6,
+    availability: wideAvailability()
+  },
+  {
+    email: "kabir.coach@fitnerve.com",
+    fullName: "Kabir Malhotra",
+    bio: "Bodybuilding coach specializing in hypertrophy programming and physique goals.",
+    specialties: ["Muscle Gain", "Bodybuilding"],
+    experienceYears: 9,
+    availability: wideAvailability()
+  },
+  {
+    email: "ananya.coach@fitnerve.com",
+    fullName: "Ananya Desai",
+    bio: "Functional fitness coach blending strength, mobility, and conditioning for everyday performance.",
+    specialties: ["Functional Fitness", "General Fitness"],
+    experienceYears: 5,
+    availability: wideAvailability()
   }
 ];
 
@@ -153,9 +187,11 @@ async function seedCoaches() {
 
     if (!user) {
       const passwordHash = await hashPassword("Coach@12345");
+      const username = await generateUniqueUsername(coach.email);
       user = await prisma.user.create({
         data: {
           email: coach.email,
+          username,
           fullName: coach.fullName,
           passwordHash,
           role: "COACH",
@@ -179,16 +215,21 @@ async function seedCoaches() {
           isAcceptingClients: true
         }
       });
-
-      for (const slot of coach.availability) {
-        await prisma.coachAvailability.create({
-          data: { coachId: coachProfile.id, ...slot }
-        });
-      }
-      console.log(`Seeded coach profile + ${coach.availability.length} availability slots for "${coach.fullName}"`);
+      console.log(`Seeded coach profile for "${coach.fullName}"`);
     } else {
       console.log(`Skipping coach profile for "${coach.fullName}" — already seeded`);
     }
+
+    // Always resync availability to the config above — replaces any stale
+    // narrow slots from an earlier seed run (e.g. before hours were widened)
+    // rather than only setting them on first creation.
+    await prisma.coachAvailability.deleteMany({ where: { coachId: coachProfile.id } });
+    for (const slot of coach.availability) {
+      await prisma.coachAvailability.create({
+        data: { coachId: coachProfile.id, ...slot }
+      });
+    }
+    console.log(`Synced ${coach.availability.length} availability slots for "${coach.fullName}"`);
 
     coachRecords[coach.fullName] = coachProfile;
   }

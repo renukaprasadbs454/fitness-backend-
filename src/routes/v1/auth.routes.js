@@ -129,6 +129,23 @@ router.post(
 
 /**
  * @swagger
+ * /auth/verify-reset-code:
+ *   post:
+ *     summary: Check a password-reset OTP without consuming it
+ *     tags: [Auth]
+ *     responses:
+ *       200: { description: Code is valid }
+ *       400: { description: Invalid or expired code }
+ */
+router.post(
+  "/verify-reset-code",
+  authLimiter,
+  validate(schemas.verifyEmail),
+  authController.verifyResetCode
+);
+
+/**
+ * @swagger
  * /auth/reset-password:
  *   post:
  *     summary: Reset password using the OTP code from the forgot-password request
