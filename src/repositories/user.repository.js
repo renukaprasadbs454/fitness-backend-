@@ -1,5 +1,8 @@
 const prisma = require("../database/prismaClient");
 
+// Enough to show "who is this user's coach" without exposing the whole Coach row.
+const assignedCoachSelect = { id: true, userId: true, user: { select: { fullName: true, email: true } } };
+
 const userRepository = {
   findByEmail: (email) => prisma.user.findUnique({ where: { email } }),
 
@@ -10,7 +13,10 @@ const userRepository = {
   findById: (id) => prisma.user.findUnique({ where: { id } }),
 
   findByIdWithProfile: (id) =>
-    prisma.user.findUnique({ where: { id }, include: { profile: true, coach: true } }),
+    prisma.user.findUnique({
+      where: { id },
+      include: { profile: true, coach: true, assignedCoach: { select: assignedCoachSelect } }
+    }),
 
   create: (data) => prisma.user.create({ data }),
 
@@ -58,7 +64,9 @@ const userRepository = {
         isActive: true,
         isEmailVerified: true,
         lastLoginAt: true,
-        createdAt: true
+        createdAt: true,
+        assignedCoachId: true,
+        assignedCoach: { select: assignedCoachSelect }
       },
       skip,
       take,
@@ -88,6 +96,28 @@ const userRepository = {
 
   updateRole: (id, role) =>
     prisma.user.update({ where: { id }, data: { role }, select: { id: true, role: true } }),
+
+  // Pass null to unassign.
+  setAssignedCoach: (id, coachId) =>
+    prisma.user.update({
+      where: { id },
+      data: { assignedCoachId: coachId },
+      select: { id: true, assignedCoachId: true, assignedCoach: { select: assignedCoachSelect } }
+    }),
+
+  // Users assigned to a coach (admin "clients" view).
+  listClientsOfCoach: (coachId) =>
+    prisma.user.findMany({
+      where: { assignedCoachId: coachId },
+      select: { id: true, fullName: true, email: true, username: true, isActive: true },
+      orderBy: { fullName: "asc" }
+    }),
+
+  // Ids of a coach's assigned users — used to scope what a coach may see/touch.
+  listClientIdsOfCoach: async (coachId) => {
+    const rows = await prisma.user.findMany({ where: { assignedCoachId: coachId }, select: { id: true } });
+    return rows.map((r) => r.id);
+  },
 
   updateBasicInfo: (id, data) =>
     prisma.user.update({
@@ -123,17 +153,21 @@ const userRepository = {
   },
 
   // ── Coach: lightweight client picker (name/email only, no sensitive fields) ──
-  searchLite: ({ search, take = 20 }) =>
+  // `assignedCoachId` restricts results to one coach's assigned users.
+  searchLite: ({ search, take = 20, assignedCoachId }) =>
     prisma.user.findMany({
-      where: search
-        ? {
-            OR: [
-              { fullName: { contains: search, mode: "insensitive" } },
-              { email: { contains: search, mode: "insensitive" } },
-              { username: { contains: search, mode: "insensitive" } }
-            ]
-          }
-        : undefined,
+      where: {
+        ...(assignedCoachId ? { assignedCoachId } : {}),
+        ...(search
+          ? {
+              OR: [
+                { fullName: { contains: search, mode: "insensitive" } },
+                { email: { contains: search, mode: "insensitive" } },
+                { username: { contains: search, mode: "insensitive" } }
+              ]
+            }
+          : {})
+      },
       select: { id: true, fullName: true, email: true, username: true, role: true },
       take,
       orderBy: { fullName: "asc" }

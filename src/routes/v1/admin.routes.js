@@ -115,6 +115,19 @@ router.patch("/users/:id/role", validate(schemas.changeRole), adminController.ch
 
 /**
  * @swagger
+ * /admin/users/{id}/coach:
+ *   put:
+ *     summary: Assign a user to a coach (coachId = null to unassign). One coach per user.
+ *     tags: [Admin]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Assignment updated }
+ *       404: { description: User or coach not found }
+ */
+router.put("/users/:id/coach", validate(schemas.assignCoach), adminController.assignCoach);
+
+/**
+ * @swagger
  * /admin/users/{id}/reset-password:
  *   post:
  *     summary: Reset a user's password (auto-generates one if not supplied) and revokes their sessions
@@ -190,6 +203,18 @@ router.put("/coaches/:id", validate(schemas.updateCoach), adminController.update
  *       200: { description: Coach deleted }
  */
 router.delete("/coaches/:id", validate(schemas.idParam), adminController.deleteCoach);
+
+/**
+ * @swagger
+ * /admin/coaches/{id}/clients:
+ *   get:
+ *     summary: List the users assigned to a coach
+ *     tags: [Admin]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Coach clients retrieved }
+ */
+router.get("/coaches/:id/clients", validate(schemas.idParam), adminController.listCoachClients);
 
 // ── Audit logs ─────────────────────────────────────────────
 

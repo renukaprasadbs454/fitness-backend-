@@ -151,8 +151,9 @@ router.post(
 );
 
 // ── Database explorer ────────────────────────────────────────
-// Mirrors the admin one (full CRUD), but excludes User/Coach/Payment —
-// see src/services/coachDb.service.js for the full rationale.
+// Mirrors the admin one (full CRUD), but excludes account/payment/credential
+// tables and scopes rows to the coach's own assigned users — see
+// src/services/coachDb.service.js for the full rationale.
 
 /**
  * @swagger

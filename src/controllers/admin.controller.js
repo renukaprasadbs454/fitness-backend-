@@ -41,6 +41,16 @@ const changeUserRole = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "User role updated", user);
 });
 
+const assignCoach = asyncHandler(async (req, res) => {
+  const user = await adminService.assignCoach(req.user.id, req.params.id, req.body.coachId);
+  return ApiResponse.success(res, httpStatus.OK, req.body.coachId ? "Coach assigned" : "Coach unassigned", user);
+});
+
+const listCoachClients = asyncHandler(async (req, res) => {
+  const clients = await adminService.listCoachClients(req.params.id);
+  return ApiResponse.success(res, httpStatus.OK, "Coach clients retrieved", clients);
+});
+
 const resetUserPassword = asyncHandler(async (req, res) => {
   const result = await adminService.resetUserPassword(
     req.user.id,
@@ -132,6 +142,8 @@ module.exports = {
   suspendUser,
   activateUser,
   changeUserRole,
+  assignCoach,
+  listCoachClients,
   resetUserPassword,
   deleteUser,
   listCoaches,

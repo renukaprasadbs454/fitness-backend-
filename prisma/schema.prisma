@@ -138,6 +138,12 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
+  // The one coach this user is assigned to (admin-managed). A coach can have
+  // many assigned users; a user has at most one coach. Nulled automatically
+  // if the coach profile is deleted.
+  assignedCoachId String? @map("assigned_coach_id")
+  assignedCoach   Coach?  @relation("CoachClients", fields: [assignedCoachId], references: [id], onDelete: SetNull)
+
   profile       UserProfile?
   coach         Coach?
   refreshTokens RefreshToken[]
@@ -170,6 +176,7 @@ model User {
   googleCalendarConnection GoogleCalendarConnection?
 
   @@index([role])
+  @@index([assignedCoachId])
   @@map("users")
 }
 
@@ -265,6 +272,7 @@ model Coach {
   availability CoachAvailability[]
   appointments Appointment[]
   chatRooms    ChatRoom[]
+  clients      User[]              @relation("CoachClients")
 
   @@index([experienceYears])
   @@map("coaches")
@@ -694,6 +702,7 @@ enum AdminAction {
   CREATE_COACH
   UPDATE_COACH
   DELETE_COACH
+  ASSIGN_COACH
 }
 
 model AdminAuditLog {

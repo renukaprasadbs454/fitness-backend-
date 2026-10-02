@@ -55,13 +55,14 @@ function toRoomSummaryDto(room, viewerRole) {
 async function getOrCreateRoom(requester, otherPartyId) {
   let userId;
   let coachId;
+  let otherUser;
 
   if (requester.role === "COACH") {
     const coach = await coachRepository.findByUserId(requester.id);
     if (!coach) throw ApiError.forbidden("Coach profile not found for this account");
     coachId = coach.id;
     userId = otherPartyId;
-    const otherUser = await userRepository.findById(otherPartyId);
+    otherUser = await userRepository.findById(otherPartyId);
     if (!otherUser) throw ApiError.notFound("User not found");
   } else {
     userId = requester.id;
@@ -72,6 +73,11 @@ async function getOrCreateRoom(requester, otherPartyId) {
 
   let room = await chatRepository.findRoomByUserAndCoach(userId, coachId);
   if (!room) {
+    // A coach can only start a *new* conversation with a user assigned to them.
+    // Users can still message any coach, and an existing conversation stays open.
+    if (otherUser && otherUser.assignedCoachId !== coachId) {
+      throw ApiError.forbidden("You can only start a chat with users assigned to you");
+    }
     room = await chatRepository.createRoom(userId, coachId);
   }
   return chatRepository.findRoomById(room.id);

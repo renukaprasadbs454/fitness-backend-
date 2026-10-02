@@ -720,6 +720,7 @@
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase cursor-pointer select-none" @click="toggleUserSort('fullName')">Name</th>
                   <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Email</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Role</th>
+                  <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Coach</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Status</th>
                   <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase cursor-pointer select-none" @click="toggleUserSort('createdAt')">Joined</th>
                   <th class="w-20 px-4 py-3"></th>
@@ -742,6 +743,7 @@
                     </td>
                     <td class="hidden sm:table-cell px-4 py-3 text-slate-400" x-text="u.email"></td>
                     <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="u.role"></span></td>
+                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="u.role === 'USER' ? (u.assignedCoach?.user?.fullName || 'Unassigned') : '—'"></td>
                     <td class="px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="u.isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'" x-text="u.isActive ? 'Active' : 'Suspended'"></span>
                     </td>
@@ -754,6 +756,7 @@
                         <div x-show="open" x-cloak x-transition class="absolute right-0 mt-1 w-44 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden z-30 text-sm">
                           <button @click="open=false; openEditUser(u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Edit</button>
                           <button @click="open=false; openChangeRole(u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Change role</button>
+                          <button x-show="u.role === 'USER'" @click="open=false; openAssignCoach(u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Assign coach</button>
                           <button @click="open=false; openResetPassword(u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Reset password</button>
                           <button x-show="u.isActive" @click="open=false; openConfirm('suspend', u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Suspend</button>
                           <button x-show="!u.isActive" @click="open=false; openConfirm('activate', u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Activate</button>
@@ -764,7 +767,7 @@
                   </tr>
                 </template>
                 <tr x-show="pagedUsers.data.length === 0">
-                  <td colspan="6" class="px-4 py-12 text-center text-slate-500">No users found</td>
+                  <td colspan="7" class="px-4 py-12 text-center text-slate-500">No users found</td>
                 </tr>
               </tbody>
             </table>
@@ -800,6 +803,7 @@
                 <div class="flex flex-wrap gap-2">
                   <button @click="openEditUser(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Edit</button>
                   <button @click="openChangeRole(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Change Role</button>
+                  <button x-show="selectedUser.role === 'USER'" @click="openAssignCoach(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Assign Coach</button>
                   <button @click="openResetPassword(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Reset Password</button>
                   <button x-show="selectedUser.isActive" @click="openConfirm('suspend', selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Suspend</button>
                   <button x-show="!selectedUser.isActive" @click="openConfirm('activate', selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Activate</button>
@@ -816,6 +820,7 @@
                   <div><p class="text-xs uppercase text-slate-500">Email Verified</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.isEmailVerified ? 'Yes' : 'No'"></p></div>
                   <div><p class="text-xs uppercase text-slate-500">Last Login</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.lastLoginAt ? formatDateTime(selectedUser.lastLoginAt) : 'Never'"></p></div>
                   <div><p class="text-xs uppercase text-slate-500">Joined</p><p class="text-sm font-medium mt-0.5" x-text="formatDateTime(selectedUser.createdAt)"></p></div>
+                  <div x-show="selectedUser.role === 'USER'"><p class="text-xs uppercase text-slate-500">Assigned Coach</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.assignedCoach?.user?.fullName || 'Unassigned'"></p></div>
                   <div><p class="text-xs uppercase text-slate-500">User ID</p><p class="text-sm font-mono text-xs mt-1" x-text="selectedUser.id"></p></div>
                 </div>
               </div>
@@ -878,6 +883,7 @@
                   <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Specialties</th>
                   <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Experience</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Accepting</th>
+                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Clients</th>
                   <th class="w-24 px-4 py-3"></th>
                 </tr>
               </thead>
@@ -910,6 +916,7 @@
                     <td class="px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="c.isAcceptingClients ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'" x-text="c.isAcceptingClients ? 'Yes' : 'No'"></span>
                     </td>
+                    <td class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="c._count?.clients ?? 0"></td>
                     <td class="px-4 py-3">
                       <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
@@ -925,7 +932,7 @@
                   </tr>
                 </template>
                 <tr x-show="pagedCoaches.data.length === 0">
-                  <td colspan="7" class="px-4 py-12 text-center text-slate-500">No coaches found</td>
+                  <td colspan="8" class="px-4 py-12 text-center text-slate-500">No coaches found</td>
                 </tr>
               </tbody>
             </table>
@@ -1340,6 +1347,27 @@
     </div>
   </div>
 
+  <!-- Assign Coach -->
+  <div x-show="modals.assignCoach" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 modal-backdrop" @click="modals.assignCoach = false"></div>
+    <div class="relative modal-panel rounded-2xl w-full max-w-md p-6">
+      <h3 class="text-lg font-semibold mb-1">Assign Coach</h3>
+      <p class="text-sm text-slate-400 mb-4" x-show="editingUser">
+        Choose the coach for <span class="text-white font-medium" x-text="editingUser?.fullName"></span>. A user has one coach; a coach can have many users. The coach will only see users assigned to them.
+      </p>
+      <select x-model="assignCoachDraft" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+        <option value="">— No coach (unassigned) —</option>
+        <template x-for="c in coaches" :key="c.id">
+          <option :value="c.id" x-text="c.user.fullName + ' (' + (c._count?.clients ?? 0) + ' clients)'"></option>
+        </template>
+      </select>
+      <div class="flex justify-end gap-2 mt-5">
+        <button @click="modals.assignCoach = false" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
+        <button @click="submitAssignCoach()" class="px-4 py-2 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Reset Password -->
   <div x-show="modals.resetPassword" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 modal-backdrop" @click="closeResetPassword()"></div>
@@ -1648,6 +1676,7 @@
       ACTIVATE_USER: "bg-emerald-500/15 text-emerald-400",
       CREATE_COACH: "bg-emerald-500/15 text-emerald-400",
       CHANGE_ROLE: "bg-primary/15 text-primary",
+      ASSIGN_COACH: "bg-primary/15 text-primary",
       RESET_PASSWORD: "bg-primary/15 text-primary",
       UPDATE_USER: "bg-dark-muted text-slate-300",
       UPDATE_COACH: "bg-dark-muted text-slate-300",
@@ -1727,11 +1756,12 @@
         paymentsFilters: { status: "ALL", page: 1 },
 
         // ---- Modals ----
-        modals: { addUser: false, editUser: false, changeRole: false, resetPassword: false, createCoach: false, editCoach: false, editAssignment: false, confirm: false, dbInsert: false, dbEdit: false },
+        modals: { addUser: false, editUser: false, changeRole: false, assignCoach: false, resetPassword: false, createCoach: false, editCoach: false, editAssignment: false, confirm: false, dbInsert: false, dbEdit: false },
         addUserForm: { fullName: "", email: "", phone: "", role: "USER" },
         editingUser: null,
         editForm: { fullName: "", username: "", email: "", phone: "" },
         roleDraft: "USER",
+        assignCoachDraft: "",
         tempPassword: null,
         coachForm: { search: "", selectedUser: null, bio: "", specialties: "", experienceYears: "" },
         editingCoach: null,
@@ -2378,6 +2408,36 @@
             this.modals.changeRole = false;
             this.showToast("Role updated");
           }
+        },
+
+        // ================= ASSIGN COACH =================
+        openAssignCoach(u) {
+          this.editingUser = u;
+          this.assignCoachDraft = u.assignedCoachId || "";
+          this.modals.assignCoach = true;
+        },
+
+        submitAssignCoach() {
+          const u = this.editingUser;
+          if (!u) return;
+          const coachId = this.assignCoachDraft || null;
+          if ((u.assignedCoachId || null) === coachId) {
+            this.modals.assignCoach = false;
+            return;
+          }
+          this.apiRequest("PUT", `/api/v1/admin/users/${u.id}/coach`, { coachId }).then((res) => {
+            // Reflect the change locally right away (list, detail page), then
+            // refresh from the server so coach client counts stay accurate.
+            const patch = { assignedCoachId: res?.assignedCoachId ?? null, assignedCoach: res?.assignedCoach ?? null };
+            const listed = this.users.find((x) => x.id === u.id);
+            if (listed) Object.assign(listed, patch);
+            if (this.selectedUser && this.selectedUser.id === u.id) Object.assign(this.selectedUser, patch);
+            this.modals.assignCoach = false;
+            this.fetchLiveData();
+            this.showToast(coachId ? "Coach assigned" : "Coach unassigned");
+          }).catch((err) => {
+            this.showToast(err.message || "Failed to assign coach", "error");
+          });
         },
 
         // ================= RESET PASSWORD =================

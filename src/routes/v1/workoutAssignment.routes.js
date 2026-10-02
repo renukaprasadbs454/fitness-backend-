@@ -8,14 +8,14 @@ const schemas = require("../../validators/workoutAssignment.validator");
  * @swagger
  * tags:
  *   name: WorkoutAssignments
- *   description: Any user sending a workout to another user
+ *   description: Coaches (to their assigned users) and admins (to anyone) sending a workout to a user
  */
 
 /**
  * @swagger
  * /workout-assignments/search-users:
  *   get:
- *     summary: Search other users to assign a workout to
+ *     summary: Search users to assign a workout to (coaches see only their assigned users; admins see all)
  *     tags: [WorkoutAssignments]
  *     security: [{ bearerAuth: [] }]
  *     parameters:

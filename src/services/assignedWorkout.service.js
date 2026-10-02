@@ -68,15 +68,37 @@ function toCustomAssignmentDto(workout) {
   };
 }
 
-async function searchUsers(currentUserId, search) {
-  const results = await userRepository.searchLite({ search, take: 20 });
+// Coaches may only act on the users an admin has assigned to them; admins may
+// act on anyone. Everyone else has no business assigning workouts.
+async function assertCanAssignTo(callerId, callerRole, targetUser) {
+  if (callerRole === "ADMIN") return;
+  if (callerRole === "COACH") {
+    const coach = await coachRepository.findByUserId(callerId);
+    if (coach && targetUser.assignedCoachId === coach.id) return;
+    throw ApiError.forbidden("This user is not assigned to you");
+  }
+  throw ApiError.forbidden("Only coaches and admins can assign workouts");
+}
+
+async function searchUsers(currentUserId, search, callerRole) {
+  let assignedCoachId;
+  if (callerRole === "COACH") {
+    const coach = await coachRepository.findByUserId(currentUserId);
+    if (!coach) return [];
+    assignedCoachId = coach.id; // coaches only see their own assigned users
+  } else if (callerRole !== "ADMIN") {
+    throw ApiError.forbidden("Only coaches and admins can search users");
+  }
+
+  const results = await userRepository.searchLite({ search, take: 20, assignedCoachId });
   return results.filter((u) => u.id !== currentUserId);
 }
 
 async function assignPlan(callerId, { userId, planId, note, scheduledAt, asCoachUserId }, callerRole) {
   const assignedByUserId = await resolveEffectiveAssigner(callerId, callerRole, asCoachUserId);
   if (userId === assignedByUserId) throw ApiError.badRequest("You can't assign a workout to yourself");
-  await requireUser(userId);
+  const targetUser = await requireUser(userId);
+  await assertCanAssignTo(callerId, callerRole, targetUser);
 
   const plan = await workoutRepository.findPlanById(planId);
   if (!plan) throw ApiError.notFound("Workout plan not found");
@@ -119,7 +141,8 @@ async function updateAssignedPlan(actingUserId, id, { note, scheduledAt }) {
 async function assignCustom(callerId, { userId, asCoachUserId, ...workoutData }, callerRole) {
   const assignedByUserId = await resolveEffectiveAssigner(callerId, callerRole, asCoachUserId);
   if (userId === assignedByUserId) throw ApiError.badRequest("You can't assign a workout to yourself");
-  await requireUser(userId);
+  const targetUser = await requireUser(userId);
+  await assertCanAssignTo(callerId, callerRole, targetUser);
 
   const workout = await customWorkoutRepository.create(userId, {
     ...workoutData,

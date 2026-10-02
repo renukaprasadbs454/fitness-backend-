@@ -74,7 +74,8 @@ const coachRepository = {
           }
         : undefined,
       include: {
-        user: { select: { id: true, fullName: true, username: true, email: true, isActive: true, role: true } }
+        user: { select: { id: true, fullName: true, username: true, email: true, isActive: true, role: true } },
+        _count: { select: { clients: true } }
       },
       skip,
       take,

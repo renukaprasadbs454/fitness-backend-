@@ -4,7 +4,7 @@ const ApiResponse = require("../utils/ApiResponse");
 const httpStatus = require("../constants/httpStatus");
 
 const searchUsers = asyncHandler(async (req, res) => {
-  const users = await assignedWorkoutService.searchUsers(req.user.id, req.query.search);
+  const users = await assignedWorkoutService.searchUsers(req.user.id, req.query.search, req.user.role);
   return ApiResponse.success(res, httpStatus.OK, "Users retrieved", users);
 });
 

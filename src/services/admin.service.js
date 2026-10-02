@@ -93,11 +93,45 @@ async function changeUserRole(adminId, id, role) {
     throw ApiError.badRequest("You cannot demote your own admin account");
   }
   const updated = await userRepository.updateRole(id, role);
+  // Only plain users are clients — drop the assignment if they stop being one.
+  if (role !== "USER" && existing.assignedCoachId) {
+    await userRepository.setAssignedCoach(id, null);
+  }
   await adminRepository.createAuditLog(adminId, "CHANGE_ROLE", "USER", id, {
     from: existing.role,
     to: role
   });
   return updated;
+}
+
+/** Assigns a user to a coach (or unassigns with coachId = null). One coach per user. */
+async function assignCoach(adminId, userId, coachId) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw ApiError.notFound("User not found");
+  if (user.role !== "USER") throw ApiError.badRequest("Only regular users can be assigned to a coach");
+
+  if (coachId) {
+    const coach = await coachRepository.findById(coachId);
+    if (!coach) throw ApiError.notFound("Coach not found");
+    if (coach.userId === userId) throw ApiError.badRequest("A user cannot be their own coach");
+  }
+
+  if ((user.assignedCoachId ?? null) === (coachId ?? null)) {
+    return userRepository.setAssignedCoach(userId, coachId ?? null); // no-op, nothing to audit
+  }
+
+  const updated = await userRepository.setAssignedCoach(userId, coachId ?? null);
+  await adminRepository.createAuditLog(adminId, "ASSIGN_COACH", "USER", userId, {
+    from: user.assignedCoachId ?? null,
+    to: coachId ?? null
+  });
+  return updated;
+}
+
+async function listCoachClients(coachId) {
+  const coach = await coachRepository.findById(coachId);
+  if (!coach) throw ApiError.notFound("Coach not found");
+  return userRepository.listClientsOfCoach(coachId);
 }
 
 async function resetUserPassword(adminId, id, newPassword) {
@@ -342,6 +376,8 @@ module.exports = {
   updateUser,
   setUserActive,
   changeUserRole,
+  assignCoach,
+  listCoachClients,
   resetUserPassword,
   deleteUser,
   listCoaches,

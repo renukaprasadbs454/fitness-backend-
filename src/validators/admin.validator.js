@@ -30,6 +30,11 @@ const changeRole = {
   body: z.object({ role: z.enum(["USER", "COACH", "ADMIN"]) })
 };
 
+const assignCoach = {
+  params: idParam.params,
+  body: z.object({ coachId: z.string().uuid().nullable() }) // null = unassign
+};
+
 const resetPassword = {
   params: idParam.params,
   body: z.object({
@@ -98,6 +103,7 @@ module.exports = {
   listUsers,
   updateUser,
   changeRole,
+  assignCoach,
   resetPassword,
   listCoachesAdmin,
   createCoach,

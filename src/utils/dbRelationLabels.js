@@ -76,13 +76,14 @@ async function resolveRelationLabels(prisma, modelInfo, rows) {
 
 // Full option list for a related model, for populating a FK picker <select>
 // in the insert/edit form — {id, label} pairs.
-async function getRelationOptions(prisma, modelName) {
+// `where` optionally narrows the list (e.g. a coach's own assigned users).
+async function getRelationOptions(prisma, modelName, where) {
   const config = RELATION_LABEL_CONFIG[modelName];
   const delegate = prisma[delegateNameFor(modelName)];
   if (!delegate) return [];
 
   const select = { id: true, ...(config?.select || {}) };
-  const rows = await delegate.findMany({ select, take: 500 }).catch(() => []);
+  const rows = await delegate.findMany({ where, select, take: 500 }).catch(() => []);
 
   return rows.map((row) => ({
     id: row.id,
