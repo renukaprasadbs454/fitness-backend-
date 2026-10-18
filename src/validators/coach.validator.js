@@ -7,8 +7,19 @@ const createOrUpdateCoach = {
     bio: z.string().trim().max(2000).optional(),
     specialties: z.array(z.string().trim().min(1)).max(20).optional(),
     experienceYears: z.number().int().min(0).max(60).optional(),
-    isAcceptingClients: z.boolean().optional()
+    isAcceptingClients: z.boolean().optional(),
+    // Sent to a client in Chats whenever they book a session with this coach; null/empty turns it off.
+    bookingMessage: z.string().trim().max(500).nullable().optional()
   })
+};
+
+const createCoachByHead = {
+  body: createOrUpdateCoach.body.extend({ userId: z.string().uuid("Invalid user id") })
+};
+
+const updateCoachProfile = {
+  params: idParam.params,
+  body: createOrUpdateCoach.body
 };
 
 const listCoaches = {
@@ -42,6 +53,7 @@ const upsertAvailability = {
 const listMyAppointments = {
   query: z.object({
     status: z.enum(["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]).optional(),
+    coachId: z.string().uuid().optional(), // head coach only; ignored for everyone else
     page: z.coerce.number().int().positive().optional(),
     limit: z.coerce.number().int().positive().max(100).optional()
   })
@@ -51,6 +63,9 @@ module.exports = {
   idParam,
   createOrUpdateCoach,
   listCoaches,
+  updateCoachProfile,
+  createCoachByHead,
+  idParam,
   upsertAvailability,
   listMyAppointments
 };

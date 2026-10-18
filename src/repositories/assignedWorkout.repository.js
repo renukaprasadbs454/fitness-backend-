@@ -61,6 +61,16 @@ const assignedWorkoutRepository = {
       orderBy: { createdAt: "desc" }
     }),
 
+  // A custom workout can be modified/removed by whoever sent it.
+  findCustomByIdForAssigner: (id, assignerUserId) =>
+    prisma.customWorkout.findFirst({
+      where: { id, OR: [{ createdByUserId: assignerUserId }, { assignedByUserId: assignerUserId }] },
+      include: {
+        exercises: { orderBy: { sortOrder: "asc" } },
+        user: { select: { id: true, fullName: true, email: true } }
+      }
+    }),
+
   listCustomAssignedByUser: (userId, { skip, take }) =>
     prisma.customWorkout.findMany({
       where: { OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] },

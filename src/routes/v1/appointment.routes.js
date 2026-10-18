@@ -51,6 +51,98 @@ router.get("/", authenticate, validate(schemas.listAppointments), appointmentCon
 
 /**
  * @swagger
+ * /appointments/meeting-status:
+ *   get:
+ *     summary: Whether sessions can get an automatically generated Google Meet link
+ *     tags: [Appointments]
+ *     responses:
+ *       200: { description: "{ googleMeetConnected: boolean }" }
+ */
+router.get("/meeting-status", authenticate, appointmentController.meetingStatus);
+
+/**
+ * @swagger
+ * /appointments/sessions/clients:
+ *   get:
+ *     summary: "Coach: the clients you can schedule sessions with"
+ *     description: Clients assigned to you, plus anyone with a booked or completed session with you since any coach swap. canScheduleAnyone is true for the head coach, who can also schedule with any other client.
+ *     tags: [Appointments]
+ *     responses:
+ *       200: { description: "{ clients: [{ id, fullName, email, username, assigned }], canScheduleAnyone: boolean }" }
+ */
+router.get("/sessions/clients", authenticate, requireRole(ROLES.COACH), appointmentController.schedulableClients);
+
+/**
+ * @swagger
+ * /appointments/sessions:
+ *   post:
+ *     summary: "Coach: schedule a session (or a weekly series) with one of your clients"
+ *     description: Sessions are created CONFIRMED. Each gets its own Google Meet link when the platform Google account is connected, unless meetingLink is given. Clashing slots are skipped and listed in the response.
+ *     tags: [Appointments]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId, title, scheduledAt]
+ *             properties:
+ *               userId: { type: string, format: uuid }
+ *               title: { type: string, example: "1:1 coaching session" }
+ *               scheduledAt: { type: string, format: date-time }
+ *               durationMinutes: { type: integer, example: 45 }
+ *               notes: { type: string }
+ *               repeatWeeks: { type: integer, minimum: 0, maximum: 11, description: "Extra weekly sessions after the first" }
+ *               meetingLink: { type: string, example: "https://meet.google.com/abc-defg-hij" }
+ *     responses:
+ *       201: { description: Sessions scheduled }
+ */
+router.post(
+  "/sessions",
+  authenticate,
+  requireRole(ROLES.COACH),
+  validate(schemas.scheduleSessions),
+  appointmentController.scheduleSessions
+);
+
+/**
+ * @swagger
+ * /appointments/{id}/meeting-link:
+ *   patch:
+ *     summary: "Coach/admin: set or clear (null) a session's meeting link"
+ *     tags: [Appointments]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               meetingLink: { type: string, nullable: true, example: "https://meet.google.com/abc-defg-hij" }
+ *     responses:
+ *       200: { description: Meeting link saved }
+ * /appointments/{id}/meeting-link/generate:
+ *   post:
+ *     summary: "Coach/admin: create a unique Google Meet link for this session via the platform Google account"
+ *     tags: [Appointments]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     responses:
+ *       200: { description: Google Meet link created }
+ *       400: { description: Platform Google account not connected }
+ */
+router.patch("/:id/meeting-link", authenticate, validate(schemas.setMeetingLink), appointmentController.setMeetingLink);
+router.post(
+  "/:id/meeting-link/generate",
+  authenticate,
+  validate(schemas.idParam),
+  appointmentController.generateMeetingLink
+);
+
+/**
+ * @swagger
  * /appointments/{id}:
  *   get:
  *     summary: Get an appointment by id

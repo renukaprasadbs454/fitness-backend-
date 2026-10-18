@@ -47,8 +47,36 @@ const updateAppointmentDetails = {
     })
 };
 
+// Only https links: they are opened straight from the app and the portals.
+const meetingLinkSchema = z
+  .string()
+  .trim()
+  .max(500)
+  .url("Enter a valid link")
+  .refine((value) => value.startsWith("https://"), { message: "Meeting links must start with https://" });
+
+const setMeetingLink = {
+  params: idParam.params,
+  body: z.object({ meetingLink: meetingLinkSchema.nullable() })
+};
+
+const scheduleSessions = {
+  body: z.object({
+    userId: z.string().uuid(),
+    title: z.string().trim().min(2).max(150),
+    scheduledAt: z.string().datetime(),
+    durationMinutes: z.number().int().min(15).max(240).optional(),
+    notes: z.string().max(1000).optional(),
+    // 0 = a single session; N = that session plus N more, one week apart.
+    repeatWeeks: z.number().int().min(0).max(11).optional(),
+    meetingLink: meetingLinkSchema.optional()
+  })
+};
+
 module.exports = {
   idParam,
+  setMeetingLink,
+  scheduleSessions,
   createAppointment,
   listAppointments,
   updateStatus,

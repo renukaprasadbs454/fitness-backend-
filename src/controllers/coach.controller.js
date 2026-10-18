@@ -14,6 +14,21 @@ const updateMyCoachProfile = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Coach profile updated", coach);
 });
 
+const updateCoachProfile = asyncHandler(async (req, res) => {
+  const coach = await coachService.updateCoachProfileAsHead(req.user.id, req.params.id, req.body);
+  return ApiResponse.success(res, httpStatus.OK, "Coach profile updated", coach);
+});
+
+const createCoach = asyncHandler(async (req, res) => {
+  const coach = await coachService.createCoachAsHead(req.user.id, req.body);
+  return ApiResponse.success(res, httpStatus.CREATED, "Coach added", coach);
+});
+
+const deleteCoach = asyncHandler(async (req, res) => {
+  await coachService.deleteCoachAsHead(req.user.id, req.params.id);
+  return ApiResponse.success(res, httpStatus.OK, "Coach removed", null);
+});
+
 const deleteMyCoachProfile = asyncHandler(async (req, res) => {
   await coachService.deleteMyCoachProfile(req.user.id);
   return ApiResponse.success(res, httpStatus.OK, "Coach profile deleted", null);
@@ -49,7 +64,7 @@ const listMyAppointments = asyncHandler(async (req, res) => {
 // assigned users; see coachDb.service.js) ───────────────────────────
 
 const listDbTables = asyncHandler(async (req, res) => {
-  const tables = coachDbService.listTables();
+  const tables = await coachDbService.listTables(req.user.id);
   return ApiResponse.success(res, httpStatus.OK, "Database schema retrieved", tables);
 });
 
@@ -81,6 +96,9 @@ const getDbRelationOptions = asyncHandler(async (req, res) => {
 module.exports = {
   getMyCoachProfile,
   updateMyCoachProfile,
+  updateCoachProfile,
+  createCoach,
+  deleteCoach,
   deleteMyCoachProfile,
   getCoachById,
   listCoaches,

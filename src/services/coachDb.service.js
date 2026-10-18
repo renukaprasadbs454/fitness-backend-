@@ -5,21 +5,28 @@ const userRepository = require("../repositories/user.repository");
 const { getDatabaseSchema } = require("../utils/dbIntrospection");
 const { resolveRelationLabels, getRelationOptions: getRelationOptionsFor } = require("../utils/dbRelationLabels");
 
-// Account-management, revenue and credential/session tables are not exposed to
-// coaches at all. User/Coach hold role + credential data (a coach editing their
-// own row could self-promote), Payment is revenue data, and the rest are live
-// login/reset/session material — a coach able to write an OtpCode or
-// RefreshToken row could take over any account.
+// Credential/session tables are never exposed to coaches — a coach able to
+// write an OtpCode or RefreshToken row could take over any account — and
+// neither are admin-only records (audit log, platform Google tokens, support
+// requests, and reports users have filed about coaches).
 const HIDDEN_MODELS = [
-  "User",
-  "Coach",
-  "Payment",
   "RefreshToken",
   "OtpCode",
   "DeviceToken",
   "GoogleCalendarConnection",
-  "AdminAuditLog"
+  "AdminAuditLog",
+  "PlatformIntegration",
+  "SupportTicket",
+  "CoachReport"
 ];
+
+// Visible to coaches but never writable through the explorer. User/Coach carry
+// role data (editing their own row could self-promote), Payment is revenue,
+// Package is platform pricing, and FavoriteCoach belongs to the users.
+const READ_ONLY_MODELS = ["User", "Coach", "Payment", "Package", "FavoriteCoach"];
+
+// Columns that are never sent to a coach, even for rows they may read.
+const HIDDEN_FIELDS = { User: ["passwordHash"] };
 
 // A coach only sees rows that belong to their own assigned users (or to their
 // own coaching relationship). Models whose ownership isn't a plain `userId`
@@ -27,6 +34,11 @@ const HIDDEN_MODELS = [
 // `userId` column is scoped to the coach's assigned users; models with neither
 // (workout plans, exercises, content) are shared reference data and stay open.
 const RELATIONAL_SCOPES = {
+  User: ({ ownerIds }) => ({ id: { in: ownerIds } }),
+  Coach: ({ coachId }) => ({ id: coachId }),
+  // Session payments for this coach's own appointments only.
+  Payment: ({ appointmentIds }) => ({ purpose: "COACH_SESSION", referenceId: { in: appointmentIds } }),
+  FavoriteCoach: ({ coachId }) => ({ coachId }),
   Appointment: ({ coachId }) => ({ coachId }),
   ChatRoom: ({ coachId }) => ({ coachId }),
   CoachAvailability: ({ coachId }) => ({ coachId }),
@@ -42,11 +54,28 @@ const NO_GENERIC_CREATE = ["ChatMessage", "CustomWorkoutExercise"];
 // them hand a row to, or take one from, someone outside their scope).
 const PROTECTED_UPDATE_FIELDS = ["id", "userId", "coachId"];
 
+// A coach's clients are the users an admin assigned to them plus anyone who
+// has booked a session with them. `ownerIds` adds the coach's own account so
+// their own notifications, preferences and profile rows are visible too.
 async function getCoachContext(coachUserId) {
   const coach = await coachRepository.findByUserId(coachUserId);
   if (!coach) throw ApiError.forbidden("Coach profile not found for this account");
-  const clientIds = await userRepository.listClientIdsOfCoach(coach.id);
-  return { coachId: coach.id, clientIds };
+  // The head coach oversees every coach, so nothing is filtered out for them.
+  if (coach.isHeadCoach) {
+    return { coachId: coach.id, coachUserId, isHeadCoach: true, clientIds: [], ownerIds: [], appointmentIds: [] };
+  }
+  const [assignedIds, appointments] = await Promise.all([
+    userRepository.listClientIdsOfCoach(coach.id),
+    prisma.appointment.findMany({ where: { coachId: coach.id }, select: { id: true, userId: true } })
+  ]);
+  const clientIds = [...new Set([...assignedIds, ...appointments.map((a) => a.userId)])];
+  return {
+    coachId: coach.id,
+    coachUserId,
+    clientIds,
+    ownerIds: [...clientIds, coachUserId],
+    appointmentIds: appointments.map((a) => a.id)
+  };
 }
 
 function hasField(modelInfo, name) {
@@ -55,22 +84,48 @@ function hasField(modelInfo, name) {
 
 /** Prisma `where` limiting a model to this coach's rows, or null for shared reference data. */
 function scopeFor(modelInfo, ctx) {
+  if (ctx.isHeadCoach) return null;
   const relational = RELATIONAL_SCOPES[modelInfo.name];
   if (relational) return relational(ctx);
-  if (hasField(modelInfo, "userId")) return { userId: { in: ctx.clientIds } };
+  if (hasField(modelInfo, "userId")) return { userId: { in: ctx.ownerIds } };
   return null;
+}
+
+function isReadOnly(modelInfo) {
+  return READ_ONLY_MODELS.includes(modelInfo.name);
+}
+
+function assertWritable(modelInfo) {
+  if (isReadOnly(modelInfo)) throw ApiError.forbidden(`'${modelInfo.name}' is read-only in the coach portal`);
+}
+
+function visibleFields(modelInfo) {
+  const hidden = HIDDEN_FIELDS[modelInfo.name] || [];
+  return modelInfo.fields.filter((f) => !hidden.includes(f.name));
+}
+
+function scopeNote(modelInfo, isHeadCoach) {
+  let note = "Shared across the platform";
+  if (modelInfo.name === "User") note = "You and your clients";
+  else if (modelInfo.name === "Coach") note = "Your coach profile";
+  else if (modelInfo.name === "Payment") note = "Payments for your sessions";
+  else if (RELATIONAL_SCOPES[modelInfo.name] || hasField(modelInfo, "userId")) note = "Your clients and you";
+  // The head coach is not filtered, so scoped tables show every coach's and client's rows.
+  return isHeadCoach && note !== "Shared across the platform" ? "All coaches and clients" : note;
 }
 
 function idFieldOf(modelInfo) {
   return modelInfo.fields.find((f) => f.isId)?.name || "id";
 }
 
-function visibleModels() {
-  return getDatabaseSchema().filter((m) => !HIDDEN_MODELS.includes(m.name));
+function visibleModels(isHeadCoach = false) {
+  return getDatabaseSchema()
+    .filter((m) => !HIDDEN_MODELS.includes(m.name))
+    .map((m) => ({ ...m, fields: visibleFields(m), readOnly: isReadOnly(m), scopeNote: scopeNote(m, isHeadCoach) }));
 }
 
-function findVisibleModel(modelName) {
-  const model = visibleModels().find(
+function findVisibleModel(modelName, isHeadCoach = false) {
+  const model = visibleModels(isHeadCoach).find(
     (m) =>
       m.name.toLowerCase() === modelName.toLowerCase() ||
       m.delegateName.toLowerCase() === modelName.toLowerCase() ||
@@ -90,13 +145,14 @@ async function findScopedRow(modelInfo, delegate, id, ctx) {
   if (!row) throw ApiError.notFound("Record not found");
 }
 
-function listTables() {
-  return visibleModels();
+async function listTables(coachUserId) {
+  const coach = await coachRepository.findByUserId(coachUserId);
+  return visibleModels(Boolean(coach?.isHeadCoach));
 }
 
 async function getTableData(coachUserId, modelName, query = {}) {
   const ctx = await getCoachContext(coachUserId);
-  const modelInfo = findVisibleModel(modelName);
+  const modelInfo = findVisibleModel(modelName, ctx.isHeadCoach);
   const delegate = prisma[modelInfo.delegateName];
   const where = scopeFor(modelInfo, ctx) || undefined;
 
@@ -104,6 +160,7 @@ async function getTableData(coachUserId, modelName, query = {}) {
   const page = Math.max(Number(query.page) || 1, 1);
   const skip = (page - 1) * limit;
 
+  // modelInfo.fields already excludes HIDDEN_FIELDS, so they are never selected.
   const scalarFields = modelInfo.fields.filter((f) => f.kind === "scalar" || f.kind === "enum");
   const selectObj = {};
   scalarFields.forEach((f) => {
@@ -167,7 +224,8 @@ function sanitizeModelData(modelInfo, data) {
 
 async function createModelRow(coachUserId, modelName, data) {
   const ctx = await getCoachContext(coachUserId);
-  const modelInfo = findVisibleModel(modelName);
+  const modelInfo = findVisibleModel(modelName, ctx.isHeadCoach);
+  assertWritable(modelInfo);
   if (NO_GENERIC_CREATE.includes(modelInfo.name)) {
     throw ApiError.forbidden(`Rows can't be created directly in '${modelInfo.name}'`);
   }
@@ -175,11 +233,11 @@ async function createModelRow(coachUserId, modelName, data) {
   const cleanedData = sanitizeModelData(modelInfo, data);
 
   // A new row can only be attached to one of the coach's own assigned users...
-  if (hasField(modelInfo, "userId") && !ctx.clientIds.includes(cleanedData.userId)) {
+  if (hasField(modelInfo, "userId") && !ctx.isHeadCoach && !ctx.clientIds.includes(cleanedData.userId)) {
     throw ApiError.forbidden("You can only add records for users assigned to you");
   }
   // ...and to the coach themselves, never someone else's coaching relationship.
-  if (hasField(modelInfo, "coachId")) {
+  if (hasField(modelInfo, "coachId") && !(ctx.isHeadCoach && cleanedData.coachId)) {
     cleanedData.coachId = ctx.coachId;
   }
 
@@ -188,7 +246,8 @@ async function createModelRow(coachUserId, modelName, data) {
 
 async function updateModelRow(coachUserId, modelName, id, data) {
   const ctx = await getCoachContext(coachUserId);
-  const modelInfo = findVisibleModel(modelName);
+  const modelInfo = findVisibleModel(modelName, ctx.isHeadCoach);
+  assertWritable(modelInfo);
   const delegate = prisma[modelInfo.delegateName];
   await findScopedRow(modelInfo, delegate, id, ctx);
 
@@ -200,7 +259,8 @@ async function updateModelRow(coachUserId, modelName, id, data) {
 
 async function deleteModelRow(coachUserId, modelName, id) {
   const ctx = await getCoachContext(coachUserId);
-  const modelInfo = findVisibleModel(modelName);
+  const modelInfo = findVisibleModel(modelName, ctx.isHeadCoach);
+  assertWritable(modelInfo);
   const delegate = prisma[modelInfo.delegateName];
   await findScopedRow(modelInfo, delegate, id, ctx);
 
@@ -214,8 +274,10 @@ async function deleteModelRow(coachUserId, modelName, id) {
 // their own rooms. Only ever returns an id + short label, never the full row.
 async function getRelationOptions(coachUserId, modelName) {
   const ctx = await getCoachContext(coachUserId);
+  if (ctx.isHeadCoach) return getRelationOptionsFor(prisma, modelName);
+
   const where = {
-    User: { assignedCoachId: ctx.coachId },
+    User: { id: { in: ctx.clientIds } },
     Coach: { id: ctx.coachId },
     ChatRoom: { coachId: ctx.coachId },
     CustomWorkout: { userId: { in: ctx.clientIds } }

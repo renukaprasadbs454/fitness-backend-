@@ -19,7 +19,8 @@ async function upcoming(userId) {
     coach: a.coach?.user?.fullName || null,
     scheduledAt: a.scheduledAt,
     durationMinutes: a.durationMinutes,
-    status: a.status
+    status: a.status,
+    meetingLink: a.meetingLink || null
   }));
 
   const workoutItems = scheduledWorkouts.map((w) => ({

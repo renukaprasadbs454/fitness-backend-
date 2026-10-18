@@ -6,6 +6,9 @@ const ApiError = require("../utils/ApiError");
 const { parsePagination, buildMeta } = require("../utils/pagination");
 const notificationService = require("./notification.service");
 
+// Sent from the coach in Chats the moment an admin assigns a user to them.
+const ASSIGNMENT_WELCOME_MESSAGE = "Welcome! I'm your coach. Feel free to message me here whenever you need guidance.";
+
 function toMessageDto(message) {
   return {
     id: message.id,
@@ -31,6 +34,7 @@ function toRoomSummaryDto(room, viewerRole) {
         name: room.user.fullName,
         avatarUrl: room.user.profile?.profileImageUrl || null
       },
+      coach: room.coach?.user ? { id: room.coach.id, name: room.coach.user.fullName } : undefined,
       lastMessage: lastMessage ? toMessageDto(lastMessage) : null,
       lastMessageAt: room.lastMessageAt
     };
@@ -52,15 +56,61 @@ function toRoomSummaryDto(room, viewerRole) {
  * `requester` is whoever is opening the chat; we figure out which side of
  * the pair they are and validate the other side actually exists.
  */
-async function getOrCreateRoom(requester, otherPartyId) {
+// A client's Chats tab only lists coaches they have booked (or completed) a session with,
+// plus the coach an admin assigned to them. Cancelled or never-booked coaches stay out.
+async function chatEligibleCoachIds(userId) {
+  const [sessions, closed, user] = await Promise.all([
+    chatRepository.qualifyingSessions(userId),
+    chatRepository.closedRoomsForUser(userId),
+    userRepository.findById(userId)
+  ]);
+  const closedAt = new Map(closed.map((r) => [r.coachId, r.closedForUserAt]));
+
+  const eligible = new Set();
+  for (const s of sessions) {
+    const closure = closedAt.get(s.coachId);
+    // After a swap, only sessions booked after the closure bring the chat back.
+    if (!closure || s.createdAt > closure) eligible.add(s.coachId);
+  }
+  if (user?.assignedCoachId) eligible.add(user.assignedCoachId);
+  return eligible;
+}
+
+// The same rule from the coach's side: the clients currently working with this coach.
+async function eligibleClientIdsForCoach(coachId) {
+  const [assignedIds, sessions, closed] = await Promise.all([
+    userRepository.listClientIdsOfCoach(coachId),
+    chatRepository.latestQualifyingSessionByClient(coachId),
+    chatRepository.closedRoomsForCoach(coachId)
+  ]);
+  const closedAt = new Map(closed.map((r) => [r.userId, r.closedForUserAt]));
+
+  const eligible = new Set(assignedIds);
+  for (const s of sessions) {
+    const closure = closedAt.get(s.userId);
+    if (!closure || s._max.createdAt > closure) eligible.add(s.userId);
+  }
+  return eligible;
+}
+
+async function getOrCreateRoom(requester, otherPartyId, { coachId: chosenCoachId } = {}) {
   let userId;
   let coachId;
   let otherUser;
+  let isHead = false;
 
   if (requester.role === "COACH") {
     const coach = await coachRepository.findByUserId(requester.id);
     if (!coach) throw ApiError.forbidden("Coach profile not found for this account");
+    isHead = Boolean(coach.isHeadCoach);
     coachId = coach.id;
+    // The head coach can open (or start) a conversation between any coach and any client.
+    if (chosenCoachId && chosenCoachId !== coach.id) {
+      if (!isHead) throw ApiError.forbidden("Only the head coach can open a chat for another coach");
+      const chosen = await coachRepository.findById(chosenCoachId);
+      if (!chosen) throw ApiError.notFound("Coach not found");
+      coachId = chosen.id;
+    }
     userId = otherPartyId;
     otherUser = await userRepository.findById(otherPartyId);
     if (!otherUser) throw ApiError.notFound("User not found");
@@ -72,10 +122,13 @@ async function getOrCreateRoom(requester, otherPartyId) {
   }
 
   let room = await chatRepository.findRoomByUserAndCoach(userId, coachId);
+  if (requester.role === "USER" && !(await chatEligibleCoachIds(userId)).has(coachId)) {
+    throw ApiError.forbidden("Book a session with this coach to start a chat.");
+  }
   if (!room) {
     // A coach can only start a *new* conversation with a user assigned to them.
-    // Users can still message any coach, and an existing conversation stays open.
-    if (otherUser && otherUser.assignedCoachId !== coachId) {
+    // A client can start one only with a coach they have booked (checked above).
+    if (otherUser && !isHead && otherUser.assignedCoachId !== coachId) {
       throw ApiError.forbidden("You can only start a chat with users assigned to you");
     }
     room = await chatRepository.createRoom(userId, coachId);
@@ -83,19 +136,23 @@ async function getOrCreateRoom(requester, otherPartyId) {
   return chatRepository.findRoomById(room.id);
 }
 
-async function listMyRooms(currentUser) {
+async function listMyRooms(currentUser, { all = false } = {}) {
   if (currentUser.role === "COACH") {
     const coach = await coachRepository.findByUserId(currentUser.id);
     if (!coach) return [];
-    const rooms = await chatRepository.listRoomsForCoach(coach.id);
+    const viewAll = all && coach.isHeadCoach;
+    const rooms = viewAll ? await chatRepository.listAllRooms() : await chatRepository.listRoomsForCoach(coach.id);
     return Promise.all(
       rooms.map(async (r) => ({
         ...toRoomSummaryDto(r, "COACH"),
-        unreadCount: await chatRepository.unreadCountForRecipient(r.id, currentUser.id)
+        // Unread counts only make sense for the coach the conversation belongs to.
+        unreadCount: !viewAll || r.coachId === coach.id ? await chatRepository.unreadCountForRecipient(r.id, currentUser.id) : 0,
+        isMine: r.coachId === coach.id
       }))
     );
   }
-  const rooms = await chatRepository.listRoomsForUser(currentUser.id);
+  const eligible = currentUser.role === "ADMIN" ? null : await chatEligibleCoachIds(currentUser.id);
+  const rooms = (await chatRepository.listRoomsForUser(currentUser.id)).filter((r) => !eligible || eligible.has(r.coachId));
   return Promise.all(
     rooms.map(async (r) => ({
       ...toRoomSummaryDto(r, "USER"),
@@ -113,10 +170,15 @@ async function assertParticipant(roomId, currentUser) {
     currentUser.role === "COACH" &&
     (await coachRepository.findByUserId(currentUser.id))?.id === room.coachId;
 
-  if (!isUserSide && !isCoachSide) {
+  let isOverseer = false;
+  if (!isUserSide && !isCoachSide && currentUser.role === "COACH") {
+    isOverseer = Boolean((await coachRepository.findByUserId(currentUser.id))?.isHeadCoach);
+  }
+
+  if (!isUserSide && !isCoachSide && !isOverseer) {
     throw ApiError.forbidden("You are not a participant in this chat room");
   }
-  return { room, isUserSide };
+  return { room, isUserSide, isParticipant: isUserSide || isCoachSide };
 }
 
 async function listMessages(roomId, currentUser, query) {
@@ -137,7 +199,8 @@ async function listMessages(roomId, currentUser, query) {
  * affect what the other participant sees.
  */
 async function clearMessages(roomId, currentUser) {
-  const { isUserSide } = await assertParticipant(roomId, currentUser);
+  const { isUserSide, isParticipant } = await assertParticipant(roomId, currentUser);
+  if (!isParticipant) throw ApiError.forbidden("You can only clear your own conversations");
   if (isUserSide) {
     await chatRepository.clearForUser(roomId);
   } else {
@@ -186,21 +249,65 @@ async function sendMessage(roomId, sender, { type = "TEXT", body, imageBuffer, i
   return { message: toMessageDto(message), recipientId };
 }
 
+/**
+ * Sent on the coach's behalf when an admin assigns a user to them, so the user
+ * finds a conversation waiting in their Chats tab. The room is created if needed.
+ */
+async function sendCoachAssignmentMessage(userId, coachId) {
+  const [coach, user] = await Promise.all([coachRepository.findById(coachId), userRepository.findById(userId)]);
+  if (!coach || !user) return null;
+
+  const coachSender = { id: coach.userId, role: "COACH" };
+  const room = await getOrCreateRoom(coachSender, userId);
+
+  const body = ASSIGNMENT_WELCOME_MESSAGE;
+
+  return sendMessage(room.id, coachSender, { type: "TEXT", body });
+}
+
+/**
+ * Sends the coach's custom booking message (if they set one) to the client who
+ * just booked a session. The room may not exist yet: users can message any
+ * coach, so it is created here directly rather than through the coach-side
+ * "assigned clients only" rule.
+ */
+async function sendBookingMessage(userId, coachId) {
+  const coach = await coachRepository.findById(coachId);
+  if (!coach) return null;
+
+  // A coach who hasn't written their own note sends the standard welcome instead.
+  const custom = coach.bookingMessage?.trim();
+  const text = custom || ASSIGNMENT_WELCOME_MESSAGE;
+
+  let room = await chatRepository.findRoomByUserAndCoach(userId, coachId);
+  if (!room) room = await chatRepository.createRoom(userId, coachId);
+
+  // The standard welcome is sent once per conversation (an admin assignment may already have sent it);
+  // a coach's own custom note goes out with every booking.
+  if (!custom && (await chatRepository.hasMessageFrom(room.id, coach.userId, ASSIGNMENT_WELCOME_MESSAGE))) return null;
+
+  return sendMessage(room.id, { id: coach.userId, role: "COACH" }, { type: "TEXT", body: text });
+}
+
 async function markDelivered(roomId, currentUser) {
-  await assertParticipant(roomId, currentUser);
-  await chatRepository.markDelivered(roomId, currentUser.id);
+  const { isParticipant } = await assertParticipant(roomId, currentUser);
+  if (isParticipant) await chatRepository.markDelivered(roomId, currentUser.id);
 }
 
 async function markSeen(roomId, currentUser) {
-  await assertParticipant(roomId, currentUser);
-  await chatRepository.markSeen(roomId, currentUser.id);
+  const { isParticipant } = await assertParticipant(roomId, currentUser);
+  if (isParticipant) await chatRepository.markSeen(roomId, currentUser.id);
 }
 
 module.exports = {
+  chatEligibleCoachIds,
+  eligibleClientIdsForCoach,
   getOrCreateRoom,
   listMyRooms,
   listMessages,
   sendMessage,
+  sendCoachAssignmentMessage,
+  sendBookingMessage,
   markDelivered,
   markSeen,
   clearMessages,

@@ -31,6 +31,11 @@ const server = httpServer.listen(env.port, () => {
   logger.info(`Admin portal available at http://localhost:${env.port}/admin`);
   logger.info(`Coach portal available at http://localhost:${env.port}/coach`);
   logger.info(`Socket.io chat namespace ready at /chat`);
+  if (env.nodeEnv === "production" && env.storage.driver !== "s3") {
+    logger.warn(
+      "STORAGE_DRIVER is not 's3' in production: uploaded images are written to this server's disk and are lost on every redeploy/restart on hosts with an ephemeral filesystem (e.g. Render). Set STORAGE_DRIVER=s3 and the S3_* variables."
+    );
+  }
   if (env.cron.enabled) {
     startCronJobs();
     logger.info(`Cron reminder sweep enabled (${env.cron.reminderSweepCron})`);

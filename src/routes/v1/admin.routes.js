@@ -4,6 +4,8 @@ const { authenticate } = require("../../middlewares/auth.middleware");
 const { requireRole } = require("../../middlewares/role.middleware");
 const validate = require("../../middlewares/validate.middleware");
 const schemas = require("../../validators/admin.validator");
+const engagementSchemas = require("../../validators/engagement.validator");
+const integrationController = require("../../controllers/integration.controller");
 const { ROLES } = require("../../constants/roles");
 
 /**
@@ -280,7 +282,213 @@ router.post(
   adminController.broadcastAnnouncement
 );
 
+// ── Image storage self-test ──────────────────────────────
+
+/**
+ * @swagger
+ * /admin/storage/check:
+ *   get:
+ *     summary: Self-test image storage - uploads a tiny image, downloads it the way the apps do, and reports each step
+ *     tags: [Admin]
+ *     responses:
+ *       200: { description: Report with ok true/false and per-step details }
+ */
+router.get("/storage/check", adminController.checkStorage);
+
+// ── Support requests ─────────────────────────────────────
+
+/**
+ * @swagger
+ * /admin/support/tickets:
+ *   get:
+ *     summary: List support requests raised by users (filter by status/category, search text)
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: query, name: status, schema: { type: string, enum: [OPEN, IN_PROGRESS, RESOLVED, CLOSED] } }
+ *       - { in: query, name: category, schema: { type: string, enum: [GENERAL, ACCOUNT, PAYMENT, TECHNICAL, COACH, OTHER] } }
+ *       - { in: query, name: search, schema: { type: string } }
+ *       - { in: query, name: page, schema: { type: integer } }
+ *       - { in: query, name: limit, schema: { type: integer } }
+ *     responses:
+ *       200: { description: Support requests retrieved (meta.counts has totals per status) }
+ * /admin/support/tickets/{id}:
+ *   patch:
+ *     summary: Reply to and/or change the status of a support request (the user is notified)
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status: { type: string, enum: [OPEN, IN_PROGRESS, RESOLVED, CLOSED] }
+ *               adminReply: { type: string, nullable: true }
+ *     responses:
+ *       200: { description: Support request updated }
+ */
+router.get("/support/tickets", validate(engagementSchemas.listSupportTickets), adminController.listSupportTickets);
+router.patch("/support/tickets/:id", validate(engagementSchemas.updateSupportTicket), adminController.updateSupportTicket);
+
+/**
+ * @swagger
+ * /admin/support/tickets/{id}:
+ *   delete:
+ *     summary: Delete a support request
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     responses:
+ *       200: { description: Support request deleted }
+ */
+router.delete("/support/tickets/:id", validate(engagementSchemas.supportTicketIdParam), adminController.deleteSupportTicket);
+
+// ── Coach reports ────────────────────────────────────────
+
+/**
+ * @swagger
+ * /admin/coach-reports:
+ *   get:
+ *     summary: List reports users have made about coaches
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: query, name: status, schema: { type: string, enum: [OPEN, REVIEWING, RESOLVED, DISMISSED] } }
+ *       - { in: query, name: page, schema: { type: integer } }
+ *       - { in: query, name: limit, schema: { type: integer } }
+ *     responses:
+ *       200: { description: Coach reports retrieved (meta.counts has totals per status) }
+ * /admin/coach-reports/{id}:
+ *   patch:
+ *     summary: Change a report's status and/or note (the user is notified of status changes)
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status: { type: string, enum: [OPEN, REVIEWING, RESOLVED, DISMISSED] }
+ *               adminNote: { type: string, nullable: true }
+ *     responses:
+ *       200: { description: Report updated }
+ * /admin/coach-reports/{id}/reassign:
+ *   post:
+ *     summary: Resolve a report by moving the user to another coach (coachId null removes their coach)
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [coachId]
+ *             properties:
+ *               coachId: { type: string, format: uuid, nullable: true }
+ *               adminNote: { type: string }
+ *     responses:
+ *       200: { description: User moved to the new coach and report resolved }
+ */
+router.get("/coach-reports", validate(engagementSchemas.listCoachReports), adminController.listCoachReports);
+router.patch("/coach-reports/:id", validate(engagementSchemas.updateCoachReport), adminController.updateCoachReport);
+router.post("/coach-reports/:id/reassign", validate(engagementSchemas.reassignFromReport), adminController.reassignFromCoachReport);
+
+// ── Integrations: platform Google account for Meet links ──
+
+/**
+ * @swagger
+ * /admin/integrations/google-meet:
+ *   get:
+ *     summary: Whether a platform Google account is connected for generating Meet links
+ *     tags: [Admin]
+ *     responses:
+ *       200: { description: Integration status (includes the redirect URI to register in Google Cloud) }
+ *   delete:
+ *     summary: Disconnect the platform Google account (links already created keep working)
+ *     tags: [Admin]
+ *     responses:
+ *       200: { description: Google account disconnected }
+ * /admin/integrations/google-meet/connect:
+ *   post:
+ *     summary: Get the Google consent URL to connect the platform account (open it in the browser)
+ *     tags: [Admin]
+ *     responses:
+ *       200: { description: Consent URL }
+ */
+router.get("/integrations/google-meet", integrationController.googleMeetStatus);
+router.post("/integrations/google-meet/connect", integrationController.googleMeetConnectUrl);
+router.delete("/integrations/google-meet", integrationController.googleMeetDisconnect);
+
 // ── Dynamic Database Explorer (Prisma Studio integration) ──
+
+/**
+ * @swagger
+ * /admin/db/tables:
+ *   get:
+ *     summary: List every database table with its columns and relations
+ *     tags: [Admin]
+ *     responses:
+ *       200: { description: Schema retrieved }
+ * /admin/db/tables/{tableName}:
+ *   get:
+ *     summary: List rows of a table (paginated)
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: path, name: tableName, required: true, schema: { type: string }, example: packages }
+ *       - { in: query, name: page, schema: { type: integer } }
+ *       - { in: query, name: limit, schema: { type: integer, maximum: 200 } }
+ *     responses:
+ *       200: { description: Rows retrieved }
+ *       404: { description: Table not found }
+ *   post:
+ *     summary: Insert a row into a table
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: path, name: tableName, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { type: object, additionalProperties: true }
+ *     responses:
+ *       201: { description: Row created }
+ * /admin/db/tables/{tableName}/{id}:
+ *   put:
+ *     summary: Update a row by its primary key
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: path, name: tableName, required: true, schema: { type: string } }
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { type: object, additionalProperties: true }
+ *     responses:
+ *       200: { description: Row updated }
+ *   delete:
+ *     summary: Delete a row by its primary key
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: path, name: tableName, required: true, schema: { type: string } }
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: Row deleted }
+ * /admin/db/relation-options/{modelName}:
+ *   get:
+ *     summary: id/label options for a model, used to pick foreign keys
+ *     tags: [Admin]
+ *     parameters:
+ *       - { in: path, name: modelName, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: Options retrieved }
+ */
 router.get("/db/tables", adminController.getDatabaseSchema);
 router.get("/db/tables/:tableName", adminController.getModelData);
 router.post("/db/tables/:tableName", adminController.createModelRow);

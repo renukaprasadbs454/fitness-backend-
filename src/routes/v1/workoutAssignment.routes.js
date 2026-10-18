@@ -80,6 +80,53 @@ router.get(
 
 /**
  * @swagger
+ * /workout-assignments/custom/{id}:
+ *   patch:
+ *     summary: Edit a custom workout you assigned (title, details and/or the full exercise list)
+ *     tags: [WorkoutAssignments]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title: { type: string }
+ *               description: { type: string, nullable: true }
+ *               durationMinutes: { type: integer, nullable: true }
+ *               difficulty: { type: string, enum: [BEGINNER, INTERMEDIATE, ADVANCED] }
+ *               categoryKey: { type: string }
+ *               exercises:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name: { type: string }
+ *                     muscleGroup: { type: string }
+ *                     sets: { type: integer }
+ *                     reps: { type: integer }
+ *     responses:
+ *       200: { description: Assigned workout updated }
+ *   delete:
+ *     summary: Remove a custom workout you assigned
+ *     tags: [WorkoutAssignments]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     responses:
+ *       200: { description: Assigned workout removed }
+ */
+router.patch(
+  "/custom/:id",
+  authenticate,
+  validate(schemas.updateCustomAssignment),
+  workoutAssignmentController.updateCustomAssignment
+);
+router.delete("/custom/:id", authenticate, validate(schemas.idParam), workoutAssignmentController.removeCustomAssignment);
+
+/**
+ * @swagger
  * /workout-assignments/{id}:
  *   patch:
  *     summary: Update a workout plan assignment's note/schedule (sender or recipient)

@@ -114,7 +114,13 @@ const env = {
     webClientSecret: process.env.GOOGLE_WEB_CLIENT_SECRET || "",
     scopes: process.env.GOOGLE_CALENDAR_SCOPES || "https://www.googleapis.com/auth/calendar.readonly",
     // 32-byte key, hex-encoded (64 hex chars) — generate with `openssl rand -hex 32`.
-    tokenEncryptionKey: process.env.GOOGLE_TOKEN_ENCRYPTION_KEY || ""
+    tokenEncryptionKey: process.env.GOOGLE_TOKEN_ENCRYPTION_KEY || "",
+    // Platform Google account used to create one Google Meet link per session.
+    // The redirect URI must be listed on the Web OAuth client in Google Cloud;
+    // when unset it is derived from the request host.
+    meetRedirectUri: process.env.GOOGLE_MEET_REDIRECT_URI || "",
+    // Email the user and coach a calendar invite for each generated meeting.
+    meetSendInvites: process.env.GOOGLE_MEET_SEND_INVITES !== "false"
   },
 
   cron: {

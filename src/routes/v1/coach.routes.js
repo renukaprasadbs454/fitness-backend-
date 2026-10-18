@@ -70,6 +70,79 @@ router.put(
 
 /**
  * @swagger
+ * /coaches/{id}:
+ *   put:
+ *     summary: "Head coach: edit another coach's profile (bio, specialties, experience, accepting clients)"
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     responses:
+ *       200: { description: Coach profile updated }
+ *       403: { description: Only the head coach can edit another coach }
+ */
+router.put(
+  "/:id",
+  invalidate(CACHE_PREFIX),
+  authenticate,
+  requireRole(ROLES.COACH),
+  validate(schemas.updateCoachProfile),
+  coachController.updateCoachProfile
+);
+
+/**
+ * @swagger
+ * /coaches:
+ *   post:
+ *     summary: "Head coach: make an existing user a coach (or update their coach profile)"
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId]
+ *             properties:
+ *               userId: { type: string, format: uuid }
+ *               bio: { type: string }
+ *               specialties: { type: array, items: { type: string } }
+ *               experienceYears: { type: integer }
+ *               isAcceptingClients: { type: boolean }
+ *     responses:
+ *       201: { description: Coach added }
+ *       403: { description: Only the head coach can add coaches }
+ * /coaches/{id}:
+ *   delete:
+ *     summary: "Head coach: remove a coach (their account becomes a regular user)"
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     responses:
+ *       200: { description: Coach removed }
+ *       403: { description: Only the head coach can remove coaches (and not the head coach) }
+ */
+router.post(
+  "/",
+  invalidate(CACHE_PREFIX),
+  authenticate,
+  requireRole(ROLES.COACH),
+  validate(schemas.createCoachByHead),
+  coachController.createCoach
+);
+router.delete(
+  "/:id",
+  invalidate(CACHE_PREFIX),
+  authenticate,
+  requireRole(ROLES.COACH),
+  validate(schemas.idParam),
+  coachController.deleteCoach
+);
+
+/**
+ * @swagger
  * /coaches/me:
  *   delete:
  *     summary: Delete the logged-in coach's own profile

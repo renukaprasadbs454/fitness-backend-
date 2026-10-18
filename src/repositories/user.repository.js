@@ -119,6 +119,14 @@ const userRepository = {
     return rows.map((r) => r.id);
   },
 
+  // Lightweight client rows for a known set of ids (coach session scheduling).
+  listClientsLiteByIds: (ids) =>
+    prisma.user.findMany({
+      where: { id: { in: ids }, role: "USER" },
+      select: { id: true, fullName: true, email: true, username: true, assignedCoachId: true },
+      orderBy: { fullName: "asc" }
+    }),
+
   updateBasicInfo: (id, data) =>
     prisma.user.update({
       where: { id },
@@ -154,10 +162,11 @@ const userRepository = {
 
   // ── Coach: lightweight client picker (name/email only, no sensitive fields) ──
   // `assignedCoachId` restricts results to one coach's assigned users.
-  searchLite: ({ search, take = 20, assignedCoachId }) =>
+  searchLite: ({ search, take = 20, assignedCoachId, role }) =>
     prisma.user.findMany({
       where: {
         ...(assignedCoachId ? { assignedCoachId } : {}),
+        ...(role ? { role } : {}),
         ...(search
           ? {
               OR: [

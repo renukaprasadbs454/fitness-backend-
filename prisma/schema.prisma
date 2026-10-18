@@ -88,6 +88,11 @@ enum WorkoutDifficulty {
   ADVANCED
 }
 
+enum MeetingProvider {
+  MANUAL
+  GOOGLE_MEET
+}
+
 enum AppointmentStatus {
   PENDING
   CONFIRMED
@@ -174,6 +179,9 @@ model User {
   workoutPlansCreated      AssignedWorkoutPlan[]     @relation("AssignedWorkoutPlanCreator")
   payments                 Payment[]
   googleCalendarConnection GoogleCalendarConnection?
+  favoriteCoaches          FavoriteCoach[]
+  supportTickets           SupportTicket[]
+  coachReports             CoachReport[]
 
   @@index([role])
   @@index([assignedCoachId])
@@ -266,6 +274,11 @@ model Coach {
   experienceYears    Int?     @map("experience_years")
   profileImageUrl    String?  @map("profile_image_url")
   isAcceptingClients Boolean  @default(true) @map("is_accepting_clients")
+  // The head coach oversees every coach: the coach portal shows them all clients,
+  // sessions and records instead of only their own. Set by an admin.
+  isHeadCoach        Boolean  @default(false) @map("is_head_coach")
+  // Optional note the coach wants every client to receive in Chats right after they book a session.
+  bookingMessage     String?  @map("booking_message")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -273,6 +286,8 @@ model Coach {
   appointments Appointment[]
   chatRooms    ChatRoom[]
   clients      User[]              @relation("CoachClients")
+  favoritedBy  FavoriteCoach[]
+  reports      CoachReport[]
 
   @@index([experienceYears])
   @@map("coaches")
@@ -603,6 +618,12 @@ model Appointment {
   status          AppointmentStatus @default(PENDING)
   notes           String?
   reminderSentAt  DateTime?         @map("reminder_sent_at")
+  // Video-call link for the session. Either pasted by the coach/admin (MANUAL)
+  // or generated through the platform's connected Google account (GOOGLE_MEET),
+  // in which case meetingEventId is the Google Calendar event that owns it.
+  meetingLink     String?           @map("meeting_link")
+  meetingProvider MeetingProvider?  @map("meeting_provider")
+  meetingEventId  String?           @map("meeting_event_id")
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
@@ -703,6 +724,13 @@ enum AdminAction {
   UPDATE_COACH
   DELETE_COACH
   ASSIGN_COACH
+  CREATE_PACKAGE
+  UPDATE_PACKAGE
+  DELETE_PACKAGE
+  UPDATE_SUPPORT_TICKET
+  UPDATE_COACH_REPORT
+  CONNECT_INTEGRATION
+  DISCONNECT_INTEGRATION
 }
 
 model AdminAuditLog {
@@ -738,20 +766,23 @@ enum MessageType {
 // One room per (user, coach) pair. Created lazily on first message
 // or when a user opens a coach's chat for the first time.
 model ChatRoom {
-  id             String    @id @default(uuid())
-  userId         String    @map("user_id")
-  user           User      @relation("ChatRoomsAsUser", fields: [userId], references: [id], onDelete: Cascade)
-  coachId        String    @map("coach_id")
-  coach          Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  lastMessageAt  DateTime? @map("last_message_at")
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  user            User      @relation("ChatRoomsAsUser", fields: [userId], references: [id], onDelete: Cascade)
+  coachId         String    @map("coach_id")
+  coach           Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  lastMessageAt   DateTime? @map("last_message_at")
   // "Clear chat" is per-viewer, not destructive: each side can hide the
   // history on their end (like WhatsApp) without deleting it for the other
   // participant. Messages created at/before this timestamp are hidden from
   // that side's message list.
-  userClearedAt  DateTime? @map("user_cleared_at")
-  coachClearedAt DateTime? @map("coach_cleared_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  userClearedAt   DateTime? @map("user_cleared_at")
+  coachClearedAt  DateTime? @map("coach_cleared_at")
+  // Set when the user is swapped away from this coach (reassigned/removed). The chat leaves the
+  // user's list unless they are assigned to this coach again or book a session after this time.
+  closedForUserAt DateTime? @map("closed_for_user_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   messages ChatMessage[]
 
@@ -846,4 +877,141 @@ model ContentPost {
   @@index([type, status, publishedAt])
   @@index([categoryId])
   @@map("content_posts")
+}
+
+// ────────────────────────────────────────────────────────────
+// MEMBERSHIP PACKAGES (duration plans shown on the Packages screen)
+// ────────────────────────────────────────────────────────────
+
+model Package {
+  id             String   @id @default(uuid())
+  name           String
+  tagline        String?
+  durationMonths Int      @map("duration_months")
+  price          Decimal  @db.Decimal(10, 2) // total price for the whole duration
+  originalPrice  Decimal  @map("original_price") @db.Decimal(10, 2) // struck-through MRP
+  currency       String   @default("INR")
+  features       String[]
+  badge          String? // e.g. "BEST VALUE"
+  isActive       Boolean  @default(true) @map("is_active")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive, sortOrder])
+  @@map("packages")
+}
+
+// ────────────────────────────────────────────────────────────
+// FAVOURITE COACHES, COACH REPORTS, SUPPORT TICKETS
+// ────────────────────────────────────────────────────────────
+
+model FavoriteCoach {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coachId   String   @map("coach_id")
+  coach     Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, coachId])
+  @@index([coachId])
+  @@map("favorite_coaches")
+}
+
+enum CoachReportReason {
+  UNRESPONSIVE
+  MISSED_SESSIONS
+  UNPROFESSIONAL
+  NOT_A_GOOD_FIT
+  INAPPROPRIATE_BEHAVIOUR
+  OTHER
+}
+
+enum CoachReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+// A user's complaint about a coach. Admins review it and may move the user to
+// another coach (reassignedToCoachId records which one).
+model CoachReport {
+  id                  String            @id @default(uuid())
+  userId              String            @map("user_id")
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coachId             String            @map("coach_id")
+  coach               Coach             @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  reason              CoachReportReason
+  details             String?
+  wantsNewCoach       Boolean           @default(false) @map("wants_new_coach")
+  status              CoachReportStatus @default(OPEN)
+  adminNote           String?           @map("admin_note")
+  reassignedToCoachId String?           @map("reassigned_to_coach_id")
+  resolvedAt          DateTime?         @map("resolved_at")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([coachId])
+  @@index([userId])
+  @@map("coach_reports")
+}
+
+enum SupportTicketCategory {
+  GENERAL
+  ACCOUNT
+  PAYMENT
+  TECHNICAL
+  COACH
+  OTHER
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model SupportTicket {
+  id          String                @id @default(uuid())
+  userId      String                @map("user_id")
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    SupportTicketCategory @default(GENERAL)
+  subject     String
+  message     String
+  status      SupportTicketStatus   @default(OPEN)
+  adminReply  String?               @map("admin_reply")
+  repliedById String?               @map("replied_by_id") // admin who last replied
+  repliedAt   DateTime?             @map("replied_at")
+  resolvedAt  DateTime?             @map("resolved_at")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@map("support_tickets")
+}
+
+// ────────────────────────────────────────────────────────────
+// PLATFORM-LEVEL INTEGRATIONS (one row per provider)
+// ────────────────────────────────────────────────────────────
+
+// The single Google account the platform uses to create a unique Google Meet
+// link for every session. Tokens are AES-256-GCM encrypted (googleTokenCrypto).
+model PlatformIntegration {
+  id            String    @id @default(uuid())
+  provider      String    @unique // "GOOGLE_MEET"
+  accountEmail  String?   @map("account_email")
+  accessToken   String?   @map("access_token")
+  refreshToken  String?   @map("refresh_token")
+  expiresAt     DateTime? @map("expires_at")
+  scope         String?
+  connectedById String?   @map("connected_by_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("platform_integrations")
 }

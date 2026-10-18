@@ -234,7 +234,15 @@ async function listPayments(query) {
 // ── Dynamic Database Schema & Table Explorer (Prisma Studio integration) ──
 
 const prisma = require("../database/prismaClient");
-const { getDatabaseSchema } = require("../utils/dbIntrospection");
+const { getDatabaseSchema: getFullSchema } = require("../utils/dbIntrospection");
+
+// Encrypted OAuth tokens for the platform Google account are not something to
+// browse or hand-edit; the integration is managed from its own admin screen.
+const EXPLORER_HIDDEN_MODELS = ["PlatformIntegration"];
+
+function getDatabaseSchema() {
+  return getFullSchema().filter((m) => !EXPLORER_HIDDEN_MODELS.includes(m.name));
+}
 const { resolveRelationLabels, getRelationOptions } = require("../utils/dbRelationLabels");
 
 async function getModelData(modelName, query = {}) {

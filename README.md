@@ -51,6 +51,8 @@ npm run prisma:generate
 npm run prisma:migrate       # dev migration
 npm run prisma:migrate:deploy
 npm run prisma:studio
+npm run prisma:seed          # demo data, including the demo coach (coach@fitnerve.in)
+node scripts/create-admin.js # also: create-coach.js, make-coach.js, check-admin.js
 npm run lint
 ```
 
@@ -60,6 +62,22 @@ npm run lint
 - **Real-time chat**: Socket.io `/chat` namespace (typing, presence, delivered/seen receipts) with a REST fallback covering the same operations; an AI coach reply endpoint sits alongside it.
 - **Calendar**: `/calendar/upcoming` merges internal appointments + scheduled workouts with, if connected, the user's Google Calendar events. Google connection lifecycle (`connect/start`, `exchange`, `status`, disconnect) lives under `/calendar/google/*` — OAuth2 Authorization Code + PKCE, tokens encrypted at rest (AES-256-GCM), auto-refresh, auto-disconnect on a revoked grant.
 - **Admin & coach portals**: static sites served directly from this API under `/admin` and `/coach`, including a built-in database explorer.
+
+- **Sessions & meeting links**: clients book sessions; coaches can also schedule a single session or a weekly series (up to 12) for their clients (`POST /appointments/sessions`, clients listed by `GET /appointments/sessions/clients`). Every session carries its own join link: pasted by the coach/admin (`PATCH /appointments/:id/meeting-link`) or generated as a unique Google Meet link through one platform Google account (`POST /appointments/:id/meeting-link/generate`, and automatically when a session is confirmed or scheduled). Rescheduling notifies the other person; a coach moving their own session ignores the weekly availability that limits client bookings.
+- **Coaches & clients**: a head coach sees every coach's clients, sessions and chats and can edit other coaches; admins assign clients to coaches. Swapping or removing a client's coach cancels their upcoming sessions with the old coach and removes that chat from the client's list. Coach-set booking messages and the assignment greeting land in Chats automatically.
+- **Packages & payments**: membership packages with a payment-method step (payments stay `PENDING` until a gateway is added).
+- **Support & reports**: users raise (and edit/delete) support requests and can report a coach they are working with; admins reply, edit, resolve or reassign from the admin portal. Users can also favourite coaches.
+- **Image uploads**: JPEG/PNG/WebP/GIF, stored locally or on S3-compatible storage; images are served through short-lived signed URLs. The admin dashboard has a **Test image storage** button to verify the bucket.
+
+## Google Meet links (one Google account for every session)
+
+1. In Google Cloud Console enable the **Google Calendar API** and use a **Web application** OAuth client (`GOOGLE_WEB_CLIENT_ID` / `GOOGLE_WEB_CLIENT_SECRET`, plus `GOOGLE_TOKEN_ENCRYPTION_KEY`).
+2. Add this under the client's **Authorized redirect URIs** (one per environment, no trailing slash):
+   - `http://localhost:4000/api/v1/integrations/google-meet/callback`
+   - `https://<your-backend-host>/api/v1/integrations/google-meet/callback`
+   A mismatch shows Google's `Error 400: redirect_uri_mismatch`.
+3. Publish the OAuth consent screen (in *Testing*, refresh tokens expire after 7 days; test users must be added).
+4. Sign in to the admin portal and press **Connect Google account** on the dashboard's *Google Meet Links* card. Until connected, sessions simply have no generated link and coaches can paste one instead.
 
 ## Email delivery
 
