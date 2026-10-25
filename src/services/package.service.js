@@ -40,7 +40,10 @@ async function checkout(userId, packageId, method) {
   const pkg = await packageRepository.findById(packageId);
   if (!pkg || !pkg.isActive) throw ApiError.notFound("Package not found");
 
-  const payment = await packageRepository.createPayment({
+  // Tapping "Buy" again shouldn't stack up duplicate pending payments: reuse the open one.
+  const since = new Date(Date.now() - 30 * 60 * 1000);
+  const open = await packageRepository.findRecentPendingPayment(userId, pkg.id, since);
+  const payment = open && open.method === method ? open : await packageRepository.createPayment({
     userId,
     amount: pkg.price,
     currency: pkg.currency,

@@ -16,7 +16,7 @@ const assignWorkoutPlan = {
   body: z.object({
     planId: z.string().uuid("Invalid workout plan id"),
     note: z.string().trim().max(500).optional(),
-    scheduledAt: z.string().datetime().optional(),
+    scheduledAt: z.string().datetime({ offset: true }).optional(),
     asCoachUserId: z.string().uuid("Invalid coach id").optional()
   })
 };
@@ -68,7 +68,7 @@ const updateAssignedWorkoutPlan = {
   params: idParam.params,
   body: z.object({
     note: z.string().trim().max(500).nullable().optional(),
-    scheduledAt: z.string().datetime().nullable().optional()
+    scheduledAt: z.string().datetime({ offset: true }).nullable().optional()
   })
 };
 

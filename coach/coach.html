@@ -130,12 +130,40 @@
     body.theme-light .bg-dark-card { background-color: #ffffff !important; }
     body.theme-light .bg-dark-muted { background-color: #e2e8f0 !important; }
     body.theme-light .border-dark-border { border-color: #cbd5e1 !important; }
+    body.theme-light .bg-dark\/40 { background-color: #f1f5f9 !important; }
     body.theme-light .card { background: #ffffff !important; border-color: #e2e8f0 !important; }
     body.theme-light .text-slate-300 { color: #334155 !important; }
     body.theme-light .text-slate-400 { color: #64748b !important; }
     body.theme-light .text-slate-500 { color: #64748b !important; }
     body.theme-light .text-slate-600 { color: #475569 !important; }
     body.theme-light .text-white { color: #0f172a !important; }
+
+    /* ── Phones: data tables become stacked cards so every column (and the row's action menu) is visible
+       without sideways scrolling. Only tables with a static header row opt in via .responsive-cards. ── */
+    @media (max-width: 767px) {
+      table.responsive-cards { min-width: 0 !important; display: block; width: 100%; }
+      table.responsive-cards thead { display: none; }
+      table.responsive-cards tbody { display: block; }
+      table.responsive-cards tbody tr { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 14px 16px; position: relative; }
+      table.responsive-cards tbody td { display: block !important; padding: 0 !important; border: 0; min-width: 0; }
+      table.responsive-cards tbody td:first-child { flex: 1 1 100%; padding-right: 44px !important; }
+      table.responsive-cards tbody td[colspan] { flex: 1 1 100%; text-align: center; padding: 28px 8px !important; }
+      table.responsive-cards tbody td[data-label]::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #64748b; margin-bottom: 2px; }
+      table.responsive-cards tbody td.row-actions { position: absolute; top: 10px; right: 10px; }
+      table.responsive-cards tbody td.row-actions button { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+      table.responsive-cards tbody td.row-actions { top: 4px; right: 4px; }
+      /* the compact duplicates inside the first cell are replaced by the labelled cells below it */
+      table.responsive-cards tbody td:first-child .sm\:hidden, table.responsive-cards tbody td:first-child .md\:hidden { display: none !important; }
+    }
+    /* Text colours picked for the dark theme that were unreadable on light backgrounds. */
+    body.theme-light .text-slate-100, body.theme-light .text-slate-200 { color: #1e293b !important; }
+    body.theme-light .text-primary-light { color: #1d4ed8 !important; }
+    body.theme-light .text-emerald-400 { color: #047857 !important; }
+    body.theme-light .text-amber-400 { color: #b45309 !important; }
+    body.theme-light .text-orange-400 { color: #c2410c !important; }
+    body.theme-light .text-red-400 { color: #dc2626 !important; }
+    body.theme-light .hover\:text-white:hover { color: #0f172a !important; }
+    body.theme-light .hover\:bg-dark-border:hover { background-color: #cbd5e1 !important; }
     body.theme-light .placeholder-slate-600::placeholder { color: #94a3b8 !important; }
     body.theme-light .hover\:bg-white\/5:hover { background-color: rgba(15,23,42,0.05) !important; }
     body.theme-light .hover\:bg-red-500\/10:hover { background-color: rgba(239,68,68,0.08) !important; }
@@ -151,7 +179,11 @@
 <body :class="themeMode === 'light' ? 'theme-light bg-slate-100 text-slate-900' : 'theme-dark bg-dark text-white'" class="font-sans antialiased" x-data="coachApp()" x-init="init()">
 
   <!-- ============ LOGIN SCREEN ============ -->
-  <div x-show="!isAuthenticated" x-cloak class="login-bg min-h-screen flex items-center justify-center p-4">
+  <div x-show="!isAuthenticated" x-cloak class="login-bg min-h-screen flex items-center justify-center p-4 relative">
+    <button type="button" @click="toggleTheme()" class="absolute top-4 right-4 p-2.5 rounded-lg border border-dark-border bg-dark-card text-slate-400 hover:text-slate-200 transition-colors" :title="themeMode === 'dark' ? 'Switch to Light' : 'Switch to Dark'" :aria-label="themeMode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
+      <svg x-show="themeMode === 'dark'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      <svg x-show="themeMode === 'light'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+    </button>
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <div class="relative inline-flex items-center justify-center mb-5">
@@ -311,7 +343,7 @@
           <button @click="mobileNavOpen = true" class="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
-          <span class="sm:hidden font-bold text-sm">FitNerve Coach</span>
+          <span class="sm:hidden font-bold text-sm whitespace-nowrap truncate min-w-0 max-[359px]:hidden">FitNerve Coach</span>
           <nav class="hidden sm:flex items-center gap-1.5 text-sm text-slate-500 min-w-0">
             <span class="flex items-center gap-1.5">
               <button @click="currentView='dashboard'" class="hover:text-slate-200 transition-colors" :class="currentView === 'dashboard' ? 'text-white font-semibold' : ''">Dashboard</button>
@@ -536,7 +568,7 @@
               </div>
 
               <div class="card p-6 mb-6 max-w-2xl">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Add a Slot</h3>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4" x-text="editingSlotId ? 'Edit slot' : 'Add a Slot'"></h3>
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                   <div class="sm:col-span-2">
                     <label class="block text-xs text-slate-500 mb-1.5">Day</label>
@@ -554,9 +586,12 @@
                   </div>
                 </div>
                 <div x-show="slotError" x-cloak class="text-sm text-red-400 mt-3" x-text="slotError"></div>
-                <button @click="addSlot()" :disabled="savingSlot" class="btn-primary px-5 py-2.5 rounded-xl text-sm mt-4 disabled:opacity-50">
-                  <span x-text="savingSlot ? 'Saving…' : 'Add Slot'"></span>
-                </button>
+                <div class="flex items-center gap-3 mt-4">
+                  <button @click="addSlot()" :disabled="savingSlot" class="btn-primary px-5 py-2.5 rounded-xl text-sm disabled:opacity-50">
+                    <span x-text="savingSlot ? 'Saving…' : (editingSlotId ? 'Save changes' : 'Add Slot')"></span>
+                  </button>
+                  <button x-show="editingSlotId" x-cloak @click="cancelSlotEdit()" class="px-4 py-2.5 rounded-xl text-sm border border-dark-border text-slate-300 hover:bg-white/5">Cancel</button>
+                </div>
               </div>
 
               <div class="card p-6">
@@ -564,10 +599,15 @@
                 <div x-show="availability.length === 0" class="text-sm text-slate-500">No availability slots yet.</div>
                 <div class="space-y-2">
                   <template x-for="slot in availability" :key="slot.id">
-                    <div class="flex items-center justify-between rounded-xl border border-dark-border px-4 py-3">
-                      <span class="text-sm font-semibold" x-text="slot.dayOfWeek"></span>
+                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3" :class="editingSlotId === slot.id ? 'border-primary/60' : 'border-dark-border'">
+                      <span class="text-sm font-semibold w-28" x-text="slot.dayOfWeek"></span>
                       <span class="text-sm text-slate-400" x-text="slot.startTime + ' – ' + slot.endTime"></span>
                       <span class="badge" :class="slot.isActive ? 'badge-green' : 'badge-slate'" x-text="slot.isActive ? 'Active' : 'Inactive'"></span>
+                      <div class="flex gap-2">
+                        <button @click="toggleSlot(slot)" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border" x-text="slot.isActive ? 'Turn off' : 'Turn on'"></button>
+                        <button @click="editSlot(slot)" class="px-3 py-1.5 rounded-lg bg-primary/15 text-primary-light text-xs font-semibold hover:bg-primary/25">Edit</button>
+                        <button @click="deleteSlot(slot)" class="px-3 py-1.5 rounded-lg text-red-400 text-xs font-semibold border border-red-500/30 hover:bg-red-500/10">Delete</button>
+                      </div>
                     </div>
                   </template>
                 </div>
@@ -633,22 +673,61 @@
           <template x-if="currentView === 'clients'">
             <div>
               <h2 class="text-2xl font-bold mb-1">Clients</h2>
-              <p class="text-slate-400 text-sm mb-6">Users an admin assigned to you, and anyone who has booked a session with you.</p>
+              <p class="text-slate-400 text-sm mb-4" x-text="coach?.isHeadCoach ? 'Every client on the platform and the coach each one is assigned to.' : 'People assigned to you by an admin, and anyone who has booked a session with you.'"></p>
+
+              <!-- Head coach: how the clients are split between coaches. Tap one to filter. -->
+              <div x-show="coach?.isHeadCoach" x-cloak class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                <button @click="clientsFilter = 'all'" class="card p-3 text-left" :class="clientsFilter === 'all' ? 'ring-1 ring-primary' : ''">
+                  <p class="text-[11px] uppercase tracking-wider text-slate-500">All clients</p>
+                  <p class="text-2xl font-bold" x-text="clientsData.summary.total"></p>
+                </button>
+                <button @click="clientsFilter = 'mine'" class="card p-3 text-left" :class="clientsFilter === 'mine' ? 'ring-1 ring-primary' : ''">
+                  <p class="text-[11px] uppercase tracking-wider text-slate-500">Assigned to you</p>
+                  <p class="text-2xl font-bold text-emerald-400" x-text="clientsData.summary.mine"></p>
+                </button>
+                <button @click="clientsFilter = 'other'" class="card p-3 text-left" :class="clientsFilter === 'other' ? 'ring-1 ring-primary' : ''">
+                  <p class="text-[11px] uppercase tracking-wider text-slate-500">With other coaches</p>
+                  <p class="text-2xl font-bold text-sky-400" x-text="clientsData.summary.other"></p>
+                </button>
+                <button @click="clientsFilter = 'unassigned'" class="card p-3 text-left" :class="clientsFilter === 'unassigned' ? 'ring-1 ring-primary' : ''">
+                  <p class="text-[11px] uppercase tracking-wider text-slate-500">No coach yet</p>
+                  <p class="text-2xl font-bold text-amber-400" x-text="clientsData.summary.unassigned"></p>
+                </button>
+              </div>
+
+              <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                <input x-model="clientsSearch" type="search" placeholder="Search by name, username, email or coach…" class="flex-1 px-3.5 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white placeholder-slate-600">
+                <select x-show="coach?.isHeadCoach" x-cloak x-model="clientsFilter" class="sm:w-64 px-3 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white">
+                  <option value="all">All coaches</option>
+                  <option value="mine" x-text="'Assigned to me (' + clientsData.summary.mine + ')'"></option>
+                  <option value="unassigned" x-text="'No coach yet (' + clientsData.summary.unassigned + ')'"></option>
+                  <template x-for="g in clientCoachGroups" :key="g.id">
+                    <option :value="'coach:' + g.id" x-text="g.name + ' (' + g.count + ')'"></option>
+                  </template>
+                </select>
+              </div>
 
               <div class="card overflow-hidden">
-                <div x-show="clients.length === 0" class="p-6 text-sm text-slate-500">No clients yet.</div>
-                <template x-for="c in clients" :key="c.id">
-                  <div class="flex items-center justify-between gap-3 border-b border-dark-border px-5 py-4 last:border-b-0">
+                <p x-show="clientsLoading" class="p-6 text-sm text-slate-500">Loading clients…</p>
+                <p x-show="!clientsLoading && clientsData.clients.length === 0" class="p-6 text-sm text-slate-500">No clients yet. Clients show up here once an admin assigns them to you or they book a session with you.</p>
+                <p x-show="!clientsLoading && clientsData.clients.length > 0 && filteredClients.length === 0" class="p-6 text-sm text-slate-500">No clients match this filter.</p>
+                <template x-for="c in filteredClients" :key="c.id">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-dark-border px-4 sm:px-5 py-4 last:border-b-0">
                     <div class="min-w-0">
-                      <p class="text-sm font-semibold flex items-center gap-2">
+                      <p class="text-sm font-semibold flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span x-text="c.fullName"></span>
-                        <span x-show="c.assigned" class="badge badge-green">Assigned</span>
+                        <span class="text-xs font-normal text-slate-500" x-text="'@' + c.username"></span>
+                        <span x-show="c.relation === 'mine'" class="badge badge-green">Assigned to you</span>
+                        <span x-show="c.relation === 'other'" class="badge badge-blue" x-text="'Coach: ' + (c.assignedCoach?.name || '')"></span>
+                        <span x-show="c.relation === 'unassigned'" class="badge badge-slate">No coach yet</span>
+                        <span x-show="c.relation === 'booked'" class="badge badge-orange">Booked with you</span>
+                        <span x-show="!c.isActive" class="badge badge-red">Suspended</span>
                       </p>
-                      <p class="text-xs text-slate-500" x-text="c.email + ' · ' + c.appointmentCount + ' session' + (c.appointmentCount === 1 ? '' : 's')"></p>
+                      <p class="text-xs text-slate-500 mt-0.5" x-text="c.email + ' · ' + c.sessions + ' session' + (c.sessions === 1 ? '' : 's') + (c.upcomingSessions ? ' · ' + c.upcomingSessions + ' upcoming' : '')"></p>
                     </div>
-                    <div class="flex flex-wrap gap-2 justify-end">
-                      <button x-show="c.assigned" @click="currentView = 'chat'; newChatCoachId = ''; startChatWith(c)" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Message</button>
-                      <button x-show="c.assigned" @click="currentView = 'workouts'; assignForm.selectedUser = c" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Assign workout</button>
+                    <div class="flex flex-wrap gap-2 sm:justify-end">
+                      <button x-show="coach?.isHeadCoach || c.relation === 'mine'" @click="currentView = 'chat'; newChatCoachId = ''; startChatWith(c)" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Message</button>
+                      <button x-show="coach?.isHeadCoach || c.relation === 'mine'" @click="currentView = 'workouts'; assignForm.selectedUser = c" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Assign workout</button>
                       <button @click="openSchedule(c)" class="px-3 py-1.5 rounded-lg bg-primary/15 text-primary-light text-xs font-semibold hover:bg-primary/25">Schedule</button>
                     </div>
                   </div>
@@ -838,7 +917,7 @@
                 <h2 class="text-2xl font-bold">Messages</h2>
                 <span class="badge" :class="chatConnected ? 'badge-green' : 'badge-slate'" x-text="chatConnected ? 'Live' : 'Reconnecting…'"></span>
               </div>
-              <p class="text-slate-400 text-sm mb-4" x-text="coach?.isHeadCoach ? (chatScope === 'all' ? 'Every coach\'s conversations. You can read them and reply.' : 'Chat with your own clients.') : 'Chat with the clients assigned to you.'"></p>
+              <p class="text-slate-400 text-sm mb-4" x-text="coach?.isHeadCoach ? (chatScope === 'all' ? 'Every coach\'s conversations with their clients. You can read them and reply.' : 'Your own conversations with your clients.') : 'Your conversations with the clients assigned to you.'"></p>
               <div x-show="coach?.isHeadCoach" x-cloak class="flex gap-2 mb-4">
                 <button @click="setChatScope('mine')" :class="chatScope === 'mine' ? 'bg-primary text-white' : 'bg-dark-card text-slate-400 border border-dark-border'" class="px-3.5 py-1.5 rounded-full text-xs font-semibold">My chats</button>
                 <button @click="setChatScope('all')" :class="chatScope === 'all' ? 'bg-primary text-white' : 'bg-dark-card text-slate-400 border border-dark-border'" class="px-3.5 py-1.5 rounded-full text-xs font-semibold">All coaches</button>
@@ -847,11 +926,26 @@
               <div class="card overflow-hidden flex h-[calc(100vh-14rem)] min-h-[420px]">
                 <!-- Conversations -->
                 <div class="w-full md:w-72 flex-shrink-0 border-r border-dark-border flex flex-col" :class="activeRoom ? 'hidden md:flex' : 'flex'">
-                  <div class="p-3 border-b border-dark-border">
+                  <div class="p-3 border-b border-dark-border space-y-2">
                     <button @click="openNewChat()" class="btn-primary w-full py-2 rounded-xl text-xs">+ New Chat</button>
+                    <input x-model="chatSearch" type="search" placeholder="Search by client or coach name" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white placeholder-slate-600">
+                    <select x-show="coach?.isHeadCoach && chatScope === 'all'" x-cloak x-model="chatCoachFilter" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white">
+                      <option value="all" x-text="'All coaches (' + chatRooms.length + ')'"></option>
+                      <template x-for="g in chatCoachGroups" :key="g.id">
+                        <option :value="g.id" x-text="(g.isMine ? 'Me · ' : '') + g.name + ' (' + g.count + ')'"></option>
+                      </template>
+                    </select>
+                    <label class="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer select-none">
+                      <input type="checkbox" x-model="chatHideEmpty" class="rounded border-dark-border">
+                      Hide chats with no messages
+                    </label>
+                    <p class="text-[11px] text-slate-500">
+                      <span x-text="visibleChatRooms.length + (visibleChatRooms.length === 1 ? ' conversation' : ' conversations')"></span>
+                      <span x-show="chatUnreadTotal > 0" x-text="' · ' + chatUnreadTotal + ' unread'" class="text-orange-400 font-semibold"></span>
+                    </p>
                   </div>
                   <div class="flex-1 overflow-y-auto">
-                    <template x-for="r in chatRooms" :key="r.id">
+                    <template x-for="r in visibleChatRooms" :key="r.id">
                       <button @click="openRoom(r)" class="w-full flex items-center gap-3 px-3 py-3 text-left border-b border-dark-border/50 hover:bg-white/5" :class="activeRoom && activeRoom.id === r.id ? 'bg-primary/10' : ''">
                         <span class="relative w-9 h-9 rounded-full bg-primary/15 text-primary-light text-xs font-bold flex items-center justify-center flex-shrink-0">
                           <span x-text="initials(r.participant.name)"></span>
@@ -862,22 +956,28 @@
                             <span class="text-sm font-semibold truncate" x-text="r.participant.name"></span>
                             <span class="text-[10px] text-slate-500 flex-shrink-0" x-text="r.lastMessageAt ? shortTime(r.lastMessageAt) : ''"></span>
                           </span>
-                          <span x-show="coach?.isHeadCoach && chatScope === 'all' && r.coach" class="block text-[10px] text-amber-400/90 truncate" x-text="'Coach: ' + (r.isMine ? 'you' : r.coach?.name)"></span>
-                          <span class="flex items-center justify-between gap-2">
-                            <span class="text-xs text-slate-500 truncate" x-text="r.lastMessage ? (r.lastMessage.type === 'IMAGE' ? '📷 Photo' : r.lastMessage.body) : 'No messages yet'"></span>
+                          <span x-show="coach?.isHeadCoach && chatScope === 'all' && r.coach" class="block mt-0.5">
+                            <span class="inline-flex items-center rounded-full bg-amber-500/15 text-amber-400 px-2 py-0.5 text-[10px] font-semibold max-w-full truncate" x-text="'Coach: ' + (r.isMine ? 'you' : r.coach?.name)"></span>
+                          </span>
+                          <span class="flex items-center justify-between gap-2 mt-0.5">
+                            <span class="text-xs truncate" :class="r.lastMessage ? 'text-slate-500' : 'text-slate-500 italic'" x-text="r.lastMessage ? ((r.lastMessage.senderId === myUserId ? 'You: ' : '') + (r.lastMessage.type === 'IMAGE' ? '📷 Photo' : r.lastMessage.body)) : 'No messages yet'"></span>
                             <span x-show="r.unreadCount > 0" class="badge badge-orange flex-shrink-0" x-text="r.unreadCount"></span>
                           </span>
                         </span>
                       </button>
                     </template>
                     <p x-show="chatRooms.length === 0" class="p-5 text-center text-xs text-slate-500">No conversations yet. Start one with “New Chat”.</p>
+                    <p x-show="chatRooms.length > 0 && visibleChatRooms.length === 0" class="p-5 text-center text-xs text-slate-500">No conversation matches “<span x-text="chatSearch"></span>”.</p>
                   </div>
                 </div>
 
                 <!-- Thread -->
                 <div class="flex-1 min-w-0 flex-col" :class="activeRoom ? 'flex' : 'hidden md:flex'">
                   <template x-if="!activeRoom">
-                    <div class="flex-1 flex items-center justify-center text-sm text-slate-500">Select a conversation to start messaging.</div>
+                    <div class="flex-1 flex flex-col items-center justify-center gap-1 px-6 text-center">
+                      <p class="text-sm font-semibold text-slate-300">No conversation open</p>
+                      <p class="text-xs text-slate-500">Pick one from the list to read and reply, or start a new chat.</p>
+                    </div>
                   </template>
                   <template x-if="activeRoom">
                     <div class="flex flex-col h-full">
@@ -887,16 +987,26 @@
                         </button>
                         <div class="min-w-0 flex-1">
                           <p class="text-sm font-semibold truncate" x-text="activeRoom.participant.name"></p>
-                          <p class="text-[11px] text-slate-500" x-text="typingInRoom ? 'typing…' : (onlineUsers[activeRoom.participant.id] ? 'Online' : '')"></p>
+                          <p class="text-[11px] text-slate-500 truncate">
+                            <span x-text="typingInRoom ? 'typing…' : (onlineUsers[activeRoom.participant.id] ? 'Online' : 'Client')"></span>
+                            <span x-show="activeRoom.coach" x-text="' · Coach: ' + (activeRoom.isMine === false ? activeRoom.coach?.name : 'you')"></span>
+                          </p>
                         </div>
                         <button @click="clearChat()" class="text-xs text-slate-500 hover:text-red-400" title="Hides history on your side only">Clear chat</button>
                       </div>
 
+                      <p x-show="activeRoom.isMine === false" x-cloak class="px-4 py-2 text-[11px] text-amber-400 bg-amber-500/10 border-b border-dark-border">
+                        This is <span class="font-semibold" x-text="activeRoom.coach?.name"></span>'s conversation with <span class="font-semibold" x-text="activeRoom.participant.name"></span>. Anything you send is sent as you (<span x-text="coach?.user?.fullName"></span>).
+                      </p>
+
                       <div id="chatScroll" class="flex-1 overflow-y-auto px-4 py-4 space-y-2">
                         <p x-show="chatLoading" class="text-center text-xs text-slate-500">Loading…</p>
-                        <template x-for="m in chatMessages" :key="m.id">
-                          <div class="flex" :class="m.senderId === myUserId ? 'justify-end' : 'justify-start'">
-                            <div class="max-w-[78%] rounded-2xl px-3.5 py-2 text-sm" :class="m.senderId === myUserId ? 'bg-primary text-white rounded-br-md' : 'bg-dark-muted text-slate-100 rounded-bl-md'">
+                        <template x-for="(m, i) in chatMessages" :key="m.id">
+                          <div>
+                          <p x-show="i === 0 || dayKey(chatMessages[i - 1].createdAt) !== dayKey(m.createdAt)" class="text-center text-[11px] text-slate-500 py-2" x-text="dayLabel(m.createdAt)"></p>
+                          <div class="flex" :class="isOutgoing(m) ? 'justify-end' : 'justify-start'">
+                            <div class="max-w-[78%] rounded-2xl px-3.5 py-2 text-sm" :class="isOutgoing(m) ? 'bg-primary text-white rounded-br-md' : 'bg-dark-muted text-slate-100 rounded-bl-md'">
+                              <p x-show="activeRoom.isMine === false" class="text-[10px] font-semibold mb-0.5 opacity-80" x-text="m.senderId === activeRoom.participant.id ? activeRoom.participant.name : (activeRoom.coach?.name || 'Coach')"></p>
                               <template x-if="m.type === 'IMAGE' && m.imageUrl">
                                 <a :href="m.imageUrl" target="_blank" rel="noopener"><img :src="m.imageUrl" alt="Photo" class="rounded-lg max-h-56 mb-1"></a>
                               </template>
@@ -907,8 +1017,9 @@
                               </p>
                             </div>
                           </div>
+                          </div>
                         </template>
-                        <p x-show="!chatLoading && chatMessages.length === 0" class="text-center text-xs text-slate-500 py-8">No messages yet. Say hello!</p>
+                        <p x-show="!chatLoading && chatMessages.length === 0" class="text-center text-xs text-slate-500 py-8">No messages yet. Type below to send the first one.</p>
                       </div>
 
                       <form @submit.prevent="sendChat()" class="flex items-end gap-2 p-3 border-t border-dark-border">
@@ -950,7 +1061,7 @@
 
               <div class="card overflow-hidden">
                 <div class="overflow-x-auto">
-                <table class="w-full text-sm min-w-[640px]">
+                <table class="w-full text-sm min-w-[640px] responsive-cards">
                   <thead>
                     <tr class="border-b border-dark-border">
                       <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Coach</th>
@@ -973,18 +1084,18 @@
                             </div>
                           </div>
                         </td>
-                        <td class="hidden md:table-cell px-4 py-3 text-slate-400">
+                        <td data-label="Specialties" class="hidden md:table-cell px-4 py-3 text-slate-400">
                           <div class="flex flex-wrap gap-1">
                             <template x-for="s in c.specialties" :key="s">
                               <span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="s"></span>
                             </template>
                           </div>
                         </td>
-                        <td class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="(c.experienceYears ?? 0) + ' yrs'"></td>
-                        <td class="px-4 py-3">
+                        <td data-label="Experience" class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="(c.experienceYears ?? 0) + ' yrs'"></td>
+                        <td data-label="Accepting" class="px-4 py-3">
                           <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="c.isAcceptingClients ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'" x-text="c.isAcceptingClients ? 'Yes' : 'No'"></span>
                         </td>
-                        <td x-show="coach?.isHeadCoach" class="px-4 py-3 text-right whitespace-nowrap">
+                        <td data-label="Actions" x-show="coach?.isHeadCoach" class="px-4 py-3 text-right whitespace-nowrap">
                           <span x-show="c.isHeadCoach" class="badge badge-orange mr-1">Head</span>
                           <button @click="editCoachFromList(c)" class="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-slate-300 rounded-md text-xs font-semibold mr-1">Edit</button>
                           <button x-show="!c.isHeadCoach && c.id !== coach?.id" @click="deleteCoachFromList(c)" class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-md text-xs font-semibold">Delete</button>
@@ -1258,29 +1369,27 @@
   <div x-show="modals.addCoach" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/70" @click="modals.addCoach = false"></div>
     <div class="relative bg-dark-card border border-dark-border rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-      <h3 class="text-lg font-bold mb-1">Add a coach</h3>
-      <p class="text-xs text-slate-500 mb-4">Pick an existing user to promote to coach. They keep the same login and become visible to clients straight away.</p>
+      <h3 class="text-lg font-bold mb-1">Add a new coach</h3>
+      <p class="text-xs text-slate-500 mb-4">Creates a brand-new coach account. Share the email and password with them so they can sign in to the app and this portal.</p>
 
-      <template x-if="!addCoachForm.selectedUser">
-        <div class="mb-4">
-          <input x-model="clientSearch" @input.debounce.300ms="searchClients(clientSearch)" placeholder="Search users by name, username or email…" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-600 mb-2">
-          <div class="max-h-48 overflow-y-auto rounded-xl border border-dark-border divide-y divide-dark-border">
-            <template x-for="u in clientResults" :key="u.id">
-              <button @click="addCoachForm.selectedUser = u" class="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-white/5">
-                <span class="w-7 h-7 rounded-full bg-primary/15 text-primary-light text-[11px] font-bold flex items-center justify-center flex-shrink-0" x-text="initials(u.fullName)"></span>
-                <span class="min-w-0"><span class="font-medium block truncate" x-text="u.fullName"></span><span class="text-xs text-slate-500 block truncate" x-text="u.email"></span></span>
-              </button>
-            </template>
-            <p x-show="clientResults.length === 0" class="p-3 text-center text-xs text-slate-500">No matching users.</p>
+      <label class="block text-xs text-slate-500 mb-1.5">Full name *</label>
+      <input x-model="addCoachForm.fullName" maxlength="100" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3" placeholder="e.g. Priya Sharma">
+      <label class="block text-xs text-slate-500 mb-1.5">Email * (their login)</label>
+      <input x-model="addCoachForm.email" type="email" autocomplete="off" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3" placeholder="coach@example.com">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="block text-xs text-slate-500 mb-1.5">Password *</label>
+          <div class="flex gap-2">
+            <input x-model="addCoachForm.password" :type="addCoachForm.showPassword ? 'text' : 'password'" autocomplete="new-password" class="min-w-0 flex-1 px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white" placeholder="Min 8 chars">
+            <button type="button" @click="addCoachForm.showPassword = !addCoachForm.showPassword" class="px-3 rounded-xl border border-dark-border text-xs text-slate-400 hover:text-white" x-text="addCoachForm.showPassword ? 'Hide' : 'Show'"></button>
           </div>
         </div>
-      </template>
-      <template x-if="addCoachForm.selectedUser">
-        <div class="flex items-center justify-between rounded-xl border border-primary/40 bg-primary/5 px-3 py-2.5 mb-4">
-          <span class="text-sm font-medium" x-text="addCoachForm.selectedUser.fullName + ' · ' + addCoachForm.selectedUser.email"></span>
-          <button @click="addCoachForm.selectedUser = null" class="text-xs text-primary-light hover:underline">Change</button>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1.5">Phone (optional)</label>
+          <input x-model="addCoachForm.phone" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white" placeholder="+91 98765 43210">
         </div>
-      </template>
+      </div>
+      <p class="text-[11px] text-slate-500 -mt-1 mb-3">The password needs 8+ characters with an uppercase letter, a lowercase letter and a number. <button type="button" @click="generateCoachPassword()" class="text-primary-light hover:underline">Generate one</button></p>
 
       <label class="block text-xs text-slate-500 mb-1.5">Bio</label>
       <textarea x-model="addCoachForm.bio" rows="3" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3"></textarea>
@@ -1328,11 +1437,23 @@
       <h3 class="text-lg font-bold mb-1">Schedule a session</h3>
       <p class="text-xs text-slate-500 mb-4">Sessions are confirmed straight away and appear in the client's app with their join link.</p>
 
+      <template x-if="coach?.isHeadCoach">
+        <div>
+          <label class="block text-xs text-slate-500 mb-1.5">Coach</label>
+          <select x-model="scheduleForm.coachId" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3">
+            <option value="" x-text="'Me (' + (coach?.user?.fullName || '') + ')'"></option>
+            <template x-for="c in allCoaches.filter((c) => c.id !== coach?.id)" :key="c.id">
+              <option :value="c.id" x-text="(c.user?.fullName || c.id) + (c.user?.username ? ' · @' + c.user.username : '')"></option>
+            </template>
+          </select>
+        </div>
+      </template>
+
       <label class="block text-xs text-slate-500 mb-1.5">Client</label>
       <select x-model="scheduleForm.userId" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3">
         <option value="">Select a client…</option>
         <template x-for="c in scheduleClients" :key="c.id">
-          <option :value="c.id" x-text="c.fullName + c.note"></option>
+          <option :value="c.id" x-text="clientLabel(c)"></option>
         </template>
       </select>
 
@@ -1489,7 +1610,7 @@
         loginLoading: false,
         loginError: "",
 
-        themeMode: "dark",
+        themeMode: (() => { try { return localStorage.getItem("fitnerve-coach-theme") === "light" ? "light" : "dark"; } catch { return "dark"; } })(),
         sidebarCollapsed: false,
         mobileNavOpen: false,
 
@@ -1510,6 +1631,7 @@
         appointmentsFilter: "ALL",
         availability: [],
         slotForm: { dayOfWeek: "MONDAY", startTime: "09:00", endTime: "10:00" },
+        editingSlotId: null,
         slotError: "",
         savingSlot: false,
         days: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"],
@@ -1569,20 +1691,29 @@
         typingInRoom: false,
         chatPoll: null,
         chatScope: "mine",
+        chatSearch: "",
+        chatCoachFilter: "all",
+        chatHideEmpty: false,
         newChatCoachId: "",
 
         refreshing: false,
-        addCoachForm: { selectedUser: null, bio: "", specialtiesText: "", experienceYears: "" },
+        addCoachForm: { fullName: "", email: "", password: "", phone: "", showPassword: false, bio: "", specialtiesText: "", experienceYears: "" },
         addCoachError: "",
         addCoachSaving: false,
         managedCoachId: "",
         assignedClients: [],
+        // The Clients page: every client with the coach they belong to (see GET /coaches/me/clients).
+        clientsData: { clients: [], summary: { total: 0, mine: 0, booked: 0, other: 0, unassigned: 0 } },
+        clientsLoaded: false,
+        clientsLoading: true,
+        clientsFilter: "all",
+        clientsSearch: "",
         meetingStatus: { googleMeetConnected: false },
         linkTarget: null,
         linkInput: "",
         linkError: "",
         linkSaving: false,
-        scheduleForm: { userId: "", title: "1:1 coaching session", scheduledAt: "", durationMinutes: 45, repeatWeeks: "0", meetingLink: "", notes: "" },
+        scheduleForm: { userId: "", coachId: "", title: "1:1 coaching session", scheduledAt: "", durationMinutes: 45, repeatWeeks: "0", meetingLink: "", notes: "" },
         scheduleError: "",
         scheduleSaving: false,
         scheduleClients: [],
@@ -1604,6 +1735,56 @@
           return this.coach?.userId || this.coach?.user?.id;
         },
 
+        // Conversations that match the search: newest message first, empty ones last.
+        get visibleChatRooms() {
+          const q = (this.chatSearch || "").trim().toLowerCase();
+          const byCoach = this.chatScope === "all" && this.chatCoachFilter !== "all";
+          const rooms = this.chatRooms.filter((r) => {
+            if (byCoach && r.coach?.id !== this.chatCoachFilter) return false;
+            if (this.chatHideEmpty && !r.lastMessage) return false;
+            return !q || `${r.participant?.name || ""} ${r.coach?.name || ""}`.toLowerCase().includes(q);
+          });
+          return rooms.sort((a, b) => {
+            if (!a.lastMessage !== !b.lastMessage) return a.lastMessage ? -1 : 1;
+            if (a.lastMessage) return new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0);
+            return (a.participant?.name || "").localeCompare(b.participant?.name || "");
+          });
+        },
+
+        // Coaches that have conversations, for the "All coaches" filter (with how many each has).
+        get chatCoachGroups() {
+          const groups = new Map();
+          for (const r of this.chatRooms) {
+            if (!r.coach) continue;
+            const g = groups.get(r.coach.id) || { id: r.coach.id, name: r.coach.name, isMine: Boolean(r.isMine), count: 0 };
+            g.count += 1;
+            groups.set(r.coach.id, g);
+          }
+          return [...groups.values()].sort((a, b) => Number(b.isMine) - Number(a.isMine) || a.name.localeCompare(b.name));
+        },
+
+        // In your own chats your messages are on the right. In another coach's chat (head coach view),
+        // the client is on the left and everything the coaches say is on the right.
+        isOutgoing(m) {
+          if (this.activeRoom?.isMine === false) return m.senderId !== this.activeRoom.participant.id;
+          return m.senderId === this.myUserId;
+        },
+
+        dayKey(iso) {
+          const d = new Date(iso);
+          return isNaN(d) ? "" : d.toDateString();
+        },
+
+        dayLabel(iso) {
+          const d = new Date(iso);
+          if (isNaN(d)) return "";
+          const today = new Date();
+          const yesterday = new Date(Date.now() - 86400000);
+          if (d.toDateString() === today.toDateString()) return "Today";
+          if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+          return d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short", year: d.getFullYear() === today.getFullYear() ? undefined : "numeric" });
+        },
+
         get chatUnreadTotal() {
           return this.chatRooms.reduce((n, r) => n + (r.unreadCount || 0), 0);
         },
@@ -1621,7 +1802,41 @@
             .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
         },
 
+        // Clients with the head coach's split by coach. Used by the dashboard count and the Schedule dialog too.
         get clients() {
+          if (this.clientsLoaded) {
+            return this.clientsData.clients.map((c) => ({ ...c, assigned: c.relation === "mine", appointmentCount: c.sessions }));
+          }
+          return this.legacyClients;
+        },
+
+        // Filtered + searched list for the Clients page.
+        get filteredClients() {
+          const q = (this.clientsSearch || "").trim().toLowerCase();
+          const f = this.clientsFilter;
+          return this.clientsData.clients.filter((c) => {
+            if (f === "mine" && c.relation !== "mine") return false;
+            if (f === "other" && c.relation !== "other") return false;
+            if (f === "unassigned" && c.relation !== "unassigned") return false;
+            if (f.startsWith("coach:") && c.assignedCoach?.id !== f.slice(6)) return false;
+            if (!q) return true;
+            return `${c.fullName} ${c.username} ${c.email} ${c.assignedCoach?.name || ""}`.toLowerCase().includes(q);
+          });
+        },
+
+        // Coaches that have at least one client (including the head coach), for the filter dropdown.
+        get clientCoachGroups() {
+          const groups = new Map();
+          for (const c of this.clientsData.clients) {
+            if (!c.assignedCoach) continue;
+            const g = groups.get(c.assignedCoach.id) || { id: c.assignedCoach.id, name: c.assignedCoach.name, count: 0 };
+            g.count += 1;
+            groups.set(c.assignedCoach.id, g);
+          }
+          return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+        },
+
+        get legacyClients() {
           const byId = new Map();
           for (const u of this.assignedClients) {
             byId.set(u.id, { ...u, assigned: true, appointmentCount: 0 });
@@ -1663,6 +1878,7 @@
           this.fetchProfile();
           this.fetchAvailability();
           this.fetchAppointments();
+          this.fetchClients();
           this.fetchAllCoaches();
           this.fetchDbSchema();
           this.loadWorkoutPlans();
@@ -1781,8 +1997,17 @@
             this.activeModelInfo.fields.forEach((f) => {
               if ((f.kind === 'scalar' || f.kind === 'enum') && !f.isId && f.name !== 'createdAt' && f.name !== 'updatedAt') {
                 let value = initialData !== null ? (initialData[f.name] ?? (f.type === 'Boolean' ? false : f.type === 'Int' || f.type === 'Float' ? '' : '')) : '';
+                let originalIso = null;
                 if (f.type === 'DateTime' && value) {
-                  try { value = new Date(value).toISOString().slice(0, 16); } catch (_) {}
+                  // datetime-local inputs show and return LOCAL time, so convert from the stored instant
+                  // (toISOString alone showed UTC, and saving then moved the time back 5½ hours in IST).
+                  // The original is kept so a field nobody touched is saved back exactly as it was.
+                  const instant = new Date(value);
+                  if (!isNaN(instant)) {
+                    originalIso = instant.toISOString();
+                    instant.setMinutes(instant.getMinutes() - instant.getTimezoneOffset());
+                    value = instant.toISOString().slice(0, 16);
+                  }
                 }
                 const relation = this.relationFor(f.name);
                 fields.push({
@@ -1792,6 +2017,8 @@
                   required: f.isRequired && !f.hasDefaultValue,
                   enumValues: f.enumValues || [],
                   value,
+                  initialValue: value,
+                  originalIso,
                   isRelation: Boolean(relation),
                   relatedModel: relation?.relatedModel || null,
                 });
@@ -1820,7 +2047,7 @@
             } else if (f.type === 'Float') {
               data[f.name] = parseFloat(f.value);
             } else if (f.type === 'DateTime' && f.value) {
-              data[f.name] = new Date(f.value).toISOString();
+              data[f.name] = f.originalIso && f.value === f.initialValue ? f.originalIso : new Date(f.value).toISOString();
             } else {
               data[f.name] = f.value;
             }
@@ -1897,6 +2124,16 @@
                 this.fetchRooms();
               })
               .catch((err) => this.showToast(err.message || "Couldn't remove this coach", "error"));
+            return;
+          }
+          if (type === "delete-slot") {
+            this.apiRequest("DELETE", `/api/v1/coaches/${this.targetCoachId}/availability/${target.id}`)
+              .then(() => {
+                if (this.editingSlotId === target.id) this.cancelSlotEdit();
+                this.fetchAvailability();
+                this.showToast("Slot deleted");
+              })
+              .catch((err) => this.showToast(err.message || "Couldn't delete the slot", "error"));
             return;
           }
           if (type === "delete-assignment") {
@@ -2118,11 +2355,22 @@
         },
 
         // ================= REFRESH =================
+        fetchClients() {
+          return this.apiRequest("GET", "/api/v1/coaches/me/clients")
+            .then((data) => {
+              this.clientsData = data || this.clientsData;
+              this.clientsLoaded = true;
+            })
+            .catch(() => {})
+            .finally(() => { this.clientsLoading = false; });
+        },
+
         refreshAll() {
           if (this.refreshing) return;
           this.refreshing = true;
           const tasks = [
             this.fetchProfile().catch(() => {}),
+            this.fetchClients(),
             this.fetchAppointments(),
             this.fetchRooms(),
             this.fetchMeetingStatus()
@@ -2159,29 +2407,47 @@
         },
 
         openAddCoach() {
-          this.addCoachForm = { selectedUser: null, bio: "", specialtiesText: "", experienceYears: "" };
+          this.addCoachForm = { fullName: "", email: "", password: "", phone: "", showPassword: false, bio: "", specialtiesText: "", experienceYears: "" };
           this.addCoachError = "";
-          this.clientSearch = "";
-          this.searchClients("");
           this.modals.addCoach = true;
+        },
+
+        // A random password that meets the rules (upper + lower + digit, 12 characters), shown so it can be shared.
+        generateCoachPassword() {
+          const pick = (chars) => chars[crypto.getRandomValues(new Uint32Array(1))[0] % chars.length];
+          const all = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+          const chars = [pick("ABCDEFGHJKLMNPQRSTUVWXYZ"), pick("abcdefghijkmnopqrstuvwxyz"), pick("23456789")];
+          while (chars.length < 12) chars.push(pick(all));
+          for (let i = chars.length - 1; i > 0; i--) {
+            const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+            [chars[i], chars[j]] = [chars[j], chars[i]];
+          }
+          this.addCoachForm.password = chars.join("");
+          this.addCoachForm.showPassword = true;
         },
 
         submitAddCoach() {
           const f = this.addCoachForm;
           this.addCoachError = "";
-          if (!f.selectedUser) return (this.addCoachError = "Pick the user to make a coach.");
+          if (f.fullName.trim().length < 2) return (this.addCoachError = "Enter the coach's full name.");
+          if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return (this.addCoachError = "Enter a valid email address.");
+          if (f.password.length < 8 || !/[A-Z]/.test(f.password) || !/[a-z]/.test(f.password) || !/[0-9]/.test(f.password)) {
+            return (this.addCoachError = "The password needs 8+ characters with an uppercase letter, a lowercase letter and a number.");
+          }
           this.addCoachSaving = true;
           this.apiRequest("POST", "/api/v1/coaches", {
-            userId: f.selectedUser.id,
+            fullName: f.fullName.trim(),
+            email: f.email.trim(),
+            phone: f.phone.trim() || undefined,
+            password: f.password,
             bio: f.bio.trim() || undefined,
             specialties: f.specialtiesText.split(",").map((x) => x.trim()).filter(Boolean),
             experienceYears: f.experienceYears === "" ? undefined : Number(f.experienceYears)
           })
             .then(() => {
               this.modals.addCoach = false;
-              this.showToast(`${f.selectedUser.fullName} is now a coach`);
+              this.showToast(`${f.fullName.trim()} was added as a coach. Share their email and password with them.`);
               this.fetchAllCoaches();
-              this.searchClients("");
             })
             .catch((err) => { this.addCoachError = err.message || "Couldn't add the coach"; })
             .finally(() => { this.addCoachSaving = false; });
@@ -2240,11 +2506,17 @@
           );
         },
 
+        // "Name · @username (note)" so clients with the same name can be told apart.
+        clientLabel(c) {
+          return [c.fullName, c.username ? "@" + c.username : ""].filter(Boolean).join(" · ") + (c.note || "");
+        },
+
         openSchedule(client = null) {
           const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
           start.setMinutes(0, 0, 0);
           this.scheduleForm = {
             userId: client?.id || "",
+            coachId: "",
             title: "1:1 coaching session",
             scheduledAt: this.toLocalInput(start.toISOString()),
             durationMinutes: 45,
@@ -2287,6 +2559,7 @@
           this.scheduleSaving = true;
           this.apiRequest("POST", "/api/v1/appointments/sessions", {
             userId: f.userId,
+            coachId: f.coachId || undefined,
             title: f.title.trim(),
             scheduledAt: new Date(f.scheduledAt).toISOString(),
             durationMinutes: Number(f.durationMinutes) || 45,
@@ -2298,6 +2571,7 @@
               const made = result?.created?.length || 0;
               const skipped = result?.skipped || [];
               this.fetchAppointments();
+              this.fetchClients();
               if (skipped.length) {
                 this.scheduleError = `${made} scheduled. Skipped:\n` + skipped.map((x) => `• ${this.formatDate(x.scheduledAt)} — ${x.reason}`).join("\n");
                 if (!made) return;
@@ -2397,6 +2671,7 @@
 
         setChatScope(scope) {
           this.chatScope = scope;
+          this.chatCoachFilter = "all";
           if (this.activeRoom) this.closeRoom();
           this.fetchRooms();
         },
@@ -2405,6 +2680,10 @@
           const scope = this.coach?.isHeadCoach && this.chatScope === "all" ? "?scope=all" : "";
           return this.apiRequest("GET", `/api/v1/chat/rooms${scope}`)
             .then((rooms) => {
+              // A slower request for a view you've since left (e.g. "My chats" after switching to "All coaches")
+              // must not overwrite the list you're looking at now.
+              const wanted = this.coach?.isHeadCoach && this.chatScope === "all" ? "?scope=all" : "";
+              if (wanted !== scope) return;
               this.chatRooms = (rooms || []).map((r) =>
                 this.currentView === "chat" && this.activeRoom?.id === r.id ? { ...r, unreadCount: 0 } : r
               );
@@ -2582,6 +2861,7 @@
 
         toggleTheme() {
           this.themeMode = this.themeMode === "dark" ? "light" : "dark";
+          try { localStorage.setItem("fitnerve-coach-theme", this.themeMode); } catch {}
         },
 
         login() {
@@ -2610,6 +2890,7 @@
               });
               this.fetchAvailability();
               this.fetchAppointments();
+              this.fetchClients();
               this.fetchAllCoaches();
               this.fetchDbSchema();
               this.loadWorkoutPlans();
@@ -2634,6 +2915,12 @@
           this.refreshToken = null;
           localStorage.removeItem("fitnerveCoachAuth");
           this.currentView = "dashboard";
+          // The next person to sign in on this browser must not see this coach's clients.
+          this.clientsData = { clients: [], summary: { total: 0, mine: 0, booked: 0, other: 0, unassigned: 0 } };
+          this.clientsLoaded = false;
+          this.clientsLoading = true;
+          this.clientsFilter = "all";
+          this.clientsSearch = "";
         },
 
         fetchProfile() {
@@ -2708,6 +2995,7 @@
           });
         },
 
+        // Adds a slot, or saves the one being edited.
         addSlot() {
           if (!this.targetCoachId) return;
           this.slotError = "";
@@ -2715,17 +3003,57 @@
             this.slotError = "Start time must be before end time.";
             return;
           }
+          const editing = this.editingSlotId;
           this.savingSlot = true;
-          this.apiRequest("POST", `/api/v1/coaches/${this.targetCoachId}/availability`, this.slotForm)
+          const request = editing
+            ? this.apiRequest("PUT", `/api/v1/coaches/${this.targetCoachId}/availability/${editing}`, this.slotForm)
+            : this.apiRequest("POST", `/api/v1/coaches/${this.targetCoachId}/availability`, this.slotForm);
+          request
             .then(() => {
               this.savingSlot = false;
+              this.cancelSlotEdit();
               this.fetchAvailability();
-              this.showToast("Availability slot added");
+              this.showToast(editing ? "Availability slot updated" : "Availability slot added");
             })
             .catch((err) => {
-              this.slotError = err.message || "Unable to add slot.";
+              this.slotError = err.message || "Unable to save the slot.";
               this.savingSlot = false;
             });
+        },
+
+        editSlot(slot) {
+          this.editingSlotId = slot.id;
+          this.slotForm = { dayOfWeek: slot.dayOfWeek, startTime: slot.startTime, endTime: slot.endTime };
+          this.slotError = "";
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        },
+
+        cancelSlotEdit() {
+          this.editingSlotId = null;
+          this.slotForm = { dayOfWeek: "MONDAY", startTime: "09:00", endTime: "10:00" };
+          this.slotError = "";
+        },
+
+        toggleSlot(slot) {
+          this.apiRequest("PUT", `/api/v1/coaches/${this.targetCoachId}/availability/${slot.id}`, { isActive: !slot.isActive })
+            .then(() => {
+              this.fetchAvailability();
+              this.showToast(slot.isActive ? "Slot turned off — clients can't book it" : "Slot turned on");
+            })
+            .catch((err) => this.showToast(err.message || "Couldn't update the slot", "error"));
+        },
+
+        deleteSlot(slot) {
+          const last = this.availability.length === 1;
+          this.confirmAction = {
+            type: "delete-slot",
+            target: slot,
+            title: "Delete this slot",
+            description: `Remove ${slot.dayOfWeek.toLowerCase()} ${slot.startTime} – ${slot.endTime}? Sessions that are already booked are not affected.` +
+              (last ? " This is the only slot, so with none left clients can book at any time of day." : ""),
+            confirmLabel: "Delete"
+          };
+          this.modals.confirm = true;
         },
 
         fetchAppointments() {

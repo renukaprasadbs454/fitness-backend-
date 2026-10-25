@@ -63,14 +63,14 @@ const listExercises = {
 const scheduleWorkout = {
   body: z.object({
     planId: z.string().uuid(),
-    scheduledAt: z.string().datetime()
+    scheduledAt: z.string().datetime({ offset: true })
   })
 };
 
 const listSchedule = {
   query: z.object({
-    from: z.string().datetime().optional(),
-    to: z.string().datetime().optional(),
+    from: z.string().datetime({ offset: true }).optional(),
+    to: z.string().datetime({ offset: true }).optional(),
     status: z.enum(["SCHEDULED", "COMPLETED", "SKIPPED"]).optional()
   })
 };

@@ -105,7 +105,11 @@ router.put(
  *             type: object
  *             required: [userId]
  *             properties:
- *               userId: { type: string, format: uuid }
+ *               userId: { type: string, format: uuid, description: "Promote this existing user. Leave out to create a brand-new coach account instead." }
+ *               fullName: { type: string, description: "New account: the coach's name" }
+ *               email: { type: string, description: "New account: login email" }
+ *               phone: { type: string, description: "New account: optional" }
+ *               password: { type: string, description: "New account: at least 8 characters with an uppercase letter, a lowercase letter and a number" }
  *               bio: { type: string }
  *               specialties: { type: array, items: { type: string } }
  *               experienceYears: { type: integer }
@@ -167,6 +171,19 @@ router.delete("/me", invalidate(CACHE_PREFIX), authenticate, requireRole(ROLES.C
  *     responses:
  *       200: { description: Appointments retrieved }
  */
+/**
+ * @swagger
+ * /coaches/me/clients:
+ *   get:
+ *     summary: "Coach: your clients, each with the coach they are assigned to (head coach: every client)"
+ *     description: relation is mine (assigned to you), booked (booked with you), other (head coach view - assigned to another coach) or unassigned.
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: "{ clients: [...], summary: { total, mine, booked, other, unassigned } }" }
+ */
+router.get("/me/clients", authenticate, requireRole(ROLES.COACH), coachController.listMyClients);
+
 router.get(
   "/me/appointments",
   authenticate,
@@ -221,6 +238,44 @@ router.post(
   requireRole(ROLES.COACH),
   validate(schemas.upsertAvailability),
   coachController.upsertAvailability
+);
+
+/**
+ * @swagger
+ * /coaches/{coachId}/availability/{slotId}:
+ *   put:
+ *     summary: Edit an availability slot (day, start, end or active). Own profile, or any coach for the head coach.
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Slot updated }
+ *       403: { description: Not your coach profile }
+ *       404: { description: Slot not found }
+ *       409: { description: Another slot already starts then }
+ *   delete:
+ *     summary: Delete an availability slot. Own profile, or any coach for the head coach.
+ *     tags: [Coaches]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Slot deleted }
+ *       403: { description: Not your coach profile }
+ *       404: { description: Slot not found }
+ */
+router.put(
+  "/:coachId/availability/:slotId",
+  invalidate(CACHE_PREFIX),
+  authenticate,
+  requireRole(ROLES.COACH),
+  validate(schemas.updateAvailabilitySlot),
+  coachController.updateAvailabilitySlot
+);
+router.delete(
+  "/:coachId/availability/:slotId",
+  invalidate(CACHE_PREFIX),
+  authenticate,
+  requireRole(ROLES.COACH),
+  validate(schemas.deleteAvailabilitySlot),
+  coachController.deleteAvailabilitySlot
 );
 
 // ── Database explorer ────────────────────────────────────────

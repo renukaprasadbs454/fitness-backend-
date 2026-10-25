@@ -45,6 +45,25 @@ const appointmentRepository = {
       }
     }),
 
+  // Sessions per client, optionally only with one coach: { userId -> { total, upcoming } }.
+  countsByClient: async (userIds, coachId) => {
+    if (!userIds.length) return new Map();
+    const base = { userId: { in: userIds }, ...(coachId ? { coachId } : {}) };
+    const [all, upcoming] = await Promise.all([
+      prisma.appointment.groupBy({ by: ["userId"], where: base, _count: { _all: true } }),
+      prisma.appointment.groupBy({
+        by: ["userId"],
+        where: { ...base, status: { in: ["PENDING", "CONFIRMED"] }, scheduledAt: { gte: new Date() } },
+        _count: { _all: true }
+      })
+    ]);
+    const counts = new Map(all.map((row) => [row.userId, { total: row._count._all, upcoming: 0 }]));
+    upcoming.forEach((row) => {
+      if (counts.has(row.userId)) counts.get(row.userId).upcoming = row._count._all;
+    });
+    return counts;
+  },
+
   updateStatus: (id, status) =>
     prisma.appointment.update({ where: { id }, data: { status }, include: includeShape }),
 

@@ -49,6 +49,7 @@ function errorHandler(err, req, res, next) {
   res.status(apiError.statusCode || httpStatus.INTERNAL_SERVER_ERROR).json({
     success: false,
     message: apiError.message,
+    code: apiError.code,
     details: apiError.details && apiError.details.length ? apiError.details : undefined,
     stack: env.nodeEnv === "development" ? err.stack : undefined
   });

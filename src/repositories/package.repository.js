@@ -10,7 +10,14 @@ const packageRepository = {
   update: (id, data) => prisma.package.update({ where: { id }, data }),
   delete: (id) => prisma.package.delete({ where: { id } }),
 
-  createPayment: (data) => prisma.payment.create({ data })
+  createPayment: (data) => prisma.payment.create({ data }),
+
+  // The user's still-open checkout for this package, if they started one recently.
+  findRecentPendingPayment: (userId, packageId, since) =>
+    prisma.payment.findFirst({
+      where: { userId, referenceId: packageId, purpose: "SUBSCRIPTION", status: "PENDING", createdAt: { gte: since } },
+      orderBy: { createdAt: "desc" }
+    })
 };
 
 module.exports = packageRepository;

@@ -4,6 +4,7 @@ const logger = require("../config/logger");
 const { runAppointmentReminderSweep } = require("./appointmentReminder.job");
 const { runWorkoutReminderSweep } = require("./workoutReminder.job");
 const { runScheduledWorkoutReminderSweep } = require("./scheduledWorkoutReminder.job");
+const { runCleanupSweep } = require("./cleanup.job");
 
 let tasks = [];
 
@@ -38,7 +39,21 @@ function startCronJobs() {
     }
   });
 
-  tasks = [appointmentTask, workoutTask, scheduledWorkoutTask];
+  // Nightly at 03:30 IST: drop expired login tokens and verification codes.
+  const cleanupTask = cron.schedule(
+    "30 3 * * *",
+    async () => {
+      try {
+        const result = await runCleanupSweep();
+        logger.info(`[cron] Cleanup: ${result.tokensDeleted} expired tokens, ${result.otpsDeleted} expired codes removed`);
+      } catch (err) {
+        logger.error(`[cron] Cleanup sweep failed: ${err.message}`);
+      }
+    },
+    { timezone: "Asia/Kolkata" }
+  );
+
+  tasks = [appointmentTask, workoutTask, scheduledWorkoutTask, cleanupTask];
 }
 
 function stopCronJobs() {

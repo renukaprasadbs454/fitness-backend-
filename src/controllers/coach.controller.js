@@ -49,9 +49,24 @@ const upsertAvailability = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Availability updated", slot);
 });
 
+const updateAvailabilitySlot = asyncHandler(async (req, res) => {
+  const slot = await coachService.updateAvailabilitySlot(req.user.id, req.params.coachId, req.params.slotId, req.body);
+  return ApiResponse.success(res, httpStatus.OK, "Availability slot updated", slot);
+});
+
+const deleteAvailabilitySlot = asyncHandler(async (req, res) => {
+  await coachService.deleteAvailabilitySlot(req.user.id, req.params.coachId, req.params.slotId);
+  return ApiResponse.success(res, httpStatus.OK, "Availability slot deleted", null);
+});
+
 const listAvailability = asyncHandler(async (req, res) => {
   const slots = await coachService.listAvailability(req.params.coachId);
   return ApiResponse.success(res, httpStatus.OK, "Availability retrieved", slots);
+});
+
+const listMyClients = asyncHandler(async (req, res) => {
+  const result = await coachService.listMyClients(req.user.id);
+  return ApiResponse.success(res, httpStatus.OK, "Clients retrieved", result);
 });
 
 const listMyAppointments = asyncHandler(async (req, res) => {
@@ -103,7 +118,10 @@ module.exports = {
   getCoachById,
   listCoaches,
   upsertAvailability,
+  updateAvailabilitySlot,
+  deleteAvailabilitySlot,
   listAvailability,
+  listMyClients,
   listMyAppointments,
   listDbTables,
   getDbTableData,

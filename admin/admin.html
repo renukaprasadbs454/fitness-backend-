@@ -157,10 +157,38 @@
     body.theme-light .bg-dark-muted { background-color: #e2e8f0 !important; }
     body.theme-light .bg-dark\/60 { background-color: rgba(248,250,252,0.95) !important; }
     body.theme-light .border-dark-border { border-color: #cbd5e1 !important; }
+    body.theme-light .bg-dark\/40 { background-color: #f1f5f9 !important; }
     body.theme-light .text-slate-400 { color: #64748b !important; }
     body.theme-light .text-slate-300 { color: #475569 !important; }
     body.theme-light .text-slate-500 { color: #64748b !important; }
     body.theme-light .text-white { color: #0f172a !important; }
+
+    /* ── Phones: data tables become stacked cards so every column (and the row's action menu) is visible
+       without sideways scrolling. Only tables with a static header row opt in via .responsive-cards. ── */
+    @media (max-width: 767px) {
+      table.responsive-cards { min-width: 0 !important; display: block; width: 100%; }
+      table.responsive-cards thead { display: none; }
+      table.responsive-cards tbody { display: block; }
+      table.responsive-cards tbody tr { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 14px 16px; position: relative; }
+      table.responsive-cards tbody td { display: block !important; padding: 0 !important; border: 0; min-width: 0; }
+      table.responsive-cards tbody td:first-child { flex: 1 1 100%; padding-right: 44px !important; }
+      table.responsive-cards tbody td[colspan] { flex: 1 1 100%; text-align: center; padding: 28px 8px !important; }
+      table.responsive-cards tbody td[data-label]::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #64748b; margin-bottom: 2px; }
+      table.responsive-cards tbody td.row-actions { position: absolute; top: 10px; right: 10px; }
+      table.responsive-cards tbody td.row-actions button { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+      table.responsive-cards tbody td.row-actions { top: 4px; right: 4px; }
+      /* the compact duplicates inside the first cell are replaced by the labelled cells below it */
+      table.responsive-cards tbody td:first-child .sm\:hidden, table.responsive-cards tbody td:first-child .md\:hidden { display: none !important; }
+    }
+    /* Text colours picked for the dark theme that were unreadable on light backgrounds. */
+    body.theme-light .text-slate-100, body.theme-light .text-slate-200 { color: #1e293b !important; }
+    body.theme-light .text-primary-light { color: #1d4ed8 !important; }
+    body.theme-light .text-emerald-400 { color: #047857 !important; }
+    body.theme-light .text-amber-400 { color: #b45309 !important; }
+    body.theme-light .text-orange-400 { color: #c2410c !important; }
+    body.theme-light .text-red-400 { color: #dc2626 !important; }
+    body.theme-light .hover\:text-white:hover { color: #0f172a !important; }
+    body.theme-light .hover\:bg-dark-border:hover { background-color: #cbd5e1 !important; }
     body.theme-light .placeholder-slate-500::placeholder { color: #94a3b8 !important; }
     body.theme-light .placeholder-slate-600::placeholder { color: #64748b !important; }
     body.theme-light .text-slate-600 { color: #475569 !important; }
@@ -179,7 +207,11 @@
 <body :class="themeMode === 'light' ? 'theme-light bg-slate-100 text-slate-900' : 'theme-dark bg-dark text-white'" class="font-sans antialiased" x-data="adminApp()" x-init="init()">
 
   <!-- ============ LOGIN SCREEN ============ -->
-  <div x-show="!isAuthenticated" x-cloak class="login-bg min-h-screen flex items-center justify-center p-4">
+  <div x-show="!isAuthenticated" x-cloak class="login-bg min-h-screen flex items-center justify-center p-4 relative">
+    <button type="button" @click="toggleTheme()" class="absolute top-4 right-4 p-2.5 rounded-lg border border-dark-border bg-dark-card text-slate-400 hover:text-slate-200 transition-colors" :title="themeMode === 'dark' ? 'Switch to Light' : 'Switch to Dark'" :aria-label="themeMode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
+      <svg x-show="themeMode === 'dark'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      <svg x-show="themeMode === 'light'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+    </button>
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <div class="relative inline-flex items-center justify-center mb-5">
@@ -264,6 +296,30 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
           <span x-show="!sidebarCollapsed">Dashboard</span>
         </button>
+        <button @click="goUsers()"
+          :class="[(currentView === 'users' || currentView === 'user-detail') ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Manage Users' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <span x-show="!sidebarCollapsed">Manage Users</span>
+        </button>
+        <button @click="currentView = 'coaches'"
+          :class="[currentView === 'coaches' ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Manage Coaches' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+          <span x-show="!sidebarCollapsed">Manage Coaches</span>
+        </button>
+        <button @click="currentView = 'payments'"
+          :class="[currentView === 'payments' ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'View Payments' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+          <span x-show="!sidebarCollapsed">View Payments</span>
+        </button>
+        <button @click="currentView = 'audit-logs'"
+          :class="[currentView === 'audit-logs' ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Audit Logs' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          <span x-show="!sidebarCollapsed">Audit Logs</span>
+        </button>
         <button @click="currentView = 'support'; fetchSupportTickets()"
           :class="[currentView === 'support' ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
           class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Support Requests' : ''">
@@ -277,6 +333,12 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg>
           <span x-show="!sidebarCollapsed">Coach Reports</span>
           <span x-show="!sidebarCollapsed && reportCounts.OPEN" class="ml-auto badge badge-orange" x-text="reportCounts.OPEN"></span>
+        </button>
+        <button @click="testStorage()" :disabled="storageTesting"
+          :class="['nav-item text-slate-400 disabled:opacity-50', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Test image storage' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span x-show="!sidebarCollapsed" x-text="storageTesting ? 'Testing storage…' : 'Test image storage'"></span>
         </button>
 
         <div class="px-3 pt-4 pb-1.5" x-show="!sidebarCollapsed">
@@ -319,6 +381,7 @@
           <button @click="currentView = 'payments'; mobileNavOpen = false" :class="currentView === 'payments' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Payments</button>
           <button @click="currentView = 'support'; fetchSupportTickets(); mobileNavOpen = false" :class="currentView === 'support' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Support Requests <span x-show="supportCounts.OPEN" class="ml-auto badge badge-orange" x-text="supportCounts.OPEN"></span></button>
           <button @click="currentView = 'coach-reports'; fetchCoachReports(); mobileNavOpen = false" :class="currentView === 'coach-reports' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Coach Reports <span x-show="reportCounts.OPEN" class="ml-auto badge badge-orange" x-text="reportCounts.OPEN"></span></button>
+          <button @click="testStorage(); mobileNavOpen = false" :disabled="storageTesting" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-50" x-text="storageTesting ? 'Testing storage…' : 'Test image storage'"></button>
 
           <div class="px-3 pt-4 pb-1.5">
             <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Database Tables</span>
@@ -712,7 +775,6 @@
               <button @click="currentView = 'support'; fetchSupportTickets()" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Support Requests</button>
               <button @click="currentView = 'coach-reports'; fetchCoachReports()" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Coach Reports</button>
               <button @click="testStorage()" :disabled="storageTesting" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50" x-text="storageTesting ? 'Testing storage…' : 'Test image storage'"></button>
-              <button disabled class="px-4 py-2 bg-dark-muted text-slate-500 text-sm font-medium rounded-lg cursor-not-allowed">System Health (soon)</button>
             </div>
           </div>
 
@@ -773,7 +835,7 @@
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
-            <table class="w-full text-sm min-w-[640px]">
+            <table class="w-full text-sm min-w-[640px] responsive-cards">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase cursor-pointer select-none" @click="toggleUserSort('fullName')">Name</th>
@@ -800,14 +862,14 @@
                         </div>
                       </div>
                     </td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-slate-400" x-text="u.email"></td>
-                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="u.role"></span></td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="u.role === 'USER' ? (u.assignedCoach?.user?.fullName || 'Unassigned') : '—'"></td>
-                    <td class="px-4 py-3">
+                    <td data-label="Email" class="hidden sm:table-cell px-4 py-3 text-slate-400" x-text="u.email"></td>
+                    <td data-label="Role" class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="u.role"></span></td>
+                    <td data-label="Coach" class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="u.role === 'USER' ? (u.assignedCoach?.user?.fullName || 'Unassigned') : '—'"></td>
+                    <td data-label="Status" class="px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="u.isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'" x-text="u.isActive ? 'Active' : 'Suspended'"></span>
                     </td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDate(u.createdAt)"></td>
-                    <td class="px-4 py-3" @click.stop>
+                    <td data-label="Joined" class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDate(u.createdAt)"></td>
+                    <td class="row-actions px-4 py-3" @click.stop>
                       <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
@@ -933,7 +995,7 @@
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
-            <table class="w-full text-sm min-w-[720px]">
+            <table class="w-full text-sm min-w-[720px] responsive-cards">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Coach</th>
@@ -960,23 +1022,23 @@
                         </div>
                       </div>
                     </td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-slate-400" x-text="c.user.email"></td>
-                    <td class="hidden sm:table-cell px-4 py-3">
+                    <td data-label="Email" class="hidden sm:table-cell px-4 py-3 text-slate-400" x-text="c.user.email"></td>
+                    <td data-label="Role" class="hidden sm:table-cell px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="c.user.role || 'COACH'"></span>
                     </td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400">
+                    <td data-label="Specialties" class="hidden md:table-cell px-4 py-3 text-slate-400">
                       <div class="flex flex-wrap gap-1">
                         <template x-for="s in c.specialties" :key="s">
                           <span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="s"></span>
                         </template>
                       </div>
                     </td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="(c.experienceYears ?? 0) + ' yrs'"></td>
-                    <td class="px-4 py-3">
+                    <td data-label="Experience" class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="(c.experienceYears ?? 0) + ' yrs'"></td>
+                    <td data-label="Accepting" class="px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="c.isAcceptingClients ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'" x-text="c.isAcceptingClients ? 'Yes' : 'No'"></span>
                     </td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="c._count?.clients ?? 0"></td>
-                    <td class="px-4 py-3">
+                    <td data-label="Clients" class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="c._count?.clients ?? 0"></td>
+                    <td class="row-actions px-4 py-3">
                       <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
@@ -1101,7 +1163,7 @@
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
-            <table class="w-full text-sm min-w-[560px]">
+            <table class="w-full text-sm min-w-[560px] responsive-cards">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Admin</th>
@@ -1118,13 +1180,13 @@
                       <p class="text-xs text-slate-500 truncate" x-text="log.admin.email"></p>
                       <p class="md:hidden text-xs text-slate-500 mt-0.5" x-text="formatDateTime(log.createdAt)"></p>
                     </td>
-                    <td class="px-4 py-3">
+                    <td data-label="Action" class="px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" :class="actionBadgeClass(log.action)" x-text="log.action.replace(/_/g, ' ')"></span>
                     </td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
+                    <td data-label="Target" class="hidden sm:table-cell px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
                       <span x-text="log.targetType"></span> · <span class="font-mono" x-text="log.targetId.slice(0, 8) + '…'"></span>
                     </td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDateTime(log.createdAt)"></td>
+                    <td data-label="When" class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDateTime(log.createdAt)"></td>
                   </tr>
                 </template>
                 <tr x-show="pagedAuditLogs.data.length === 0">
@@ -1180,7 +1242,7 @@
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
-            <table class="w-full text-sm min-w-[720px]">
+            <table class="w-full text-sm min-w-[720px] responsive-cards">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">User</th>
@@ -1198,13 +1260,13 @@
                       <p class="font-medium truncate" x-text="p.user?.fullName || '—'"></p>
                       <p class="text-xs text-slate-500 truncate" x-text="p.user?.email || ''"></p>
                     </td>
-                    <td class="px-4 py-3 font-mono text-slate-300 whitespace-nowrap" x-text="formatCurrency(p.amount, p.currency)"></td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-slate-400 text-xs" x-text="(p.purpose || '').replace(/_/g, ' ')"></td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 text-xs" x-text="p.method || '—'"></td>
-                    <td class="px-4 py-3">
+                    <td data-label="Amount" class="px-4 py-3 font-mono text-slate-300 whitespace-nowrap" x-text="formatCurrency(p.amount, p.currency)"></td>
+                    <td data-label="Purpose" class="hidden sm:table-cell px-4 py-3 text-slate-400 text-xs" x-text="(p.purpose || '').replace(/_/g, ' ')"></td>
+                    <td data-label="Method" class="hidden md:table-cell px-4 py-3 text-slate-400 text-xs" x-text="p.method || '—'"></td>
+                    <td data-label="Status" class="px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" :class="paymentStatusBadgeClass(p.status)" x-text="p.status"></span>
                     </td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDateTime(p.createdAt)"></td>
+                    <td data-label="When" class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDateTime(p.createdAt)"></td>
                   </tr>
                 </template>
                 <tr x-show="pagedPayments.data.length === 0">
@@ -1710,7 +1772,7 @@
 
         // ---- Nav / layout ----
         currentView: "dashboard",
-        themeMode: "dark",
+        themeMode: (() => { try { return localStorage.getItem("fitnerve-admin-theme") === "light" ? "light" : "dark"; } catch { return "dark"; } })(),
         sidebarCollapsed: false,
         mobileNavOpen: false,
 
@@ -1922,9 +1984,18 @@
             this.activeModelInfo.fields.forEach(f => {
               if ((f.kind === 'scalar' || f.kind === 'enum') && !f.isId && f.name !== 'createdAt' && f.name !== 'updatedAt') {
                 let value = initialData !== null ? (initialData[f.name] ?? (f.type === 'Boolean' ? false : f.type === 'Int' || f.type === 'Float' ? '' : '')) : '';
+                let originalIso = null;
                 // Format datetime values for input[type=datetime-local]
                 if (f.type === 'DateTime' && value) {
-                  try { value = new Date(value).toISOString().slice(0, 16); } catch (_) {}
+                  // datetime-local inputs show and return LOCAL time, so convert from the stored instant
+                  // (toISOString alone showed UTC, and saving then moved the time back 5½ hours in IST).
+                  // The original is kept so a field nobody touched is saved back exactly as it was.
+                  const instant = new Date(value);
+                  if (!isNaN(instant)) {
+                    originalIso = instant.toISOString();
+                    instant.setMinutes(instant.getMinutes() - instant.getTimezoneOffset());
+                    value = instant.toISOString().slice(0, 16);
+                  }
                 }
                 const relation = this.relationFor(f.name);
                 fields.push({
@@ -1934,6 +2005,8 @@
                   required: f.isRequired && !f.hasDefaultValue,
                   enumValues: f.enumValues || [],
                   value,
+                  initialValue: value,
+                  originalIso,
                   isRelation: Boolean(relation),
                   relatedModel: relation?.relatedModel || null,
                 });
@@ -1964,7 +2037,7 @@
             } else if (f.type === 'Float') {
               data[f.name] = parseFloat(f.value);
             } else if (f.type === 'DateTime' && f.value) {
-              data[f.name] = new Date(f.value).toISOString();
+              data[f.name] = f.originalIso && f.value === f.initialValue ? f.originalIso : new Date(f.value).toISOString();
             } else {
               data[f.name] = f.value;
             }
@@ -2117,6 +2190,7 @@
 
         toggleTheme() {
           this.themeMode = this.themeMode === "dark" ? "light" : "dark";
+          try { localStorage.setItem("fitnerve-admin-theme", this.themeMode); } catch {}
         },
 
         goBack() {
@@ -2550,15 +2624,14 @@
             this.showToast("Full name and email are required.", "error");
             return;
           }
-          const tempPw = this.generatePassword();
           if (this.isAuthenticated) {
-            this.apiRequest("POST", "/api/v1/auth/register", {
+            this.apiRequest("POST", "/api/v1/admin/users", {
               fullName: f.fullName.trim(),
               email: f.email.trim(),
               phone: f.phone.trim() || undefined,
-              password: tempPw,
               role: f.role
-            }).then(() => {
+            }).then((data) => {
+              const tempPw = data.temporaryPassword;
               this.fetchLiveData();
               this.modals.addUser = false;
               navigator.clipboard?.writeText(tempPw).catch(() => {});
@@ -2582,6 +2655,7 @@
             this.users.unshift(newUser);
             this.persist();
             this.modals.addUser = false;
+            const tempPw = this.generatePassword();
             navigator.clipboard?.writeText(tempPw).catch(() => {});
             this.showToast(`User created. Temporary password (copied): ${tempPw}`, "success", 8000);
           }

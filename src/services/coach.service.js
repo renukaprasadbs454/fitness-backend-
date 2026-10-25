@@ -3,6 +3,10 @@ const userRepository = require("../repositories/user.repository");
 const adminRepository = require("../repositories/admin.repository");
 const ApiError = require("../utils/ApiError");
 const { parsePagination, buildMeta } = require("../utils/pagination");
+const appointmentRepository = require("../repositories/appointment.repository");
+const chatService = require("./chat.service");
+const { hashPassword } = require("../utils/password");
+const { generateUniqueUsername } = require("../utils/username");
 
 async function getMyCoachProfile(userId) {
   const coach = await coachRepository.findByUserId(userId);
@@ -35,8 +39,32 @@ async function requireHeadCoach(userId) {
 }
 
 // Head coach: turn an existing user into a coach (or update their coach profile).
-async function createCoachAsHead(userId, { userId: targetUserId, ...coachData }) {
+// Creates a brand-new coach account (no existing user needed). The head coach chooses the
+// password and hands it over; the account is marked verified so the coach can sign in straight away.
+async function createNewCoachAccount(headUserId, { fullName, email, phone, password, ...coachData }) {
+  if (await userRepository.findByEmail(email)) throw ApiError.conflict("An account with this email already exists");
+  if (phone && (await userRepository.findByPhone(phone))) throw ApiError.conflict("An account with this phone number already exists");
+
+  const user = await userRepository.create({
+    fullName,
+    email,
+    phone,
+    passwordHash: await hashPassword(password),
+    role: "COACH",
+    username: await generateUniqueUsername(email),
+    isEmailVerified: true
+  });
+  await userRepository.createProfile(user.id, {});
+  const coach = await coachRepository.create({ userId: user.id, specialties: [], ...coachData });
+
+  await adminRepository.createAuditLog(headUserId, "CREATE_COACH", "COACH", coach.id, { userId: user.id, by: "head-coach", newAccount: true });
+  return coachRepository.findById(coach.id);
+}
+
+async function createCoachAsHead(userId, { userId: targetUserId, fullName, email, phone, password, ...coachData }) {
   await requireHeadCoach(userId);
+  if (!targetUserId) return createNewCoachAccount(userId, { fullName, email, phone, password, ...coachData });
+
   const user = await userRepository.findById(targetUserId);
   if (!user) throw ApiError.notFound("User not found");
   if (user.role === "ADMIN") throw ApiError.badRequest("Admin accounts can't be made coaches");
@@ -101,9 +129,82 @@ async function setAvailability(userId, coachId, slot) {
   return coachRepository.upsertAvailabilitySlot(coachId, slot);
 }
 
+// A coach manages their own slots; the head coach can manage anyone's.
+async function loadSlotForChange(userId, coachId, slotId) {
+  const caller = await coachRepository.findByUserId(userId);
+  if (!caller || (caller.id !== coachId && !caller.isHeadCoach)) {
+    throw ApiError.forbidden("You can only manage your own availability");
+  }
+  const slot = await coachRepository.findAvailabilitySlot(slotId);
+  if (!slot || slot.coachId !== coachId) throw ApiError.notFound("Availability slot not found");
+  return slot;
+}
+
+async function updateAvailabilitySlot(userId, coachId, slotId, changes) {
+  const slot = await loadSlotForChange(userId, coachId, slotId);
+  const next = { ...slot, ...changes };
+  if (next.startTime >= next.endTime) throw ApiError.badRequest("startTime must be earlier than endTime");
+
+  const clash = (await coachRepository.listAvailability(coachId)).some(
+    (other) => other.id !== slotId && other.dayOfWeek === next.dayOfWeek && other.startTime === next.startTime
+  );
+  if (clash) throw ApiError.conflict(`There is already a ${next.dayOfWeek.toLowerCase()} slot starting at ${next.startTime}`);
+
+  return coachRepository.updateAvailabilitySlot(slotId, changes);
+}
+
+async function deleteAvailabilitySlot(userId, coachId, slotId) {
+  await loadSlotForChange(userId, coachId, slotId);
+  await coachRepository.deleteAvailabilitySlot(slotId);
+}
+
 async function listAvailability(coachId) {
   await getCoachById(coachId); // 404s if coach doesn't exist
   return coachRepository.listAvailability(coachId);
+}
+
+/**
+ * The Clients page. A coach sees the clients that are theirs: assigned to them, or booked with them
+ * since any coach swap. The head coach sees every client account and which coach each one belongs to.
+ * `relation` says how each client relates to the signed-in coach.
+ */
+async function listMyClients(userId) {
+  const coach = await coachRepository.findByUserId(userId);
+  if (!coach) throw ApiError.notFound("Coach profile not found for this account");
+
+  const ids = coach.isHeadCoach ? undefined : [...(await chatService.eligibleClientIdsForCoach(coach.id))];
+  const users = ids && !ids.length ? [] : await userRepository.listClientsOverview(ids);
+  const counts = await appointmentRepository.countsByClient(
+    users.map((u) => u.id),
+    coach.isHeadCoach ? undefined : coach.id
+  );
+
+  const clients = users.map((u) => {
+    const mine = u.assignedCoachId === coach.id;
+    const relation = mine ? "mine" : !coach.isHeadCoach ? "booked" : u.assignedCoachId ? "other" : "unassigned";
+    const { total = 0, upcoming = 0 } = counts.get(u.id) || {};
+    return {
+      id: u.id,
+      fullName: u.fullName,
+      username: u.username,
+      email: u.email,
+      isActive: u.isActive,
+      relation,
+      assignedCoach: u.assignedCoach ? { id: u.assignedCoach.id, name: u.assignedCoach.user.fullName } : null,
+      sessions: total,
+      upcomingSessions: upcoming
+    };
+  });
+
+  // Mine first, then by name.
+  const rank = { mine: 0, booked: 1, other: 2, unassigned: 3 };
+  clients.sort((a, b) => rank[a.relation] - rank[b.relation] || a.fullName.localeCompare(b.fullName));
+
+  const count = (relation) => clients.filter((c) => c.relation === relation).length;
+  return {
+    clients,
+    summary: { total: clients.length, mine: count("mine"), booked: count("booked"), other: count("other"), unassigned: count("unassigned") }
+  };
 }
 
 async function listMyAppointments(userId, query) {
@@ -130,6 +231,9 @@ module.exports = {
   listCoaches,
   deleteMyCoachProfile,
   setAvailability,
+  updateAvailabilitySlot,
+  deleteAvailabilitySlot,
   listAvailability,
+  listMyClients,
   listMyAppointments
 };

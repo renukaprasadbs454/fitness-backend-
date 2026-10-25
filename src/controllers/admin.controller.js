@@ -96,6 +96,11 @@ const resetUserPassword = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Password reset", result);
 });
 
+const createUser = asyncHandler(async (req, res) => {
+  const result = await adminService.createUser(req.user.id, req.body);
+  return ApiResponse.success(res, httpStatus.CREATED, "User created", result);
+});
+
 const deleteUser = asyncHandler(async (req, res) => {
   await adminService.deleteUser(req.user.id, req.params.id);
   return ApiResponse.success(res, httpStatus.OK, "User deleted", null);
@@ -240,6 +245,7 @@ module.exports = {
   assignCoach,
   listCoachClients,
   resetUserPassword,
+  createUser,
   deleteUser,
   listCoaches,
   createCoach,

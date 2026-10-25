@@ -16,7 +16,10 @@ const tokenRepository = {
     prisma.refreshToken.updateMany({
       where: { userId, revoked: false },
       data: { revoked: true }
-    })
+    }),
+
+  // Housekeeping: tokens that expired before `before` can never be used again.
+  deleteExpiredBefore: (before) => prisma.refreshToken.deleteMany({ where: { expiresAt: { lt: before } } })
 };
 
 module.exports = tokenRepository;

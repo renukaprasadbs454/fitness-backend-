@@ -119,6 +119,23 @@ const userRepository = {
     return rows.map((r) => r.id);
   },
 
+  // Clients with the coach they are assigned to. `ids` narrows to a set; omit it for every client account.
+  listClientsOverview: (ids) =>
+    prisma.user.findMany({
+      where: { role: "USER", ...(ids ? { id: { in: ids } } : {}) },
+      select: {
+        id: true,
+        fullName: true,
+        username: true,
+        email: true,
+        isActive: true,
+        assignedCoachId: true,
+        assignedCoach: { select: { id: true, user: { select: { fullName: true } } } }
+      },
+      orderBy: { fullName: "asc" },
+      take: 1000
+    }),
+
   // Lightweight client rows for a known set of ids (coach session scheduling).
   listClientsLiteByIds: (ids) =>
     prisma.user.findMany({

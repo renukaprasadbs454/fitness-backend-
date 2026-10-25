@@ -13,8 +13,27 @@ const createOrUpdateCoach = {
   })
 };
 
+const newCoachPassword = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[A-Z]/, "Password must contain an uppercase letter")
+  .regex(/[a-z]/, "Password must contain a lowercase letter")
+  .regex(/[0-9]/, "Password must contain a number");
+
+// Head coach adds a coach either by creating a brand-new account (fullName + email + password)
+// or by promoting an existing user (userId).
 const createCoachByHead = {
-  body: createOrUpdateCoach.body.extend({ userId: z.string().uuid("Invalid user id") })
+  body: createOrUpdateCoach.body
+    .extend({
+      userId: z.string().uuid("Invalid user id").optional(),
+      fullName: z.string().trim().min(2).max(100).optional(),
+      email: z.string().trim().toLowerCase().email().optional(),
+      phone: z.string().trim().min(7).max(20).optional(),
+      password: newCoachPassword.optional()
+    })
+    .refine((b) => b.userId || (b.fullName && b.email && b.password), {
+      message: "Enter the new coach's name, email and password"
+    })
 };
 
 const updateCoachProfile = {
@@ -50,6 +69,23 @@ const upsertAvailability = {
   })
 };
 
+const TIME = z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Use HH:mm");
+const slotParams = z.object({ coachId: z.string().uuid("Invalid coach id"), slotId: z.string().uuid("Invalid slot id") });
+
+const updateAvailabilitySlot = {
+  params: slotParams,
+  body: z
+    .object({
+      dayOfWeek: z.enum(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]).optional(),
+      startTime: TIME.optional(),
+      endTime: TIME.optional(),
+      isActive: z.boolean().optional()
+    })
+    .refine((body) => Object.keys(body).length > 0, { message: "Nothing to update" })
+};
+
+const deleteAvailabilitySlot = { params: slotParams };
+
 const listMyAppointments = {
   query: z.object({
     status: z.enum(["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]).optional(),
@@ -65,7 +101,8 @@ module.exports = {
   listCoaches,
   updateCoachProfile,
   createCoachByHead,
-  idParam,
   upsertAvailability,
+  updateAvailabilitySlot,
+  deleteAvailabilitySlot,
   listMyAppointments
 };

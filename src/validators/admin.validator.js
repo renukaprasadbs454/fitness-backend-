@@ -25,6 +25,16 @@ const updateUser = {
   })
 };
 
+const createUser = {
+  body: z.object({
+    fullName: z.string().trim().min(2).max(100),
+    email: z.string().trim().toLowerCase().email(),
+    phone: z.string().trim().min(7).max(20).optional(),
+    role: z.enum(["USER", "COACH"]).optional().default("USER"),
+    password: z.string().min(8).max(128).optional() // omit to auto-generate
+  })
+};
+
 const changeRole = {
   params: idParam.params,
   body: z.object({ role: z.enum(["USER", "COACH", "ADMIN"]) })
@@ -102,6 +112,7 @@ module.exports = {
   idParam,
   listUsers,
   updateUser,
+  createUser,
   changeRole,
   assignCoach,
   resetPassword,

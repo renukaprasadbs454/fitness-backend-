@@ -18,7 +18,10 @@ const otpRepository = {
     prisma.otpCode.updateMany({
       where: { userId, purpose, used: false },
       data: { used: true }
-    })
+    }),
+
+  // Housekeeping: codes that expired before `before` are dead weight.
+  deleteExpiredBefore: (before) => prisma.otpCode.deleteMany({ where: { expiresAt: { lt: before } } })
 };
 
 module.exports = otpRepository;

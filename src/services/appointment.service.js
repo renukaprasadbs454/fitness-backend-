@@ -246,15 +246,20 @@ async function reschedule(userId, userRole, id, { scheduledAt, durationMinutes }
   const updated = await appointmentRepository.updateSchedule(id, { scheduledAt: new Date(scheduledAt), durationMinutes });
   await meetingService.rescheduleMeeting(updated);
 
-  // Tell everyone on the session except whoever moved it. Best-effort: never undoes the move.
-  const recipients = [updated.userId, updated.coach?.userId].filter((recipient) => recipient && recipient !== userId);
+  // Tell everyone on the session except whoever changed it, saying what actually changed.
+  // Best-effort: a notification failure never undoes the change.
+  const moved = new Date(updated.scheduledAt).getTime() !== new Date(appointment.scheduledAt).getTime();
+  const resized = updated.durationMinutes !== appointment.durationMinutes;
+  const recipients = moved || resized ? [updated.userId, updated.coach?.userId].filter((recipient) => recipient && recipient !== userId) : [];
   for (const recipient of recipients) {
     await notificationService
       .notify(
         recipient,
         "APPOINTMENT_REMINDER",
-        "Session rescheduled",
-        `"${updated.title}" has moved to ${formatIst(updated.scheduledAt)}.`,
+        moved ? "Session rescheduled" : "Session updated",
+        moved
+          ? `"${updated.title}" has moved to ${formatIst(updated.scheduledAt)}.`
+          : `"${updated.title}" on ${formatIst(updated.scheduledAt)} now runs ${updated.durationMinutes} minutes.`,
         { data: { appointmentId: updated.id } }
       )
       .catch((err) => logger.warn(`[appointments] reschedule notice failed: ${err.message}`));
@@ -350,16 +355,24 @@ async function schedulableClients(coachUserId) {
  * supplies a link of their own. Slots that clash with existing bookings are
  * skipped and reported back rather than failing the whole series.
  */
-async function scheduleSessions(coachUserId, { userId, title, scheduledAt, durationMinutes = 45, notes, repeatWeeks = 0, meetingLink }) {
-  const coach = await coachRepository.findByUserId(coachUserId);
-  if (!coach) throw ApiError.forbidden("Coach profile not found for this account");
+async function scheduleSessions(coachUserId, { userId, coachId, title, scheduledAt, durationMinutes = 45, notes, repeatWeeks = 0, meetingLink }) {
+  const caller = await coachRepository.findByUserId(coachUserId);
+  if (!caller) throw ApiError.forbidden("Coach profile not found for this account");
+
+  // The head coach may book the session on any coach's calendar; everyone else books only for themselves.
+  let coach = caller;
+  if (coachId && coachId !== caller.id) {
+    if (!caller.isHeadCoach) throw ApiError.forbidden("Only the head coach can schedule a session for another coach");
+    coach = await coachRepository.findById(coachId);
+    if (!coach) throw ApiError.notFound("Coach not found");
+  }
 
   const client = await userRepository.findById(userId);
   if (!client || client.role !== "USER") throw ApiError.notFound("Client not found");
 
   // The head coach can work with any client (as with workouts and chats). Other coaches only with
   // clients who are currently theirs: assigned to them, or booked with them since any coach swap.
-  if (!coach.isHeadCoach && !(await chatService.chatEligibleCoachIds(userId)).has(coach.id)) {
+  if (!caller.isHeadCoach && !(await chatService.chatEligibleCoachIds(userId)).has(coach.id)) {
     throw ApiError.forbidden("You can only schedule sessions with your own clients");
   }
 

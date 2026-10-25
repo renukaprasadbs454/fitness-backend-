@@ -48,7 +48,10 @@ const env = {
     maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || "5", 10),
     // TEMPORARY escape hatch: when set, this code is accepted for ANY account in
     // place of the emailed one. Leave unset (the default) to disable it.
-    bypassCode: (process.env.OTP_BYPASS_CODE || "").trim()
+    bypassCode: (process.env.OTP_BYPASS_CODE || "").trim(),
+    // When "true", client accounts must verify their email before they can sign in;
+    // signing in unverified sends a fresh code instead. Coaches/admins are exempt.
+    requireVerifiedLogin: process.env.REQUIRE_EMAIL_VERIFICATION === "true"
   },
 
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || "12", 10),
@@ -60,7 +63,8 @@ const env = {
 
   rateLimit: {
     windowMin: parseInt(process.env.RATE_LIMIT_WINDOW_MIN || "15", 10),
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100", 10),
+    // One app screen can fire ~8 requests, and people on the same Wi-Fi share an IP.
+    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "300", 10),
     authMaxRequests: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || "10", 10)
   },
 

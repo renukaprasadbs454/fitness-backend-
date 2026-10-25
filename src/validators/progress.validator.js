@@ -3,7 +3,7 @@ const { z } = require("zod");
 const logWeight = {
   body: z.object({
     weightKg: z.number().positive().max(500),
-    loggedAt: z.string().datetime().optional()
+    loggedAt: z.string().datetime({ offset: true }).optional()
   })
 };
 
@@ -15,7 +15,7 @@ const logMeasurement = {
       hipCm: z.number().positive().max(300).optional(),
       armCm: z.number().positive().max(150).optional(),
       thighCm: z.number().positive().max(200).optional(),
-      loggedAt: z.string().datetime().optional()
+      loggedAt: z.string().datetime({ offset: true }).optional()
     })
     .refine(
       (d) => ["chestCm", "waistCm", "hipCm", "armCm", "thighCm"].some((k) => d[k] !== undefined),

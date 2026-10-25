@@ -122,6 +122,8 @@ app.use(
       persistAuthorization: true,
       displayRequestDuration: true,
       tryItOutEnabled: true,
+      // Serialised into the Swagger UI page and run in the browser, so `window` is the page's.
+      /* eslint-disable no-undef */
       responseInterceptor: function (res) {
         try {
           var url = String(res.url || "").split("?")[0];
@@ -140,6 +142,7 @@ app.use(
         }
         return res;
       }
+      /* eslint-enable no-undef */
     }
   })
 );

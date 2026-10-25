@@ -88,6 +88,7 @@ router.get("/sessions/clients", authenticate, requireRole(ROLES.COACH), appointm
  *             required: [userId, title, scheduledAt]
  *             properties:
  *               userId: { type: string, format: uuid }
+ *               coachId: { type: string, format: uuid, description: "Head coach only: the coach this session is with (defaults to you)" }
  *               title: { type: string, example: "1:1 coaching session" }
  *               scheduledAt: { type: string, format: date-time }
  *               durationMinutes: { type: integer, example: 45 }

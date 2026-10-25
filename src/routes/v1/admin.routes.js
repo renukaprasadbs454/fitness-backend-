@@ -57,6 +57,32 @@ router.get("/users", validate(schemas.listUsers), adminController.listUsers);
 
 /**
  * @swagger
+ * /admin/users:
+ *   post:
+ *     summary: Create a client or coach account (verified; returns a one-time temporary password)
+ *     tags: [Admin]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [fullName, email]
+ *             properties:
+ *               fullName: { type: string }
+ *               email: { type: string, format: email }
+ *               phone: { type: string }
+ *               role: { type: string, enum: [USER, COACH] }
+ *               password: { type: string, description: Omit to auto-generate }
+ *     responses:
+ *       201: { description: User created }
+ *       409: { description: Email or phone already in use }
+ */
+router.post("/users", validate(schemas.createUser), adminController.createUser);
+
+/**
+ * @swagger
  * /admin/users/{id}:
  *   get:
  *     summary: Get full user details (profile + coach relation if any)

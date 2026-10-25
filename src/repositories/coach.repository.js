@@ -44,6 +44,12 @@ const coachRepository = {
       create: { coachId, ...data }
     }),
 
+  findAvailabilitySlot: (id) => prisma.coachAvailability.findUnique({ where: { id } }),
+
+  updateAvailabilitySlot: (id, data) => prisma.coachAvailability.update({ where: { id }, data }),
+
+  deleteAvailabilitySlot: (id) => prisma.coachAvailability.delete({ where: { id } }),
+
   listAvailability: (coachId) =>
     prisma.coachAvailability.findMany({ where: { coachId }, orderBy: { dayOfWeek: "asc" } }),
 

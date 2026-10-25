@@ -4,6 +4,7 @@ const coachRepository = require("../repositories/coach.repository");
 const adminRepository = require("../repositories/admin.repository");
 const ApiError = require("../utils/ApiError");
 const { hashPassword } = require("../utils/password");
+const { generateUniqueUsername } = require("../utils/username");
 const { parsePagination, buildMeta } = require("../utils/pagination");
 const { toIstIsoString } = require("../utils/timezone");
 
@@ -149,6 +150,29 @@ async function resetUserPassword(adminId, id, newPassword) {
 
   // Returned once, out-of-band — never persisted or logged in plaintext elsewhere.
   return { userId: id, temporaryPassword: tempPassword };
+}
+
+// Admin creates an account directly. It's marked verified (the admin vouches for the
+// address) and the temporary password is returned once so the admin can hand it over.
+async function createUser(adminId, { fullName, email, phone, role, password }) {
+  if (await userRepository.findByEmail(email)) throw ApiError.conflict("An account with this email already exists");
+  if (phone && (await userRepository.findByPhone(phone))) throw ApiError.conflict("An account with this phone number already exists");
+
+  const tempPassword = password || crypto.randomBytes(9).toString("base64url");
+  const user = await userRepository.create({
+    fullName,
+    email,
+    phone,
+    passwordHash: await hashPassword(tempPassword),
+    role,
+    username: await generateUniqueUsername(email),
+    isEmailVerified: true
+  });
+  await userRepository.createProfile(user.id, {});
+  if (role === "COACH") await coachRepository.create({ userId: user.id, specialties: [] });
+
+  await adminRepository.createAuditLog(adminId, "CREATE_USER", "USER", user.id, { role, generated: !password });
+  return { user: await userRepository.findById(user.id), temporaryPassword: tempPassword };
 }
 
 async function deleteUser(adminId, id) {
@@ -387,6 +411,7 @@ module.exports = {
   assignCoach,
   listCoachClients,
   resetUserPassword,
+  createUser,
   deleteUser,
   listCoaches,
   createCoach,
