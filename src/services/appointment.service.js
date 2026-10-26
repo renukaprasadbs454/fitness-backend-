@@ -153,10 +153,17 @@ async function autoGenerateMeeting(appointment) {
   }
 }
 
+/** The head coach oversees every coach's sessions, so they can approve, cancel and edit any of them. */
+async function isHeadCoachUser(userId, userRole) {
+  if (userRole !== "COACH") return false;
+  const coach = await coachRepository.findByUserId(userId);
+  return Boolean(coach?.isHeadCoach);
+}
+
 async function loadForMeetingChange(userId, userRole, id) {
   const appointment = await appointmentRepository.findById(id);
   if (!appointment) throw ApiError.notFound("Appointment not found");
-  if (appointment.coach?.userId !== userId && userRole !== "ADMIN") {
+  if (appointment.coach?.userId !== userId && userRole !== "ADMIN" && !(await isHeadCoachUser(userId, userRole))) {
     throw ApiError.forbidden("Only the session's coach or an admin can manage its meeting link");
   }
   if (appointment.status === "CANCELLED" || appointment.status === "COMPLETED") {
@@ -198,7 +205,7 @@ async function updateStatus(userId, userRole, id, status) {
   if (!appointment) throw ApiError.notFound("Appointment not found");
 
   const isOwner = appointment.userId === userId;
-  const isCoachOnAppointment = appointment.coach?.userId === userId;
+  const isCoachOnAppointment = appointment.coach?.userId === userId || (await isHeadCoachUser(userId, userRole));
   if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
     throw ApiError.forbidden("You cannot modify this appointment");
   }
@@ -225,7 +232,7 @@ async function reschedule(userId, userRole, id, { scheduledAt, durationMinutes }
   if (!appointment) throw ApiError.notFound("Appointment not found");
 
   const isOwner = appointment.userId === userId;
-  const isCoachOnAppointment = appointment.coach?.userId === userId;
+  const isCoachOnAppointment = appointment.coach?.userId === userId || (await isHeadCoachUser(userId, userRole));
   if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
     throw ApiError.forbidden("You cannot modify this appointment");
   }
@@ -272,7 +279,7 @@ async function updateDetails(userId, userRole, id, { title, notes }) {
   if (!appointment) throw ApiError.notFound("Appointment not found");
 
   const isOwner = appointment.userId === userId;
-  const isCoachOnAppointment = appointment.coach?.userId === userId;
+  const isCoachOnAppointment = appointment.coach?.userId === userId || (await isHeadCoachUser(userId, userRole));
   if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
     throw ApiError.forbidden("You cannot modify this appointment");
   }
@@ -285,7 +292,7 @@ async function remove(userId, userRole, id) {
   if (!appointment) throw ApiError.notFound("Appointment not found");
 
   const isOwner = appointment.userId === userId;
-  const isCoachOnAppointment = appointment.coach?.userId === userId;
+  const isCoachOnAppointment = appointment.coach?.userId === userId || (await isHeadCoachUser(userId, userRole));
   if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
     throw ApiError.forbidden("You cannot delete this appointment");
   }

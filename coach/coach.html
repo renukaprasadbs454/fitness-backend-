@@ -628,6 +628,17 @@
                 <button @click="openSchedule()" class="btn-primary px-4 py-2.5 rounded-xl text-sm flex-shrink-0">+ Schedule Session</button>
               </div>
 
+              <div x-show="coach?.isHeadCoach" x-cloak class="flex items-center gap-2 mb-4">
+                <label class="text-xs text-slate-500">Working as</label>
+                <select x-model="appointmentsCoachId" @change="fetchAppointments()" class="px-3 py-2 bg-dark border border-dark-border rounded-xl text-sm text-white">
+                  <option value="">All coaches</option>
+                  <template x-for="c in allCoaches" :key="c.id">
+                    <option :value="c.id" x-text="(c.user?.fullName || c.id) + (c.id === coach?.id ? ' (me)' : '')"></option>
+                  </template>
+                </select>
+                <span x-show="appointmentsCoachId" class="text-xs text-slate-500">Schedule, confirm, cancel and meeting links apply to this coach's sessions.</span>
+              </div>
+
               <div class="flex gap-2 mb-5">
                 <template x-for="tab in ['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED']" :key="tab">
                   <button @click="appointmentsFilter = tab; fetchAppointments()"
@@ -659,9 +670,9 @@
                     </div>
                     <span class="badge" :class="statusBadge(displayStatus(a))" x-text="displayStatus(a)"></span>
                     <div class="flex gap-2">
-                      <button x-show="a.status === 'PENDING'" @click="setAppointmentStatus(a, 'CONFIRMED')" class="px-3 py-1.5 rounded-lg bg-primary/15 text-primary-light text-xs font-semibold hover:bg-primary/25">Confirm</button>
-                      <button x-show="a.status === 'CONFIRMED'" @click="setAppointmentStatus(a, 'COMPLETED')" class="px-3 py-1.5 rounded-lg bg-green-500/15 text-green-400 text-xs font-semibold hover:bg-green-500/25">Complete</button>
-                      <button x-show="a.status === 'PENDING' || a.status === 'CONFIRMED'" @click="setAppointmentStatus(a, 'CANCELLED')" class="px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 text-xs font-semibold hover:bg-red-500/25">Cancel</button>
+                      <button x-show="a.status === 'PENDING'" @click="askAppointmentStatus(a, 'CONFIRMED')" class="px-3 py-1.5 rounded-lg bg-primary/15 text-primary-light text-xs font-semibold hover:bg-primary/25">Confirm</button>
+                      <button x-show="a.status === 'CONFIRMED'" @click="askAppointmentStatus(a, 'COMPLETED')" class="px-3 py-1.5 rounded-lg bg-green-500/15 text-green-400 text-xs font-semibold hover:bg-green-500/25">Complete</button>
+                      <button x-show="a.status === 'PENDING' || a.status === 'CONFIRMED'" @click="askAppointmentStatus(a, 'CANCELLED')" class="px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 text-xs font-semibold hover:bg-red-500/25">Cancel</button>
                     </div>
                   </div>
                 </template>
@@ -1237,14 +1248,14 @@
   </div>
 
   <!-- Generic Confirm Modal -->
-  <div x-show="modals.confirm" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div x-show="modals.confirm" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/70 backdrop-blur-xs" @click="modals.confirm = false"></div>
     <div class="relative bg-dark-card border border-dark-border rounded-2xl w-full max-w-sm p-6">
       <h3 class="text-lg font-semibold mb-2" x-text="confirmAction.title"></h3>
       <p class="text-sm text-slate-400 mb-5" x-text="confirmAction.description"></p>
       <div class="flex justify-end gap-2">
         <button @click="modals.confirm = false" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
-        <button @click="runConfirmAction()" class="px-4 py-2 text-sm rounded-lg font-bold transition-colors bg-red-500/90 hover:bg-red-500 text-white" x-text="confirmAction.confirmLabel"></button>
+        <button @click="runConfirmAction()" :class="confirmAction.positive ? 'bg-primary hover:bg-primary-light text-white' : 'bg-red-500/90 hover:bg-red-500 text-white'" class="px-4 py-2 text-sm rounded-lg font-bold transition-colors" x-text="confirmAction.confirmLabel"></button>
       </div>
     </div>
   </div>
@@ -1629,6 +1640,7 @@
 
         appointments: [],
         appointmentsFilter: "ALL",
+        appointmentsCoachId: "",
         availability: [],
         slotForm: { dayOfWeek: "MONDAY", startTime: "09:00", endTime: "10:00" },
         editingSlotId: null,
@@ -2114,6 +2126,14 @@
         runConfirmAction() {
           const { type, target } = this.confirmAction;
           this.modals.confirm = false;
+          if (type === "appointment-status") {
+            this.setAppointmentStatus(target.appointment, target.status);
+            return;
+          }
+          if (type === "schedule-session") {
+            this.saveSchedule();
+            return;
+          }
           if (type === "delete-coach") {
             this.apiRequest("DELETE", `/api/v1/coaches/${target.id}`)
               .then(() => {
@@ -2516,7 +2536,8 @@
           start.setMinutes(0, 0, 0);
           this.scheduleForm = {
             userId: client?.id || "",
-            coachId: "",
+            // Working "as" a coach on the Appointments page pre-selects them as the session's coach.
+            coachId: this.coach?.isHeadCoach && this.appointmentsCoachId !== this.coach?.id ? this.appointmentsCoachId : "",
             title: "1:1 coaching session",
             scheduledAt: this.toLocalInput(start.toISOString()),
             durationMinutes: 45,
@@ -2556,6 +2577,21 @@
             return (this.scheduleError = "Meeting links must start with https://");
           }
 
+          const client = this.scheduleClients.find((c) => c.id === f.userId);
+          const weeks = Number(f.repeatWeeks) || 0;
+          this.confirmAction = {
+            type: "schedule-session",
+            target: null,
+            title: "Schedule this session?",
+            description: `Are you sure you want to schedule "${f.title.trim()}" with ${client?.fullName || "this client"} on ${this.formatDate(new Date(f.scheduledAt).toISOString())}${weeks ? ` and ${weeks} more week${weeks === 1 ? "" : "s"}` : ""}? It is confirmed straight away and the client is notified.`,
+            confirmLabel: "Yes, schedule",
+            positive: true
+          };
+          this.modals.confirm = true;
+        },
+
+        saveSchedule() {
+          const f = this.scheduleForm;
           this.scheduleSaving = true;
           this.apiRequest("POST", "/api/v1/appointments/sessions", {
             userId: f.userId,
@@ -3057,17 +3093,32 @@
         },
 
         fetchAppointments() {
-          const query = this.appointmentsFilter !== "ALL" ? `?status=${this.appointmentsFilter}&limit=100` : "?limit=100";
+          let query = this.appointmentsFilter !== "ALL" ? `?status=${this.appointmentsFilter}&limit=100` : "?limit=100";
+          if (this.coach?.isHeadCoach && this.appointmentsCoachId) query += `&coachId=${this.appointmentsCoachId}`;
           return this.apiRequest("GET", `/api/v1/coaches/me/appointments${query}`).then((items) => {
             this.appointments = items || [];
           });
         },
 
+        // Asks "are you sure?" first so a session can't be confirmed, completed or cancelled by a stray click.
+        askAppointmentStatus(appointment, status) {
+          const who = `${appointment.title} with ${appointment.user?.fullName || "the client"} on ${this.formatDate(appointment.scheduledAt)}`;
+          const copy = {
+            CONFIRMED: { title: "Approve this session?", description: `Are you sure you want to approve "${who}"? The client will be notified.`, confirmLabel: "Yes, approve", positive: true },
+            COMPLETED: { title: "Mark as completed?", description: `Are you sure "${who}" is completed?`, confirmLabel: "Yes, complete", positive: true },
+            CANCELLED: { title: "Cancel this session?", description: `Are you sure you want to cancel "${who}"? Its meeting link will be removed.`, confirmLabel: "Yes, cancel session", positive: false }
+          }[status];
+          this.confirmAction = { type: "appointment-status", target: { appointment, status }, ...copy };
+          this.modals.confirm = true;
+        },
+
         setAppointmentStatus(appointment, status) {
-          this.apiRequest("PATCH", `/api/v1/appointments/${appointment.id}/status`, { status }).then(() => {
-            this.showToast(`Appointment ${status.toLowerCase()}`);
-            this.fetchAppointments();
-          });
+          this.apiRequest("PATCH", `/api/v1/appointments/${appointment.id}/status`, { status })
+            .then(() => {
+              this.showToast(`Appointment ${status.toLowerCase()}`);
+              this.fetchAppointments();
+            })
+            .catch((err) => this.showToast(err.message || "Couldn't update the appointment", "error"));
         },
 
         statusBadge(status) {
