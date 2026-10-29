@@ -15,10 +15,10 @@ Create an `A` record `api-fitnerve.kwiko.org` pointing at the VPS public IPv4
 dig +short api-fitnerve.kwiko.org A
 ```
 
-From the project checkout, install Docker, Compose, Nginx, Certbot, and UFW:
+From the backend repository checkout, install Docker, Compose, Nginx, Certbot, and UFW:
 
 ```bash
-sudo bash BACKEND/deploy/setup-vps.sh
+sudo bash deploy/setup-vps.sh
 ```
 
 If SSH runs on a nonstandard port, allow it in UFW before enabling the firewall.
@@ -30,8 +30,8 @@ outbound submission or use an email service/API that permits your use case.
 
 ## 2. Create protected environment files
 
-Copy this workspace to `/opt/fitnerve`, with `BACKEND` and `FRONTEND` as sibling
-directories and Git checkouts. Then create the two ignored secret files:
+Clone only the backend GitHub repository into `/opt/fitnerve`. Create the ignored
+environment files there:
 
 ```bash
 cd /opt/fitnerve
@@ -43,7 +43,7 @@ POSTGRES_PASSWORD=REPLACE_WITH_A_LONG_RANDOM_PASSWORD
 EOF
 chmod 600 .env.deploy
 
-cat > BACKEND/.env.production <<'EOF'
+cat > .env.production <<'EOF'
 NODE_ENV=production
 PORT=5050
 API_VERSION=v1
@@ -68,7 +68,7 @@ LOCAL_UPLOAD_DIR=uploads
 ENABLE_CRON=true
 LOG_LEVEL=info
 EOF
-chmod 600 BACKEND/.env.production
+chmod 600 .env.production
 ```
 
 Generate distinct strong secrets with:
@@ -93,7 +93,7 @@ FitNerve binds only `127.0.0.1:8088`; Postgres has no host port. Check public li
 
 ```bash
 ss -ltnp | grep -E ':(80|443)\b' || true
-install -m 644 BACKEND/deploy/nginx/host-api-fitnerve.conf /etc/nginx/sites-available/api-fitnerve.kwiko.org
+install -m 644 deploy/nginx/host-api-fitnerve.conf /etc/nginx/sites-available/api-fitnerve.kwiko.org
 ln -s /etc/nginx/sites-available/api-fitnerve.kwiko.org /etc/nginx/sites-enabled/api-fitnerve.kwiko.org
 nginx -t && systemctl reload nginx
 ```
@@ -110,7 +110,7 @@ Deploy and verify through both the internal loopback and public HTTPS routes:
 
 ```bash
 cd /opt/fitnerve
-./BACKEND/deploy.sh
+./deploy.sh
 curl -fsS http://127.0.0.1:8088/api/v1/health
 curl -fsS https://api-fitnerve.kwiko.org/api/v1/health
 ```
@@ -125,7 +125,7 @@ without printing credentials:
 
 ```bash
 nc -vz smtp.your-provider.example 587
-docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml logs --tail=100 backend
+docker compose --project-directory . --env-file .env.deploy -f docker-compose.prod.yml logs --tail=100 backend
 ```
 
 Register with a real test mailbox, inspect the message and enter the received
@@ -138,41 +138,27 @@ updates backend branch `suhas-changes-3` by default; override it if needed:
 
 ```bash
 cd /opt/fitnerve
-FITNERVE_BRANCH=suhas-changes-3 ./BACKEND/deploy.sh
+FITNERVE_BRANCH=suhas-changes-3 ./deploy.sh
 ```
 
 Inspect status/logs and stop/start without removing persistent data:
 
 ```bash
-docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml ps
-docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml logs -f backend nginx postgres
-docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml down
-docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml up -d
+docker compose --project-directory . --env-file .env.deploy -f docker-compose.prod.yml ps
+docker compose --project-directory . --env-file .env.deploy -f docker-compose.prod.yml logs -f backend nginx postgres
+docker compose --project-directory . --env-file .env.deploy -f docker-compose.prod.yml down
+docker compose --project-directory . --env-file .env.deploy -f docker-compose.prod.yml up -d
 ```
 
 `down` preserves named volumes. Do not use `down -v` unless intentionally
 destroying the development database/uploads.
 
-## 6. GitHub push from the developer workstation
+## 6. Push the backend repository
 
-This workspace currently has two independent repositories, not one root
-repository. Push the backend and frontend changes in their respective repos;
-deployment files in this guide currently live with the backend checkout. Stage
-only reviewed paths, never `.env` files:
+From the developer workstation, push only the backend repository for this VPS deployment:
 
 ```powershell
 cd "D:\kwiko projects\FITNERVE\BACKEND"
 git status --short
-git add src docker-compose.prod.yml docker-compose.nginx.yml deploy.sh deploy/ DEPLOYMENT.md Dockerfile
-git commit -m "Add FitNerve VPS deployment and coach access controls"
 git push origin suhas-changes-3
-
-cd "D:\kwiko projects\FITNERVE\FRONTEND"
-git status --short
-git add Dockerfile nginx.conf src/screens/BookingScreen.tsx src/screens/CoachDetailScreen.tsx src/screens/VerifyOtpScreen.tsx src/store/appStore.ts
-git commit -m "Enforce assigned coach booking and refresh sessions"
-git push origin suhas-changes
 ```
-
-If pushing a release to another branch, confirm the GitHub branch protections
-and merge process first. Never force-push.
