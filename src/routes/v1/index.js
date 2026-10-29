@@ -21,6 +21,11 @@ const chatRoutes = require("./chat.routes");
 const aiCoachRoutes = require("./aiCoach.routes");
 const contentRoutes = require("./content.routes");
 const analyticsRoutes = require("./analytics.routes");
+const packageRoutes = require("./package.routes");
+const favoriteRoutes = require("./favorite.routes");
+const coachReportRoutes = require("./coachReport.routes");
+const supportRoutes = require("./support.routes");
+const integrationRoutes = require("./integration.routes");
 
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
@@ -43,6 +48,11 @@ router.use("/admin/analytics", analyticsRoutes);
 router.use("/chat", chatRoutes);
 router.use("/chat", aiCoachRoutes); // adds POST /chat/coach-reply (Gemini AI coach) alongside real chat under /chat
 router.use("/content", contentRoutes);
+router.use("/packages", packageRoutes);
+router.use("/favorites", favoriteRoutes);
+router.use("/coach-reports", coachReportRoutes);
+router.use("/support", supportRoutes);
+router.use("/integrations", integrationRoutes);
 
 router.get("/health", (req, res) => res.json({ success: true, message: "OK" }));
 

@@ -16,7 +16,7 @@ const assignWorkoutPlan = {
   body: z.object({
     planId: z.string().uuid("Invalid workout plan id"),
     note: z.string().trim().max(500).optional(),
-    scheduledAt: z.string().datetime().optional(),
+    scheduledAt: z.string().datetime({ offset: true }).optional(),
     asCoachUserId: z.string().uuid("Invalid coach id").optional()
   })
 };
@@ -42,6 +42,21 @@ const assignCustomWorkout = {
   })
 };
 
+const updateCustomAssignment = {
+  params: idParam.params,
+  body: z
+    .object({
+      title: z.string().trim().min(2).max(120),
+      description: z.string().max(1000).nullable(),
+      durationMinutes: z.number().int().positive().max(300).nullable(),
+      difficulty: z.enum(DIFFICULTIES),
+      categoryKey: z.enum(CATEGORY_KEYS),
+      // When present the exercise list is replaced wholesale.
+      exercises: z.array(assignCustomWorkoutExercise).min(1).max(50)
+    })
+    .partial()
+};
+
 const listMyAssignedWorkouts = {
   query: z.object({
     page: z.coerce.number().int().min(1).optional(),
@@ -53,7 +68,7 @@ const updateAssignedWorkoutPlan = {
   params: idParam.params,
   body: z.object({
     note: z.string().trim().max(500).nullable().optional(),
-    scheduledAt: z.string().datetime().nullable().optional()
+    scheduledAt: z.string().datetime({ offset: true }).nullable().optional()
   })
 };
 
@@ -63,6 +78,7 @@ module.exports = {
   searchUsers,
   assignWorkoutPlan,
   assignCustomWorkout,
+  updateCustomAssignment,
   listMyAssignedWorkouts,
   updateAssignedWorkoutPlan
 };

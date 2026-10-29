@@ -8,6 +8,11 @@ const options = {
       title: "FitNerve API — Phase 1 + Phase 2 + Phase 3 (Admin)",
       version: "1.3.0",
       description:
+        "**How to authorize:** call `POST /auth/login` below with your email and password (use Try it out). " +
+        "The access token from the response is applied automatically and kept across page reloads, so every " +
+        "lock-icon endpoint can then be tried directly. You can also click **Authorize** and paste a token " +
+        "yourself (paste the token only, without the word `Bearer`). Access tokens expire after 15 minutes; " +
+        "calling `POST /auth/refresh` re-authorizes automatically. Admin-only endpoints need an ADMIN account.\n\n" +
         "Authentication, User Profile, Coach Module, Uploads (Phase 1); BMI, Calorie, Activity/Steps, Progress Tracker, Workouts, Appointments, Calendar (Phase 2); Real-time Chat (Socket.io), Push Notifications (FCM), Content Management, Admin Analytics Dashboard, and an enhanced Workout Recommendation engine (Phase 3); plus admin-only user/coach management, dashboard stats, and audit logging (Admin Portal) for the FitNerve fitness platform."
     },
     servers: [{ url: `/api/${env.apiVersion}` }],
@@ -50,7 +55,7 @@ const options = {
           required: ["email", "code", "newPassword"],
           properties: {
             email: { type: "string" },
-            code: { type: "string", example: "123456" },
+            code: { type: "string", example: "six-digit code delivered by email" },
             newPassword: { type: "string" }
           }
         },
@@ -59,7 +64,7 @@ const options = {
           required: ["email", "code"],
           properties: {
             email: { type: "string" },
-            code: { type: "string", example: "123456" }
+            code: { type: "string", example: "six-digit code delivered by email" }
           }
         },
         ResendOtpRequest: {
@@ -68,6 +73,21 @@ const options = {
           properties: {
             email: { type: "string" },
             purpose: { type: "string", enum: ["REGISTRATION", "PASSWORD_RESET"] }
+          }
+        },
+        PackageRequest: {
+          type: "object",
+          required: ["name", "durationMonths", "price", "originalPrice"],
+          properties: {
+            name: { type: "string", example: "Quarterly" },
+            tagline: { type: "string", example: "Build the habit" },
+            durationMonths: { type: "integer", example: 3 },
+            price: { type: "number", example: 3499 },
+            originalPrice: { type: "number", example: 5997 },
+            features: { type: "array", items: { type: "string" }, example: ["2 coach sessions included"] },
+            badge: { type: "string", example: "MOST POPULAR" },
+            isActive: { type: "boolean" },
+            sortOrder: { type: "integer" }
           }
         },
         UpdateProfileRequest: {
@@ -100,4 +120,20 @@ const options = {
   apis: ["./src/routes/v1/*.js"]
 };
 
-module.exports = swaggerJsdoc(options);
+const spec = swaggerJsdoc(options);
+
+// Every endpoint requires a Bearer token unless it is explicitly public.
+// Applying this globally (instead of relying on each route's own `security`
+// annotation) means no protected endpoint can be left without the lock icon,
+// and Swagger UI attaches the Authorize token to all of them.
+const PUBLIC_PATHS = [/^\/auth\//, /^\/health$/];
+
+spec.security = [{ bearerAuth: [] }];
+for (const [route, operations] of Object.entries(spec.paths || {})) {
+  if (!PUBLIC_PATHS.some((re) => re.test(route))) continue;
+  for (const operation of Object.values(operations)) {
+    if (operation && typeof operation === "object") operation.security = [];
+  }
+}
+
+module.exports = spec;

@@ -16,14 +16,14 @@ async function uploadImage(userId, file, type, extra = {}) {
   if (!file) throw ApiError.badRequest("No file provided");
 
   const subfolder = SUBFOLDER_BY_TYPE[type];
-  const { url, storageKey } = await saveFile(file, subfolder);
+  const { url, storageKey, mimeType } = await saveFile(file, subfolder);
 
   const media = await mediaRepository.create({
     userId,
     type,
     url,
     storageKey,
-    mimeType: file.mimetype,
+    mimeType,
     sizeBytes: file.size,
     ...extra
   });

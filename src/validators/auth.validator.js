@@ -13,7 +13,9 @@ const register = {
     email: z.string().trim().toLowerCase().email(),
     phone: z.string().trim().min(7).max(20).optional(),
     password: passwordSchema,
-    role: z.enum(["USER", "COACH"]).optional().default("USER")
+    // Public sign-up only ever creates client accounts. Coaches are created by an
+    // admin (POST /admin/users) or the head coach (POST /coaches).
+    role: z.literal("USER").optional().default("USER")
   })
 };
 

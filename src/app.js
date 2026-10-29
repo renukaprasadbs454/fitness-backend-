@@ -34,7 +34,7 @@ app.use(
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:"],
         frameSrc: ["'self'", "http://localhost:5555"],
-        connectSrc: ["'self'", "http://localhost:4000", "https://localhost:4000"],
+        connectSrc: ["'self'", "http://localhost:5050", "https://localhost:5050", "http://localhost:4000", "https://localhost:4000", "http://localhost:*", "http://127.0.0.1:*"],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         frameAncestors: ["'self'"]
@@ -89,7 +89,10 @@ app.use(
 app.use(`/api/${env.apiVersion}`, generalLimiter);
 
 // ── Static file serving for local-driver uploads ────────
-app.use(`/${env.storage.localUploadDir}`, express.static(env.storage.localUploadDir));
+app.use(
+  `/${env.storage.localUploadDir}`,
+  express.static(env.storage.localUploadDir, { maxAge: "30d", immutable: true })
+);
 
 // ── Admin frontend served from backend under /admin ─────
 const adminDir = path.join(__dirname, "../admin");
@@ -106,12 +109,51 @@ app.get(["/coach", "/coach/*"], (req, res) => {
 });
 
 // ── API docs ─────────────────────────────────────────────
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Swagger UI. `persistAuthorization` keeps the token across reloads. The
+// response interceptor (serialized into the page, so it must be self-contained)
+// picks the access token out of a successful login / verify-email / refresh
+// call and authorizes the UI with it, so testers never copy tokens by hand.
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: "FitNerve API Docs",
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      tryItOutEnabled: true,
+      // Serialised into the Swagger UI page and run in the browser, so `window` is the page's.
+      /* eslint-disable no-undef */
+      responseInterceptor: function (res) {
+        try {
+          var url = String(res.url || "").split("?")[0];
+          if (res.status === 200 && /\/auth\/(login|verify-email|refresh)$/.test(url)) {
+            var body = typeof res.body === "string" ? JSON.parse(res.body) : res.body;
+            var token = body && body.data && body.data.accessToken;
+            if (token && window.ui) {
+              // The persist-aware variant also stores the token (persistAuthorization), so a reload keeps you logged in.
+              window.ui.authActions.authorizeWithPersistOption({
+                bearerAuth: { name: "bearerAuth", schema: { type: "http", scheme: "bearer" }, value: token }
+              });
+            }
+          }
+        } catch (e) {
+          /* never break the response because of the helper */
+        }
+        return res;
+      }
+      /* eslint-enable no-undef */
+    }
+  })
+);
 
 // ── Versioned API ────────────────────────────────────────
 app.use(`/api/${env.apiVersion}`, signS3Urls(), v1Routes);
 
 app.get("/", (req, res) => {
+  if (req.accepts("html") && !req.xhr && req.headers.accept && req.headers.accept.includes("text/html")) {
+    return res.redirect("/admin");
+  }
   res.json({ success: true, message: "FitNerve API is running", docs: "/api-docs", admin: "/admin", coach: "/coach" });
 });
 

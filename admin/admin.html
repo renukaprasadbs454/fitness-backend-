@@ -157,10 +157,38 @@
     body.theme-light .bg-dark-muted { background-color: #e2e8f0 !important; }
     body.theme-light .bg-dark\/60 { background-color: rgba(248,250,252,0.95) !important; }
     body.theme-light .border-dark-border { border-color: #cbd5e1 !important; }
+    body.theme-light .bg-dark\/40 { background-color: #f1f5f9 !important; }
     body.theme-light .text-slate-400 { color: #64748b !important; }
     body.theme-light .text-slate-300 { color: #475569 !important; }
     body.theme-light .text-slate-500 { color: #64748b !important; }
     body.theme-light .text-white { color: #0f172a !important; }
+
+    /* ── Phones: data tables become stacked cards so every column (and the row's action menu) is visible
+       without sideways scrolling. Only tables with a static header row opt in via .responsive-cards. ── */
+    @media (max-width: 767px) {
+      table.responsive-cards { min-width: 0 !important; display: block; width: 100%; }
+      table.responsive-cards thead { display: none; }
+      table.responsive-cards tbody { display: block; }
+      table.responsive-cards tbody tr { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 14px 16px; position: relative; }
+      table.responsive-cards tbody td { display: block !important; padding: 0 !important; border: 0; min-width: 0; }
+      table.responsive-cards tbody td:first-child { flex: 1 1 100%; padding-right: 44px !important; }
+      table.responsive-cards tbody td[colspan] { flex: 1 1 100%; text-align: center; padding: 28px 8px !important; }
+      table.responsive-cards tbody td[data-label]::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #64748b; margin-bottom: 2px; }
+      table.responsive-cards tbody td.row-actions { position: absolute; top: 10px; right: 10px; }
+      table.responsive-cards tbody td.row-actions button { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+      table.responsive-cards tbody td.row-actions { top: 4px; right: 4px; }
+      /* the compact duplicates inside the first cell are replaced by the labelled cells below it */
+      table.responsive-cards tbody td:first-child .sm\:hidden, table.responsive-cards tbody td:first-child .md\:hidden { display: none !important; }
+    }
+    /* Text colours picked for the dark theme that were unreadable on light backgrounds. */
+    body.theme-light .text-slate-100, body.theme-light .text-slate-200 { color: #1e293b !important; }
+    body.theme-light .text-primary-light { color: #1d4ed8 !important; }
+    body.theme-light .text-emerald-400 { color: #047857 !important; }
+    body.theme-light .text-amber-400 { color: #b45309 !important; }
+    body.theme-light .text-orange-400 { color: #c2410c !important; }
+    body.theme-light .text-red-400 { color: #dc2626 !important; }
+    body.theme-light .hover\:text-white:hover { color: #0f172a !important; }
+    body.theme-light .hover\:bg-dark-border:hover { background-color: #cbd5e1 !important; }
     body.theme-light .placeholder-slate-500::placeholder { color: #94a3b8 !important; }
     body.theme-light .placeholder-slate-600::placeholder { color: #64748b !important; }
     body.theme-light .text-slate-600 { color: #475569 !important; }
@@ -179,7 +207,11 @@
 <body :class="themeMode === 'light' ? 'theme-light bg-slate-100 text-slate-900' : 'theme-dark bg-dark text-white'" class="font-sans antialiased" x-data="adminApp()" x-init="init()">
 
   <!-- ============ LOGIN SCREEN ============ -->
-  <div x-show="!isAuthenticated" x-cloak class="login-bg min-h-screen flex items-center justify-center p-4">
+  <div x-show="!isAuthenticated" x-cloak class="login-bg min-h-screen flex items-center justify-center p-4 relative">
+    <button type="button" @click="toggleTheme()" class="absolute top-4 right-4 p-2.5 rounded-lg border border-dark-border bg-dark-card text-slate-400 hover:text-slate-200 transition-colors" :title="themeMode === 'dark' ? 'Switch to Light' : 'Switch to Dark'" :aria-label="themeMode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'">
+      <svg x-show="themeMode === 'dark'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      <svg x-show="themeMode === 'light'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+    </button>
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <div class="relative inline-flex items-center justify-center mb-5">
@@ -264,6 +296,50 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
           <span x-show="!sidebarCollapsed">Dashboard</span>
         </button>
+        <button @click="goUsers()"
+          :class="[(currentView === 'users' || currentView === 'user-detail') ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Manage Users' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <span x-show="!sidebarCollapsed">Manage Users</span>
+        </button>
+        <button @click="currentView = 'coaches'"
+          :class="[currentView === 'coaches' ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Manage Coaches' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+          <span x-show="!sidebarCollapsed">Manage Coaches</span>
+        </button>
+        <button @click="currentView = 'payments'"
+          :class="[currentView === 'payments' ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'View Payments' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+          <span x-show="!sidebarCollapsed">View Payments</span>
+        </button>
+        <button @click="currentView = 'audit-logs'"
+          :class="[currentView === 'audit-logs' ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Audit Logs' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          <span x-show="!sidebarCollapsed">Audit Logs</span>
+        </button>
+        <button @click="currentView = 'support'; fetchSupportTickets()"
+          :class="[currentView === 'support' ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Support Requests' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <span x-show="!sidebarCollapsed">Support Requests</span>
+          <span x-show="!sidebarCollapsed && supportCounts.OPEN" class="ml-auto badge badge-orange" x-text="supportCounts.OPEN"></span>
+        </button>
+        <button @click="currentView = 'coach-reports'; fetchCoachReports()"
+          :class="[currentView === 'coach-reports' ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Coach Reports' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg>
+          <span x-show="!sidebarCollapsed">Coach Reports</span>
+          <span x-show="!sidebarCollapsed && reportCounts.OPEN" class="ml-auto badge badge-orange" x-text="reportCounts.OPEN"></span>
+        </button>
+        <button @click="testStorage()" :disabled="storageTesting"
+          :class="['nav-item text-slate-400 disabled:opacity-50', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Test image storage' : ''">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span x-show="!sidebarCollapsed" x-text="storageTesting ? 'Testing storage…' : 'Test image storage'"></span>
+        </button>
 
         <div class="px-3 pt-4 pb-1.5" x-show="!sidebarCollapsed">
           <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Database Tables</span>
@@ -301,9 +377,11 @@
           <button @click="currentView = 'dashboard'; mobileNavOpen = false" :class="currentView === 'dashboard' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Dashboard</button>
           <button @click="goUsers(); mobileNavOpen = false" :class="(currentView === 'users' || currentView === 'user-detail') ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Users</button>
           <button @click="currentView = 'coaches'; mobileNavOpen = false" :class="currentView === 'coaches' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Coaches</button>
-          <button @click="goAssignWorkouts(); mobileNavOpen = false" :class="currentView === 'assign-workouts' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Assign Workouts</button>
           <button @click="currentView = 'audit-logs'; mobileNavOpen = false" :class="currentView === 'audit-logs' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Audit Logs</button>
           <button @click="currentView = 'payments'; mobileNavOpen = false" :class="currentView === 'payments' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Payments</button>
+          <button @click="currentView = 'support'; fetchSupportTickets(); mobileNavOpen = false" :class="currentView === 'support' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Support Requests <span x-show="supportCounts.OPEN" class="ml-auto badge badge-orange" x-text="supportCounts.OPEN"></span></button>
+          <button @click="currentView = 'coach-reports'; fetchCoachReports(); mobileNavOpen = false" :class="currentView === 'coach-reports' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Coach Reports <span x-show="reportCounts.OPEN" class="ml-auto badge badge-orange" x-text="reportCounts.OPEN"></span></button>
+          <button @click="testStorage(); mobileNavOpen = false" :disabled="storageTesting" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-50" x-text="storageTesting ? 'Testing storage…' : 'Test image storage'"></button>
 
           <div class="px-3 pt-4 pb-1.5">
             <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Database Tables</span>
@@ -343,6 +421,11 @@
         </div>
 
         <div class="flex items-center gap-2 flex-shrink-0">
+          <button @click="refreshAll()" :disabled="loadingData" title="Fetch the latest data"
+            class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dark-border text-xs text-slate-300 hover:bg-white/5 hover:text-white transition-colors font-medium disabled:opacity-60">
+            <svg class="w-3.5 h-3.5" :class="loadingData ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span class="hidden sm:inline">Refresh</span>
+          </button>
           <button @click="toggleTheme()" class="p-2 rounded-lg border border-dark-border text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-colors" :title="themeMode === 'dark' ? 'Switch to Light' : 'Switch to Dark'">
             <svg x-show="themeMode === 'dark'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
             <svg x-show="themeMode === 'light'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
@@ -645,15 +728,53 @@
             </div>
           </div>
 
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <button @click="currentView = 'support'; fetchSupportTickets()" class="text-left bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl p-6 transition-colors">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="font-semibold">Support Requests</h2>
+                <span class="badge" :class="supportCounts.OPEN ? 'badge-orange' : 'badge-green'" x-text="supportCounts.OPEN ? `${supportCounts.OPEN} open` : 'All clear'"></span>
+              </div>
+              <p class="text-sm text-slate-400"><span x-text="supportCounts.IN_PROGRESS || 0"></span> in progress · <span x-text="supportCounts.RESOLVED || 0"></span> resolved</p>
+            </button>
+            <button @click="currentView = 'coach-reports'; fetchCoachReports()" class="text-left bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl p-6 transition-colors">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="font-semibold">Coach Reports</h2>
+                <span class="badge" :class="(reportCounts.OPEN || reportCounts.REVIEWING) ? 'badge-orange' : 'badge-green'" x-text="(reportCounts.OPEN || 0) + (reportCounts.REVIEWING || 0) ? `${(reportCounts.OPEN || 0) + (reportCounts.REVIEWING || 0)} to review` : 'All clear'"></span>
+              </div>
+              <p class="text-sm text-slate-400"><span x-text="reportCounts.RESOLVED || 0"></span> resolved · <span x-text="reportCounts.DISMISSED || 0"></span> dismissed</p>
+            </button>
+            <div class="bg-dark-card border border-dark-border rounded-xl p-6">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="font-semibold">Google Meet Links</h2>
+                <span class="badge" :class="meetStatus?.connected ? 'badge-green' : 'badge-slate'" x-text="meetStatus?.connected ? 'Connected' : 'Not connected'"></span>
+              </div>
+              <template x-if="meetStatus?.connected">
+                <div>
+                  <p class="text-sm text-slate-400 mb-3">Every confirmed session gets its own Meet link from <span class="text-slate-200" x-text="meetStatus.accountEmail || 'the connected account'"></span>.</p>
+                  <button @click="disconnectMeet()" :disabled="meetBusy" class="px-3 py-1.5 text-xs rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-50">Disconnect</button>
+                </div>
+              </template>
+              <template x-if="!meetStatus?.connected">
+                <div>
+                  <p class="text-sm text-slate-400 mb-3">Connect one Google account to generate a unique Meet link for every 1:1 session automatically.</p>
+                  <button x-show="meetStatus?.configured" @click="connectMeet()" :disabled="meetBusy" class="px-3 py-1.5 text-xs rounded-lg bg-primary text-dark font-bold hover:bg-primary-light disabled:opacity-50" x-text="meetBusy ? 'Opening Google…' : 'Connect Google account'"></button>
+                  <p x-show="meetStatus && !meetStatus.configured" class="text-xs text-orange-400">Set GOOGLE_WEB_CLIENT_ID, GOOGLE_WEB_CLIENT_SECRET and GOOGLE_TOKEN_ENCRYPTION_KEY on the server first.</p>
+                  <p x-show="meetStatus?.redirectUri" class="text-[11px] text-slate-500 mt-2 break-all">Authorised redirect URI to add in Google Cloud: <span class="font-mono text-slate-400" x-text="meetStatus?.redirectUri"></span></p>
+                </div>
+              </template>
+            </div>
+          </div>
+
           <div class="bg-dark-card border border-dark-border rounded-xl p-6 mb-6">
             <h2 class="font-semibold mb-4">Quick Actions</h2>
             <div class="flex flex-wrap gap-3">
               <button @click="goUsers()" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Manage Users</button>
               <button @click="currentView = 'coaches'" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Manage Coaches</button>
-              <button @click="goAssignWorkouts()" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Assign Workouts</button>
               <button @click="currentView = 'audit-logs'" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">View Audit Logs</button>
               <button @click="currentView = 'payments'" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">View Payments</button>
-              <button disabled class="px-4 py-2 bg-dark-muted text-slate-500 text-sm font-medium rounded-lg cursor-not-allowed">System Health (soon)</button>
+              <button @click="currentView = 'support'; fetchSupportTickets()" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Support Requests</button>
+              <button @click="currentView = 'coach-reports'; fetchCoachReports()" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors">Coach Reports</button>
+              <button @click="testStorage()" :disabled="storageTesting" class="px-4 py-2 bg-dark-muted hover:bg-dark-border text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50" x-text="storageTesting ? 'Testing storage…' : 'Test image storage'"></button>
             </div>
           </div>
 
@@ -714,12 +835,13 @@
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
-            <table class="w-full text-sm min-w-[640px]">
+            <table class="w-full text-sm min-w-[640px] responsive-cards">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase cursor-pointer select-none" @click="toggleUserSort('fullName')">Name</th>
                   <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Email</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Role</th>
+                  <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Coach</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Status</th>
                   <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase cursor-pointer select-none" @click="toggleUserSort('createdAt')">Joined</th>
                   <th class="w-20 px-4 py-3"></th>
@@ -740,13 +862,14 @@
                         </div>
                       </div>
                     </td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-slate-400" x-text="u.email"></td>
-                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="u.role"></span></td>
-                    <td class="px-4 py-3">
+                    <td data-label="Email" class="hidden sm:table-cell px-4 py-3 text-slate-400" x-text="u.email"></td>
+                    <td data-label="Role" class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="u.role"></span></td>
+                    <td data-label="Coach" class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="u.role === 'USER' ? (u.assignedCoach?.user?.fullName || 'Unassigned') : '—'"></td>
+                    <td data-label="Status" class="px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="u.isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'" x-text="u.isActive ? 'Active' : 'Suspended'"></span>
                     </td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDate(u.createdAt)"></td>
-                    <td class="px-4 py-3" @click.stop>
+                    <td data-label="Joined" class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDate(u.createdAt)"></td>
+                    <td class="row-actions px-4 py-3" @click.stop>
                       <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
@@ -754,6 +877,7 @@
                         <div x-show="open" x-cloak x-transition class="absolute right-0 mt-1 w-44 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden z-30 text-sm">
                           <button @click="open=false; openEditUser(u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Edit</button>
                           <button @click="open=false; openChangeRole(u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Change role</button>
+                          <button x-show="u.role === 'USER'" @click="open=false; openAssignCoach(u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Assign coach</button>
                           <button @click="open=false; openResetPassword(u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Reset password</button>
                           <button x-show="u.isActive" @click="open=false; openConfirm('suspend', u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Suspend</button>
                           <button x-show="!u.isActive" @click="open=false; openConfirm('activate', u)" class="w-full text-left px-3 py-2 hover:bg-white/5">Activate</button>
@@ -764,7 +888,7 @@
                   </tr>
                 </template>
                 <tr x-show="pagedUsers.data.length === 0">
-                  <td colspan="6" class="px-4 py-12 text-center text-slate-500">No users found</td>
+                  <td colspan="7" class="px-4 py-12 text-center text-slate-500">No users found</td>
                 </tr>
               </tbody>
             </table>
@@ -800,6 +924,7 @@
                 <div class="flex flex-wrap gap-2">
                   <button @click="openEditUser(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Edit</button>
                   <button @click="openChangeRole(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Change Role</button>
+                  <button x-show="selectedUser.role === 'USER'" @click="openAssignCoach(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Assign Coach</button>
                   <button @click="openResetPassword(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Reset Password</button>
                   <button x-show="selectedUser.isActive" @click="openConfirm('suspend', selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Suspend</button>
                   <button x-show="!selectedUser.isActive" @click="openConfirm('activate', selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Activate</button>
@@ -816,6 +941,7 @@
                   <div><p class="text-xs uppercase text-slate-500">Email Verified</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.isEmailVerified ? 'Yes' : 'No'"></p></div>
                   <div><p class="text-xs uppercase text-slate-500">Last Login</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.lastLoginAt ? formatDateTime(selectedUser.lastLoginAt) : 'Never'"></p></div>
                   <div><p class="text-xs uppercase text-slate-500">Joined</p><p class="text-sm font-medium mt-0.5" x-text="formatDateTime(selectedUser.createdAt)"></p></div>
+                  <div x-show="selectedUser.role === 'USER'"><p class="text-xs uppercase text-slate-500">Assigned Coach</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.assignedCoach?.user?.fullName || 'Unassigned'"></p></div>
                   <div><p class="text-xs uppercase text-slate-500">User ID</p><p class="text-sm font-mono text-xs mt-1" x-text="selectedUser.id"></p></div>
                 </div>
               </div>
@@ -869,7 +995,7 @@
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
-            <table class="w-full text-sm min-w-[720px]">
+            <table class="w-full text-sm min-w-[720px] responsive-cards">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Coach</th>
@@ -878,6 +1004,7 @@
                   <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Specialties</th>
                   <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Experience</th>
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Accepting</th>
+                  <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Clients</th>
                   <th class="w-24 px-4 py-3"></th>
                 </tr>
               </thead>
@@ -895,28 +1022,43 @@
                         </div>
                       </div>
                     </td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-slate-400" x-text="c.user.email"></td>
-                    <td class="hidden sm:table-cell px-4 py-3">
+                    <td data-label="Email" class="hidden sm:table-cell px-4 py-3 text-slate-400">
+                      <div class="flex items-center gap-1.5">
+                        <span class="truncate" x-text="c.user.email"></span>
+                        <button @click="openCoachCredentials(c)" title="Manage coach credentials & password" class="p-1 text-slate-500 hover:text-primary rounded hover:bg-white/5 transition-colors">
+                          <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                        </button>
+                      </div>
+                    </td>
+                    <td data-label="Role" class="hidden sm:table-cell px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="c.user.role || 'COACH'"></span>
                     </td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400">
+                    <td data-label="Specialties" class="hidden md:table-cell px-4 py-3 text-slate-400">
                       <div class="flex flex-wrap gap-1">
                         <template x-for="s in c.specialties" :key="s">
                           <span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="s"></span>
                         </template>
                       </div>
                     </td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="(c.experienceYears ?? 0) + ' yrs'"></td>
-                    <td class="px-4 py-3">
+                    <td data-label="Experience" class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="(c.experienceYears ?? 0) + ' yrs'"></td>
+                    <td data-label="Accepting" class="px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="c.isAcceptingClients ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'" x-text="c.isAcceptingClients ? 'Yes' : 'No'"></span>
                     </td>
-                    <td class="px-4 py-3">
+                    <td data-label="Clients" class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="c._count?.clients ?? 0"></td>
+                    <td class="row-actions px-4 py-3">
                       <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
                         </button>
-                        <div x-show="open" x-cloak x-transition class="absolute right-0 mt-1 w-44 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden z-30 text-sm">
-                          <button @click="open=false; openEditCoach(c)" class="w-full text-left px-3 py-2 hover:bg-white/5">Edit</button>
+                        <div x-show="open" x-cloak x-transition class="absolute right-0 mt-1 w-48 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden z-30 text-sm">
+                          <button @click="open=false; openCoachCredentials(c)" class="w-full text-left px-3 py-2 text-primary hover:bg-white/5 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                            <span>Credentials / Password</span>
+                          </button>
+                          <button @click="open=false; openEditCoach(c)" class="w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            <span>Edit Profile</span>
+                          </button>
                           <button @click="open=false; openChangeRole({ id: c.userId, role: c.user.role, fullName: c.user.fullName })" class="w-full text-left px-3 py-2 hover:bg-white/5">Change role</button>
                           <button @click="open=false; openConfirm('delete-coach', c)" class="w-full text-left px-3 py-2 text-red-400 hover:bg-red-500/10 border-t border-dark-border">Remove</button>
                         </div>
@@ -925,7 +1067,7 @@
                   </tr>
                 </template>
                 <tr x-show="pagedCoaches.data.length === 0">
-                  <td colspan="7" class="px-4 py-12 text-center text-slate-500">No coaches found</td>
+                  <td colspan="8" class="px-4 py-12 text-center text-slate-500">No coaches found</td>
                 </tr>
               </tbody>
             </table>
@@ -940,175 +1082,89 @@
           </div>
         </div>
 
-        <!-- ===== ASSIGN WORKOUTS VIEW ===== -->
-        <div x-show="currentView === 'assign-workouts'">
-          <div class="mb-5">
-            <h1 class="text-2xl font-bold">Assign Workouts</h1>
-            <p class="text-slate-400 text-sm mt-0.5">Send a workout — from the library or built from scratch — to any user.</p>
+        <!-- ===== SUPPORT REQUESTS VIEW ===== -->
+        <div x-show="currentView === 'support'">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
+            <div>
+              <h1 class="text-2xl font-bold">Support Requests</h1>
+              <p class="text-slate-400 text-sm mt-0.5">Help requests users send from the app. Replying notifies the user.</p>
+            </div>
+            <div class="relative w-full sm:w-64">
+              <input x-model="supportFilters.search" @input.debounce.400ms="fetchSupportTickets()" placeholder="Search subject, message or user…"
+                class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-            <!-- New assignment form -->
-            <div class="bg-dark-card border border-dark-border rounded-xl p-5">
-              <h2 class="font-semibold mb-4">New Assignment</h2>
-
-              <div class="mb-4">
-                <label class="block text-xs font-medium text-slate-300 mb-1.5">Step 1 — Coach</label>
-                <select x-model="assignForm.coachUserId" @change="assignForm.selectedUser = null" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                  <option value="">Select a coach…</option>
-                  <template x-for="c in coaches" :key="c.userId">
-                    <option :value="c.userId" x-text="c.user?.fullName || c.userId"></option>
-                  </template>
-                </select>
-                <p class="mt-1 text-[11px] text-slate-500">The user will see this workout as a personalised plan from this coach — not from your admin account.</p>
-              </div>
-
-              <div class="mb-4">
-                <label class="block text-xs font-medium text-slate-300 mb-1.5">Step 2 — Send to</label>
-                <template x-if="!assignForm.coachUserId">
-                  <p class="rounded-lg border border-dashed border-dark-border px-3 py-2.5 text-xs text-slate-500">Pick a coach above first.</p>
-                </template>
-                <template x-if="assignForm.coachUserId && !assignForm.selectedUser">
-                  <div class="space-y-2">
-                    <input x-model="assignForm.search" placeholder="Search users by name, username or email… (or just pick from the list)" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                    <div class="max-h-56 overflow-y-auto rounded-lg border border-dark-border divide-y divide-dark-border">
-                      <template x-for="u in assignCandidateUsers()" :key="u.id">
-                        <button @click="assignForm.selectedUser = u" class="w-full flex items-center px-3 py-2 text-left text-sm hover:bg-white/5">
-                          <span class="min-w-0"><span class="font-medium" x-text="u.fullName"></span> <span class="text-slate-500" x-text="'· @' + u.username"></span></span>
-                        </button>
-                      </template>
-                      <p x-show="assignCandidateUsers().length === 0" class="p-3 text-center text-xs text-slate-500">No matching users.</p>
-                    </div>
-                  </div>
-                </template>
-                <template x-if="assignForm.coachUserId && assignForm.selectedUser">
-                  <div class="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/5 px-3 py-2.5">
-                    <span class="text-sm"><span class="font-medium" x-text="assignForm.selectedUser.fullName"></span> <span class="text-slate-500" x-text="'· @' + assignForm.selectedUser.username"></span></span>
-                    <button @click="assignForm.selectedUser = null" class="text-xs text-primary hover:underline">Change</button>
-                  </div>
-                </template>
-              </div>
-
-              <div class="mb-4 flex gap-2" x-show="assignForm.coachUserId && assignForm.selectedUser">
-                <button @click="assignForm.mode = 'CATALOG'" class="flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" :class="assignForm.mode === 'CATALOG' ? 'bg-primary text-dark' : 'bg-dark-muted text-slate-300 hover:bg-dark-border'">From Library</button>
-                <button @click="assignForm.mode = 'CUSTOM'" class="flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" :class="assignForm.mode === 'CUSTOM' ? 'bg-primary text-dark' : 'bg-dark-muted text-slate-300 hover:bg-dark-border'">Build Custom</button>
-              </div>
-
-              <template x-if="assignForm.coachUserId && assignForm.selectedUser && assignForm.mode === 'CATALOG'">
-                <div class="space-y-3">
-                  <div class="max-h-52 overflow-y-auto rounded-lg border border-dark-border divide-y divide-dark-border">
-                    <template x-for="p in workoutPlans" :key="p.id">
-                      <button @click="assignForm.selectedPlanId = p.id" class="w-full flex items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-white/5" :class="assignForm.selectedPlanId === p.id ? 'bg-primary/10' : ''">
-                        <span class="min-w-0">
-                          <span class="font-medium block truncate" x-text="p.title"></span>
-                          <span class="block text-xs text-slate-500 truncate" x-text="`${(p.category || '').replace(/_/g,' ')} · ${p.duration} · ${p.difficulty}`"></span>
-                        </span>
-                        <svg x-show="assignForm.selectedPlanId === p.id" class="w-4 h-4 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                      </button>
-                    </template>
-                    <p x-show="!workoutPlans.length" class="p-3 text-center text-xs text-slate-500">No catalog plans found.</p>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Note (optional)</label>
-                    <textarea x-model="assignForm.note" rows="2" placeholder="Anything they should know" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary"></textarea>
-                  </div>
-                </div>
-              </template>
-
-              <template x-if="assignForm.coachUserId && assignForm.selectedUser && assignForm.mode === 'CUSTOM'">
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Title</label>
-                    <input x-model="assignForm.title" placeholder="e.g. Push Day" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Description</label>
-                    <input x-model="assignForm.description" placeholder="Optional notes" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-slate-300 mb-1">Duration (min)</label>
-                      <input type="number" min="0" x-model="assignForm.durationMinutes" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-slate-300 mb-1">Difficulty</label>
-                      <select x-model="assignForm.difficulty" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                        <option value="BEGINNER">Beginner</option>
-                        <option value="INTERMEDIATE">Intermediate</option>
-                        <option value="ADVANCED">Advanced</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Category</label>
-                    <select x-model="assignForm.categoryKey" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                      <option value="WEIGHT_LOSS">Weight Loss</option>
-                      <option value="MUSCLE_GAIN">Muscle Gain</option>
-                      <option value="STRENGTH">Strength</option>
-                      <option value="CARDIO">Cardio</option>
-                      <option value="YOGA">Yoga</option>
-                      <option value="GENERAL_FITNESS">General Fitness</option>
-                    </select>
-                  </div>
-
-                  <div class="flex items-center justify-between pt-1">
-                    <label class="text-xs font-medium text-slate-300">Exercises</label>
-                    <button @click="addAssignExerciseRow()" class="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold rounded-lg transition-colors">+ Add</button>
-                  </div>
-                  <template x-for="(row, idx) in assignForm.exercises" :key="idx">
-                    <div class="rounded-lg border border-dark-border p-3 space-y-2">
-                      <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500" x-text="`Exercise ${idx + 1}`"></span>
-                        <button x-show="assignForm.exercises.length > 1" @click="removeAssignExerciseRow(idx)" class="text-red-400 hover:text-red-300 text-xs">Remove</button>
-                      </div>
-                      <input x-model="row.name" placeholder="Name (e.g. Bench Press)" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                      <input x-model="row.muscleGroup" placeholder="Muscle group" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                      <div class="grid grid-cols-2 gap-2">
-                        <input type="number" x-model="row.sets" placeholder="Sets" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                        <input type="number" x-model="row.reps" placeholder="Reps" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                      </div>
-                    </div>
-                  </template>
-                </div>
-              </template>
-
-              <p x-show="assignFormError" x-text="assignFormError" class="mt-3 text-xs text-orange-400"></p>
-              <button x-show="assignForm.coachUserId && assignForm.selectedUser" @click="submitAssignWorkout()" :disabled="assignFormSaving" class="w-full mt-4 px-4 py-2.5 bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                <span x-show="assignFormSaving" class="loader" style="border-top-color:#0c1210;border-color:rgba(12,18,16,0.3)"></span>
-                <span x-text="assignFormSaving ? 'Sending…' : 'Assign Workout'"></span>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <template x-for="s in ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'ALL']" :key="s">
+              <button @click="supportFilters.status = s; fetchSupportTickets()"
+                :class="supportFilters.status === s ? 'bg-primary text-dark' : 'bg-dark-card text-slate-400 border border-dark-border'"
+                class="px-3 py-1.5 rounded-full text-xs font-semibold">
+                <span x-text="s === 'ALL' ? 'All' : s.replace('_', ' ')"></span>
+                <span x-show="s !== 'ALL' && supportCounts[s]" class="ml-1 opacity-80" x-text="`(${supportCounts[s] || 0})`"></span>
               </button>
-            </div>
+            </template>
+          </div>
 
-            <!-- Sent assignments -->
-            <div class="bg-dark-card border border-dark-border rounded-xl p-5">
-              <div class="flex items-center justify-between mb-4">
-                <h2 class="font-semibold">Sent by You</h2>
-                <button @click="fetchSentAssignments()" class="text-xs text-slate-400 hover:text-white">Refresh</button>
-              </div>
-              <div class="space-y-2 max-h-[560px] overflow-y-auto">
-                <template x-for="a in sentAssignments" :key="a.id">
-                  <div class="rounded-lg border border-dark-border p-3">
-                    <div class="flex items-start justify-between gap-2">
-                      <div class="min-w-0">
-                        <p class="text-sm font-medium truncate" x-text="a.title || 'Workout'"></p>
-                        <p class="text-xs text-slate-500 truncate" x-text="`To ${a.user?.fullName || 'user'} · ${formatDateTime(a.createdAt)}`"></p>
-                        <p x-show="a.note" class="text-xs text-slate-400 mt-1" x-text="a.note"></p>
-                        <span class="inline-block mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium" :class="a.type === 'custom' ? 'bg-indigo-500/15 text-indigo-300' : 'bg-primary/15 text-primary'" x-text="a.type === 'custom' ? 'Custom' : 'Catalog'"></span>
-                      </div>
-                      <div class="flex gap-1 flex-shrink-0">
-                        <button @click="openEditSentAssignment(a)" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                        </button>
-                        <button @click="deleteSentAssignment(a)" class="p-1.5 text-red-400 hover:text-red-300 rounded-lg hover:bg-red-500/10">
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
-                      </div>
-                    </div>
+          <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
+            <template x-for="t in supportTickets" :key="t.id">
+              <button @click="openTicket(t)" class="w-full text-left flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-5 py-4 border-b border-dark-border/60 last:border-b-0 hover:bg-white/[0.03]">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <p class="font-medium truncate" x-text="t.subject"></p>
+                    <span class="badge badge-slate" x-text="t.category"></span>
                   </div>
-                </template>
-                <p x-show="!sentAssignments.length" class="text-center text-sm text-slate-500 py-8">No workouts assigned yet.</p>
-              </div>
-            </div>
+                  <p class="text-xs text-slate-500 truncate mt-0.5" x-text="`${t.user?.fullName || 'User'} · ${t.user?.email || ''} · ${formatDateTime(t.createdAt)}`"></p>
+                  <p class="text-xs text-slate-400 truncate mt-1" x-text="t.message"></p>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span x-show="t.adminReply" class="text-[11px] text-slate-500">Replied</span>
+                  <span class="badge" :class="ticketBadge(t.status)" x-text="t.status.replace('_', ' ')"></span>
+                </div>
+              </button>
+            </template>
+            <p x-show="!supportTickets.length" class="p-8 text-center text-sm text-slate-500">No support requests here.</p>
+          </div>
+        </div>
+
+        <!-- ===== COACH REPORTS VIEW ===== -->
+        <div x-show="currentView === 'coach-reports'">
+          <div class="mb-5">
+            <h1 class="text-2xl font-bold">Coach Reports</h1>
+            <p class="text-slate-400 text-sm mt-0.5">Problems users have reported with a coach. Review them and move the user to another coach when needed.</p>
+          </div>
+
+          <div class="flex flex-wrap gap-2 mb-4">
+            <template x-for="s in ['OPEN', 'REVIEWING', 'RESOLVED', 'DISMISSED', 'ALL']" :key="s">
+              <button @click="reportFilter = s; fetchCoachReports()"
+                :class="reportFilter === s ? 'bg-primary text-dark' : 'bg-dark-card text-slate-400 border border-dark-border'"
+                class="px-3 py-1.5 rounded-full text-xs font-semibold">
+                <span x-text="s === 'ALL' ? 'All' : s"></span>
+                <span x-show="s !== 'ALL' && reportCounts[s]" class="ml-1 opacity-80" x-text="`(${reportCounts[s] || 0})`"></span>
+              </button>
+            </template>
+          </div>
+
+          <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
+            <template x-for="r in coachReports" :key="r.id">
+              <button @click="openReport(r)" class="w-full text-left flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-5 py-4 border-b border-dark-border/60 last:border-b-0 hover:bg-white/[0.03]">
+                <div class="min-w-0 flex-1">
+                  <p class="font-medium truncate">
+                    <span x-text="r.user?.fullName || 'User'"></span>
+                    <span class="text-slate-500 font-normal">reported</span>
+                    <span x-text="r.coachName || 'a coach'"></span>
+                  </p>
+                  <p class="text-xs text-slate-500 mt-0.5" x-text="`${r.reasonLabel} · ${formatDateTime(r.createdAt)}`"></p>
+                  <p x-show="r.details" class="text-xs text-slate-400 truncate mt-1" x-text="r.details"></p>
+                  <p x-show="r.reassignedToCoachName" class="text-xs text-emerald-400 mt-1" x-text="`Moved to ${r.reassignedToCoachName}`"></p>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span x-show="r.wantsNewCoach" class="badge badge-indigo">Wants new coach</span>
+                  <span class="badge" :class="reportBadge(r.status)" x-text="r.status"></span>
+                </div>
+              </button>
+            </template>
+            <p x-show="!coachReports.length" class="p-8 text-center text-sm text-slate-500">No reports here.</p>
           </div>
         </div>
 
@@ -1121,7 +1177,7 @@
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
-            <table class="w-full text-sm min-w-[560px]">
+            <table class="w-full text-sm min-w-[560px] responsive-cards">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Admin</th>
@@ -1138,13 +1194,13 @@
                       <p class="text-xs text-slate-500 truncate" x-text="log.admin.email"></p>
                       <p class="md:hidden text-xs text-slate-500 mt-0.5" x-text="formatDateTime(log.createdAt)"></p>
                     </td>
-                    <td class="px-4 py-3">
+                    <td data-label="Action" class="px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" :class="actionBadgeClass(log.action)" x-text="log.action.replace(/_/g, ' ')"></span>
                     </td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
+                    <td data-label="Target" class="hidden sm:table-cell px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
                       <span x-text="log.targetType"></span> · <span class="font-mono" x-text="log.targetId.slice(0, 8) + '…'"></span>
                     </td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDateTime(log.createdAt)"></td>
+                    <td data-label="When" class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDateTime(log.createdAt)"></td>
                   </tr>
                 </template>
                 <tr x-show="pagedAuditLogs.data.length === 0">
@@ -1200,7 +1256,7 @@
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
-            <table class="w-full text-sm min-w-[720px]">
+            <table class="w-full text-sm min-w-[720px] responsive-cards">
               <thead>
                 <tr class="border-b border-dark-border">
                   <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">User</th>
@@ -1218,13 +1274,13 @@
                       <p class="font-medium truncate" x-text="p.user?.fullName || '—'"></p>
                       <p class="text-xs text-slate-500 truncate" x-text="p.user?.email || ''"></p>
                     </td>
-                    <td class="px-4 py-3 font-mono text-slate-300 whitespace-nowrap" x-text="formatCurrency(p.amount, p.currency)"></td>
-                    <td class="hidden sm:table-cell px-4 py-3 text-slate-400 text-xs" x-text="(p.purpose || '').replace(/_/g, ' ')"></td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 text-xs" x-text="p.method || '—'"></td>
-                    <td class="px-4 py-3">
+                    <td data-label="Amount" class="px-4 py-3 font-mono text-slate-300 whitespace-nowrap" x-text="formatCurrency(p.amount, p.currency)"></td>
+                    <td data-label="Purpose" class="hidden sm:table-cell px-4 py-3 text-slate-400 text-xs" x-text="(p.purpose || '').replace(/_/g, ' ')"></td>
+                    <td data-label="Method" class="hidden md:table-cell px-4 py-3 text-slate-400 text-xs" x-text="p.method || '—'"></td>
+                    <td data-label="Status" class="px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" :class="paymentStatusBadgeClass(p.status)" x-text="p.status"></span>
                     </td>
-                    <td class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDateTime(p.createdAt)"></td>
+                    <td data-label="When" class="hidden md:table-cell px-4 py-3 text-slate-400 whitespace-nowrap" x-text="formatDateTime(p.createdAt)"></td>
                   </tr>
                 </template>
                 <tr x-show="pagedPayments.data.length === 0">
@@ -1340,6 +1396,27 @@
     </div>
   </div>
 
+  <!-- Assign Coach -->
+  <div x-show="modals.assignCoach" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 modal-backdrop" @click="modals.assignCoach = false"></div>
+    <div class="relative modal-panel rounded-2xl w-full max-w-md p-6">
+      <h3 class="text-lg font-semibold mb-1">Assign Coach</h3>
+      <p class="text-sm text-slate-400 mb-4" x-show="editingUser">
+        Choose the coach for <span class="text-white font-medium" x-text="editingUser?.fullName"></span>. A user has one coach; a coach can have many users. The coach will only see users assigned to them.
+      </p>
+      <select x-model="assignCoachDraft" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+        <option value="">— No coach (unassigned) —</option>
+        <template x-for="c in coaches" :key="c.id">
+          <option :value="c.id" x-text="c.user.fullName + ' (' + (c._count?.clients ?? 0) + ' clients)'"></option>
+        </template>
+      </select>
+      <div class="flex justify-end gap-2 mt-5">
+        <button @click="modals.assignCoach = false" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
+        <button @click="submitAssignCoach()" class="px-4 py-2 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Reset Password -->
   <div x-show="modals.resetPassword" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 modal-backdrop" @click="closeResetPassword()"></div>
@@ -1372,52 +1449,353 @@
   <!-- Create Coach -->
   <div x-show="modals.createCoach" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 modal-backdrop" @click="closeCreateCoach()"></div>
-    <div class="relative modal-panel rounded-2xl w-full max-w-md p-6">
-      <h3 class="text-lg font-semibold mb-1">Add Coach</h3>
-      <p class="text-sm text-slate-400 mb-4">Promote an existing user to COACH and set up their coach profile.</p>
-
-      <template x-if="!coachForm.selectedUser">
-        <div class="space-y-2">
-          <div class="relative">
-            <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
-            <input x-model="coachForm.search" placeholder="Search users by name, username or email…" class="w-full pl-8 pr-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+    <div class="relative modal-panel rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+      
+      <!-- Created Credentials Success View -->
+      <template x-if="coachCreatedCredentials">
+        <div class="space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400 flex-shrink-0">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white">Coach Account Created!</h3>
+              <p class="text-xs text-slate-400">Login credentials have been generated and are ready to share.</p>
+            </div>
           </div>
-          <div class="max-h-56 overflow-y-auto rounded-lg border border-dark-border divide-y divide-dark-border">
-            <template x-for="u in coachCandidateUsers()" :key="u.id">
-              <button @click="coachForm.selectedUser = u" class="w-full flex items-center justify-between px-3 py-2 text-left text-sm hover:bg-white/5">
-                <span><span class="font-medium" x-text="u.fullName"></span> <span class="text-slate-500" x-text="'· @' + u.username"></span></span>
-              </button>
-            </template>
-            <p x-show="coachCandidateUsers().length === 0" class="p-4 text-center text-sm text-slate-500">No matching users found.</p>
+
+          <div class="rounded-xl bg-dark border border-dark-border p-4 space-y-3 font-mono text-xs">
+            <div>
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Coach Portal URL</span>
+              <a href="/coach/" target="_blank" class="text-primary hover:underline font-sans text-sm flex items-center gap-1.5 mt-0.5">
+                <span x-text="window.location.origin + '/coach/'"></span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+            </div>
+            <div class="border-t border-dark-border/50 pt-2">
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Coach Name</span>
+              <span class="text-white font-sans text-sm" x-text="coachCreatedCredentials.fullName"></span>
+            </div>
+            <div class="border-t border-dark-border/50 pt-2">
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Login Email</span>
+              <span class="text-white text-sm" x-text="coachCreatedCredentials.email"></span>
+            </div>
+            <div class="border-t border-dark-border/50 pt-2">
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Password</span>
+              <span class="text-amber-400 font-bold text-sm" x-text="coachCreatedCredentials.password"></span>
+            </div>
+          </div>
+
+          <div class="rounded-lg bg-primary/10 border border-primary/20 p-3 text-xs text-slate-300 flex items-start gap-2">
+            <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div>Share these credentials with the coach. They can sign in immediately at the Coach Portal.</div>
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button @click="copyCoachCredentials(coachCreatedCredentials)" class="btn-primary flex-1 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <span>Copy Login Credentials</span>
+            </button>
+            <button @click="closeCreateCoach()" class="px-4 py-2.5 bg-dark-muted hover:bg-dark-border rounded-lg text-sm font-semibold transition-colors">Done</button>
           </div>
         </div>
       </template>
 
-      <template x-if="coachForm.selectedUser">
-        <div class="space-y-3">
-          <div class="flex items-center justify-between rounded-lg border border-dark-border px-3 py-2">
-            <span class="text-sm"><span class="font-medium" x-text="coachForm.selectedUser.fullName"></span> <span class="text-slate-500" x-text="'· @' + coachForm.selectedUser.username"></span></span>
-            <button @click="coachForm.selectedUser = null" class="text-xs text-primary hover:underline">Change</button>
+      <!-- Create Form -->
+      <template x-if="!coachCreatedCredentials">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-lg font-bold text-white">Add Coach</h3>
+            <button @click="closeCreateCoach()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors">✕</button>
           </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Bio</label>
-            <input x-model="coachForm.bio" placeholder="Certified strength & conditioning coach" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+          <p class="text-xs text-slate-400 mb-4">Create a new coach account with login credentials, or promote an existing user.</p>
+
+          <!-- Mode Toggle Tabs -->
+          <div class="flex p-1 bg-dark rounded-xl border border-dark-border mb-4">
+            <button type="button" @click="coachForm.mode = 'new'"
+              class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all"
+              :class="coachForm.mode === 'new' ? 'bg-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'">
+              Create New Coach
+            </button>
+            <button type="button" @click="coachForm.mode = 'promote'"
+              class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all"
+              :class="coachForm.mode === 'promote' ? 'bg-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'">
+              Promote Existing User
+            </button>
           </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Specialties (comma-separated)</label>
-            <input x-model="coachForm.specialties" placeholder="Strength, Weight Loss" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Years of experience</label>
-            <input type="number" min="0" x-model="coachForm.experienceYears" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-          </div>
+
+          <!-- Mode: Create New Coach -->
+          <template x-if="coachForm.mode === 'new'">
+            <div class="space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Full Name <span class="text-red-400">*</span></label>
+                  <input type="text" x-model="coachForm.fullName" placeholder="e.g. Rahul Sharma"
+                    class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Login Email <span class="text-red-400">*</span></label>
+                  <input type="email" x-model="coachForm.email" placeholder="rahul.coach@fitnerve.com"
+                    class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                </div>
+              </div>
+
+              <!-- Password row with generate button -->
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-xs font-medium text-slate-300">Login Password</label>
+                  <button type="button" @click="coachForm.password = generateStrongPassword(); coachForm.showPassword = true"
+                    class="text-xs text-primary hover:text-primary-light flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Generate Strong
+                  </button>
+                </div>
+                <div class="relative">
+                  <input :type="coachForm.showPassword ? 'text' : 'password'" x-model="coachForm.password"
+                    placeholder="Enter password or click Generate"
+                    class="w-full pl-3 pr-10 py-2 bg-dark border border-dark-border rounded-lg text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-primary">
+                  <button type="button" @click="coachForm.showPassword = !coachForm.showPassword"
+                    class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                    <svg x-show="!coachForm.showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <svg x-show="coachForm.showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"/></svg>
+                  </button>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1">If left blank, a secure random password will be auto-generated.</p>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Phone Number (optional)</label>
+                  <input type="tel" x-model="coachForm.phone" placeholder="+91 9876543210"
+                    class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Years of Experience</label>
+                  <input type="number" min="0" x-model="coachForm.experienceYears" placeholder="e.g. 5"
+                    class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Specialties (comma-separated)</label>
+                <input x-model="coachForm.specialties" placeholder="Strength Training, Weight Loss, Nutrition"
+                  class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Bio / Notes</label>
+                <textarea rows="2" x-model="coachForm.bio" placeholder="Certified personal trainer specializing in functional fitness..."
+                  class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white"></textarea>
+              </div>
+
+              <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer pt-1">
+                <input type="checkbox" x-model="coachForm.isAcceptingClients" class="rounded border-dark-border bg-dark">
+                <span>Accepting new clients immediately</span>
+              </label>
+
+              <div class="flex justify-end gap-2 mt-5 pt-3 border-t border-dark-border">
+                <button type="button" @click="closeCreateCoach()" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
+                <button type="button" @click="submitCreateCoach()" :disabled="!coachForm.fullName || !coachForm.email"
+                  class="btn-primary px-5 py-2 text-sm font-bold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">
+                  Create Coach & Credentials
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <!-- Mode: Promote Existing User -->
+          <template x-if="coachForm.mode === 'promote'">
+            <div class="space-y-3">
+              <template x-if="!coachForm.selectedUser">
+                <div class="space-y-2">
+                  <div class="relative">
+                    <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+                    <input x-model="coachForm.search" placeholder="Search users by name, username or email…" class="w-full pl-8 pr-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                  </div>
+                  <div class="max-h-52 overflow-y-auto rounded-lg border border-dark-border divide-y divide-dark-border">
+                    <template x-for="u in coachCandidateUsers()" :key="u.id">
+                      <button @click="coachForm.selectedUser = u" class="w-full flex items-center justify-between px-3 py-2 text-left text-sm hover:bg-white/5">
+                        <span><span class="font-medium text-white" x-text="u.fullName"></span> <span class="text-slate-400" x-text="'· ' + u.email"></span></span>
+                        <span class="text-xs text-primary">Select</span>
+                      </button>
+                    </template>
+                    <p x-show="coachCandidateUsers().length === 0" class="p-4 text-center text-sm text-slate-500">No matching users found.</p>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="coachForm.selectedUser">
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between rounded-lg border border-dark-border bg-dark px-3 py-2">
+                    <div>
+                      <p class="font-medium text-sm text-white" x-text="coachForm.selectedUser.fullName"></p>
+                      <p class="text-xs text-slate-400" x-text="coachForm.selectedUser.email"></p>
+                    </div>
+                    <button @click="coachForm.selectedUser = null" class="text-xs text-primary hover:underline">Change</button>
+                  </div>
+
+                  <div>
+                    <div class="flex items-center justify-between mb-1">
+                      <label class="block text-xs font-medium text-slate-300">Set New Password (optional)</label>
+                      <button type="button" @click="coachForm.password = generateStrongPassword(); coachForm.showPassword = true"
+                        class="text-xs text-primary hover:text-primary-light">Generate</button>
+                    </div>
+                    <input :type="coachForm.showPassword ? 'text' : 'password'" x-model="coachForm.password" placeholder="Leave empty to keep existing password"
+                      class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm font-mono focus:outline-none focus:border-primary text-white">
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Bio</label>
+                    <input x-model="coachForm.bio" placeholder="Certified coach" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Specialties (comma-separated)</label>
+                    <input x-model="coachForm.specialties" placeholder="Strength, Weight Loss" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Years of experience</label>
+                    <input type="number" min="0" x-model="coachForm.experienceYears" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                  </div>
+                </div>
+              </template>
+
+              <div class="flex justify-end gap-2 mt-5 pt-3 border-t border-dark-border">
+                <button type="button" @click="closeCreateCoach()" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
+                <button type="button" @click="submitCreateCoach()" :disabled="!coachForm.selectedUser" class="btn-primary px-4 py-2 text-sm font-bold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Promote to Coach</button>
+              </div>
+            </div>
+          </template>
         </div>
       </template>
+    </div>
+  </div>
 
-      <div class="flex justify-end gap-2 mt-5">
-        <button @click="closeCreateCoach()" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
-        <button @click="submitCreateCoach()" :disabled="!coachForm.selectedUser" class="px-4 py-2 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Create coach</button>
+  <!-- Coach Credentials & Reset Password Modal -->
+  <div x-show="modals.coachCredentials" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 modal-backdrop" @click="closeCoachCredentials()"></div>
+    <div class="relative modal-panel rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center text-primary flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Coach Credentials & Access</h3>
+            <p class="text-xs text-slate-400">Manage login email & password for <span class="font-mono text-primary font-semibold">/coach/</span></p>
+          </div>
+        </div>
+        <button @click="closeCoachCredentials()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors">✕</button>
       </div>
+
+      <!-- Coach Info -->
+      <template x-if="editingCoach">
+        <div class="flex items-center justify-between rounded-xl bg-dark/60 border border-dark-border px-4 py-3 mb-4">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-full bg-accent/20 text-accent font-bold text-xs flex items-center justify-center flex-shrink-0" x-text="initials(editingCoach.user?.fullName)"></div>
+            <div class="min-w-0">
+              <p class="font-medium text-sm text-white truncate" x-text="editingCoach.user?.fullName"></p>
+              <p class="text-xs text-slate-400 truncate" x-text="'@' + (editingCoach.user?.username || '') + ' · Current email: ' + (editingCoach.user?.email || '')"></p>
+            </div>
+          </div>
+          <span class="badge badge-blue">COACH</span>
+        </div>
+      </template>
+
+      <!-- Updated Success View -->
+      <template x-if="coachCredentialsResult">
+        <div class="space-y-4">
+          <div class="rounded-xl bg-emerald-500/10 border border-emerald-500/25 p-4">
+            <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm mb-1">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Credentials Updated Successfully</span>
+            </div>
+            <p class="text-xs text-slate-300">Active sessions have been revoked. The coach can now log in immediately with the credentials below.</p>
+          </div>
+
+          <div class="rounded-xl bg-dark border border-dark-border p-4 space-y-3 font-mono text-xs">
+            <div>
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Coach Portal URL</span>
+              <a href="/coach/" target="_blank" class="text-primary hover:underline font-sans text-sm flex items-center gap-1.5 mt-0.5">
+                <span x-text="window.location.origin + '/coach/'"></span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+            </div>
+            <div class="border-t border-dark-border/50 pt-2">
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Login Email</span>
+              <span class="text-white text-sm" x-text="coachCredentialsResult.email"></span>
+            </div>
+            <div class="border-t border-dark-border/50 pt-2">
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Password</span>
+              <span class="text-amber-400 font-bold text-sm" x-text="coachCredentialsResult.password"></span>
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button @click="copyCoachCredentials(coachCredentialsResult)" class="btn-primary flex-1 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <span>Copy Login Credentials</span>
+            </button>
+            <button @click="closeCoachCredentials()" class="px-4 py-2.5 bg-dark-muted hover:bg-dark-border rounded-lg text-sm font-semibold transition-colors">Done</button>
+          </div>
+        </div>
+      </template>
+
+      <!-- Edit Credentials Form -->
+      <template x-if="!coachCredentialsResult">
+        <form @submit.prevent="submitCoachCredentials()" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Coach Full Name</label>
+            <input type="text" x-model="coachCredentialsForm.fullName" required
+              class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm text-white focus:outline-none focus:border-primary">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Login Email Address <span class="text-red-400">*</span>
+            </label>
+            <input type="email" x-model="coachCredentialsForm.email" required
+              class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm text-white focus:outline-none focus:border-primary"
+              placeholder="coach@fitnerve.com">
+            <p class="text-[11px] text-slate-500 mt-1">This is the email address used to log in at <span class="font-mono text-slate-400" x-text="window.location.origin + '/coach/'"></span>.</p>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Create / Reset Password
+              </label>
+              <button type="button" @click="generateCoachPassword()" class="text-xs text-primary hover:text-primary-light flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Generate Strong
+              </button>
+            </div>
+            <div class="relative">
+              <input :type="coachCredentialsForm.showPassword ? 'text' : 'password'" x-model="coachCredentialsForm.password"
+                placeholder="Leave blank to keep existing, or type new password"
+                class="w-full pl-3 pr-10 py-2.5 bg-dark border border-dark-border rounded-lg text-sm text-white font-mono placeholder-slate-600 focus:outline-none focus:border-primary">
+              <button type="button" @click="coachCredentialsForm.showPassword = !coachCredentialsForm.showPassword"
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                <svg x-show="!coachCredentialsForm.showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <svg x-show="coachCredentialsForm.showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"/></svg>
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">If entered, the password will be immediately updated and old sessions revoked.</p>
+          </div>
+
+          <div class="rounded-xl border border-dark-border/60 bg-dark/40 p-3 text-xs text-slate-400 flex items-start gap-2">
+            <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div>After saving, you can copy the login credentials and sign in to <a href="/coach/" target="_blank" class="text-primary underline">Coach Portal</a>.</div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-dark-border">
+            <button type="button" @click="closeCoachCredentials()" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
+            <button type="submit" :disabled="coachCredentialsForm.loading" class="btn-primary px-5 py-2 text-sm font-bold rounded-lg transition-colors flex items-center gap-2">
+              <span x-show="coachCredentialsForm.loading" class="loader w-3.5 h-3.5 border-white border-t-transparent"></span>
+              <span>Save & Update Credentials</span>
+            </button>
+          </div>
+        </form>
+      </template>
     </div>
   </div>
 
@@ -1425,90 +1803,136 @@
   <div x-show="modals.editCoach" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60" @click="modals.editCoach = false"></div>
     <div class="relative bg-dark-card border border-dark-border rounded-2xl w-full max-w-md p-6">
-      <h3 class="text-lg font-semibold mb-4">Edit Coach</h3>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">Edit Coach</h3>
+        <button @click="modals.editCoach = false" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors">✕</button>
+      </div>
       <template x-if="editingCoach">
         <div class="space-y-3">
+          <!-- Credentials shortcut bar -->
+          <div class="p-3 rounded-xl bg-dark/60 border border-dark-border flex items-center justify-between">
+            <div class="min-w-0 pr-2">
+              <p class="text-xs font-semibold text-slate-300">Login Account</p>
+              <p class="text-[11px] text-slate-400 truncate" x-text="editingCoach.user?.email"></p>
+            </div>
+            <button type="button" @click="modals.editCoach = false; openCoachCredentials(editingCoach)"
+              class="px-2.5 py-1.5 text-xs bg-primary/15 text-primary-light border border-primary/25 hover:bg-primary/25 rounded-lg transition-colors flex items-center gap-1.5 font-medium flex-shrink-0">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+              <span>Manage Credentials</span>
+            </button>
+          </div>
+
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Bio</label>
-            <input x-model="editCoachForm.bio" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+            <input x-model="editCoachForm.bio" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Specialties (comma-separated)</label>
-            <input x-model="editCoachForm.specialtiesText" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+            <input x-model="editCoachForm.specialtiesText" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Years of experience</label>
-            <input type="number" min="0" x-model="editCoachForm.experienceYears" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+            <input type="number" min="0" x-model="editCoachForm.experienceYears" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
           </div>
-          <label class="flex items-center gap-2 text-sm text-slate-300">
+          <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
             <input type="checkbox" x-model="editCoachForm.isAcceptingClients" class="rounded border-dark-border bg-dark">
-            Accepting new clients
+            <span>Accepting new clients</span>
           </label>
         </div>
       </template>
-      <div class="flex justify-end gap-2 mt-5">
+      <div class="flex justify-end gap-2 mt-5 pt-3 border-t border-dark-border">
         <button @click="modals.editCoach = false" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
-        <button @click="submitEditCoach()" class="px-4 py-2 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors">Save changes</button>
+        <button @click="submitEditCoach()" class="btn-primary px-4 py-2 text-sm font-bold rounded-lg transition-colors">Save changes</button>
       </div>
     </div>
   </div>
 
-  <!-- Edit Assignment -->
-  <div x-show="modals.editAssignment" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/60" @click="modals.editAssignment = false"></div>
-    <div class="relative bg-dark-card border border-dark-border rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-      <h3 class="text-lg font-semibold mb-1" x-text="editingAssignment?.type === 'custom' ? 'Edit Custom Workout' : 'Edit Note'"></h3>
-      <template x-if="editingAssignment">
-        <p class="text-sm text-slate-400 mb-4" x-text="editingAssignment.title"></p>
-      </template>
-
-      <!-- Plan assignment: just the note -->
-      <template x-if="editingAssignment?.type !== 'custom'">
-        <textarea x-model="editAssignmentNote" rows="3" placeholder="Add a note" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary"></textarea>
-      </template>
-
-      <!-- Custom workout: full editable fields -->
-      <template x-if="editingAssignment?.type === 'custom'">
-        <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Title</label>
-            <input x-model="editCustomForm.title" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Description</label>
-            <input x-model="editCustomForm.description" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-slate-300 mb-1">Duration (min)</label>
-              <input type="number" min="0" x-model="editCustomForm.durationMinutes" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-300 mb-1">Difficulty</label>
-              <select x-model="editCustomForm.difficulty" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-                <option value="BEGINNER">Beginner</option>
-                <option value="INTERMEDIATE">Intermediate</option>
-                <option value="ADVANCED">Advanced</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Category</label>
-            <select x-model="editCustomForm.categoryKey" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-              <option value="WEIGHT_LOSS">Weight Loss</option>
-              <option value="MUSCLE_GAIN">Muscle Gain</option>
-              <option value="STRENGTH">Strength</option>
-              <option value="CARDIO">Cardio</option>
-              <option value="YOGA">Yoga</option>
-              <option value="GENERAL_FITNESS">General Fitness</option>
-            </select>
-          </div>
+  <!-- Support Ticket -->
+  <div x-show="modals.supportTicket" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="modals.supportTicket = false"></div>
+    <div class="relative bg-dark-card border border-dark-border rounded-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" x-show="activeTicket">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="min-w-0">
+          <h3 class="text-lg font-semibold" x-text="activeTicket?.subject"></h3>
+          <p class="text-xs text-slate-500 mt-0.5" x-text="`${activeTicket?.user?.fullName || ''} · ${activeTicket?.user?.email || ''}`"></p>
+          <p class="text-xs text-slate-500" x-text="activeTicket ? `${activeTicket.category} · ${formatDateTime(activeTicket.createdAt)}` : ''"></p>
         </div>
-      </template>
+        <button @click="modals.supportTicket = false" class="text-slate-400 hover:text-white w-8 h-8 rounded-lg hover:bg-white/5 flex-shrink-0">✕</button>
+      </div>
 
-      <div class="flex justify-end gap-2 mt-5">
-        <button @click="modals.editAssignment = false" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
-        <button @click="submitEditSentAssignment()" class="px-4 py-2 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors">Save changes</button>
+      <div class="mb-4">
+        <label class="block text-xs font-medium text-slate-300 mb-1.5">Topic</label>
+        <select x-model="ticketForm.category" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm mb-3 focus:outline-none focus:border-primary">
+          <template x-for="c in ['GENERAL', 'ACCOUNT', 'PAYMENT', 'TECHNICAL', 'COACH', 'OTHER']" :key="c"><option :value="c" x-text="c"></option></template>
+        </select>
+        <label class="block text-xs font-medium text-slate-300 mb-1.5">Subject</label>
+        <input x-model="ticketForm.subject" maxlength="150" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm mb-3 focus:outline-none focus:border-primary">
+        <label class="block text-xs font-medium text-slate-300 mb-1.5">User's message</label>
+        <textarea x-model="ticketForm.message" rows="4" maxlength="4000" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary"></textarea>
+      </div>
+
+      <label class="block text-xs font-medium text-slate-300 mb-1.5">Status</label>
+      <select x-model="ticketForm.status" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm mb-3 focus:outline-none focus:border-primary">
+        <option value="OPEN">Open</option>
+        <option value="IN_PROGRESS">In progress</option>
+        <option value="RESOLVED">Resolved</option>
+        <option value="CLOSED">Closed</option>
+      </select>
+
+      <label class="block text-xs font-medium text-slate-300 mb-1.5">Reply to the user</label>
+      <textarea x-model="ticketForm.adminReply" rows="4" placeholder="Your reply is shown in the app and sent as a notification."
+        class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary"></textarea>
+      <p x-show="activeTicket?.repliedAt" class="text-[11px] text-slate-500 mt-1" x-text="activeTicket?.repliedAt ? 'Last replied ' + formatDateTime(activeTicket.repliedAt) : ''"></p>
+
+      <div class="flex items-center justify-end gap-2 mt-5">
+        <button @click="modals.supportTicket = false" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
+        <button @click="saveTicket()" :disabled="savingTicket" class="px-4 py-2 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors disabled:opacity-50" x-text="savingTicket ? 'Saving…' : 'Save & notify user'"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coach Report -->
+  <div x-show="modals.coachReport" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" @click="modals.coachReport = false"></div>
+    <div class="relative bg-dark-card border border-dark-border rounded-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" x-show="activeReport">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="min-w-0">
+          <h3 class="text-lg font-semibold">Report about <span x-text="activeReport?.coachName"></span></h3>
+          <p class="text-xs text-slate-500 mt-0.5" x-text="`From ${activeReport?.user?.fullName || ''} (${activeReport?.user?.email || ''})`"></p>
+          <p class="text-xs text-slate-500" x-text="activeReport ? `${activeReport.reasonLabel} · ${formatDateTime(activeReport.createdAt)}` : ''"></p>
+        </div>
+        <button @click="modals.coachReport = false" class="text-slate-400 hover:text-white w-8 h-8 rounded-lg hover:bg-white/5 flex-shrink-0">✕</button>
+      </div>
+
+      <div x-show="activeReport?.details" class="rounded-lg bg-dark border border-dark-border p-3 text-sm text-slate-200 whitespace-pre-wrap mb-3" x-text="activeReport?.details"></div>
+      <p x-show="activeReport?.wantsNewCoach" class="text-xs text-indigo-300 mb-3">The user asked to be moved to a different coach.</p>
+      <p x-show="activeReport?.reassignedToCoachName" class="text-xs text-emerald-400 mb-3" x-text="`Already moved to ${activeReport?.reassignedToCoachName}.`"></p>
+
+      <label class="block text-xs font-medium text-slate-300 mb-1.5">Status</label>
+      <select x-model="reportForm.status" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm mb-3 focus:outline-none focus:border-primary">
+        <option value="OPEN">Open</option>
+        <option value="REVIEWING">Reviewing</option>
+        <option value="RESOLVED">Resolved</option>
+        <option value="DISMISSED">Dismissed</option>
+      </select>
+
+      <label class="block text-xs font-medium text-slate-300 mb-1.5">Note to the user (optional)</label>
+      <textarea x-model="reportForm.adminNote" rows="3" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm mb-1 focus:outline-none focus:border-primary"></textarea>
+      <div class="flex justify-end mb-5">
+        <button @click="saveReport()" :disabled="savingReport" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors disabled:opacity-50">Save status &amp; note</button>
+      </div>
+
+      <div class="rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <h4 class="text-sm font-semibold mb-1">Change this user's coach</h4>
+        <p class="text-xs text-slate-400 mb-3">Moves the user to another coach, resolves the report, notifies the user, and the new coach greets them in Chats.</p>
+        <select x-model="reportForm.newCoachId" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm mb-3 focus:outline-none focus:border-primary">
+          <option value="">Select a new coach…</option>
+          <template x-for="c in coaches.filter((c) => c.id !== activeReport?.coachId)" :key="c.id">
+            <option :value="c.id" x-text="`${c.user?.fullName || c.id}${c.isAcceptingClients ? '' : ' (not accepting clients)'}`"></option>
+          </template>
+          <option value="__none__">Remove coach without assigning another</option>
+        </select>
+        <button @click="reassignReport()" :disabled="!reportForm.newCoachId || savingReport" class="w-full px-4 py-2.5 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors disabled:opacity-50">Move user &amp; resolve report</button>
       </div>
     </div>
   </div>
@@ -1648,6 +2072,7 @@
       ACTIVATE_USER: "bg-emerald-500/15 text-emerald-400",
       CREATE_COACH: "bg-emerald-500/15 text-emerald-400",
       CHANGE_ROLE: "bg-primary/15 text-primary",
+      ASSIGN_COACH: "bg-primary/15 text-primary",
       RESET_PASSWORD: "bg-primary/15 text-primary",
       UPDATE_USER: "bg-dark-muted text-slate-300",
       UPDATE_COACH: "bg-dark-muted text-slate-300",
@@ -1659,6 +2084,8 @@
       FAILED: "bg-red-500/15 text-red-400",
       REFUNDED: "bg-indigo-500/15 text-indigo-400",
     };
+
+    let _adminRefreshPromise = null;
 
     function adminApp() {
       return {
@@ -1673,7 +2100,7 @@
 
         // ---- Nav / layout ----
         currentView: "dashboard",
-        themeMode: "dark",
+        themeMode: (() => { try { return localStorage.getItem("fitnerve-admin-theme") === "light" ? "light" : "dark"; } catch { return "dark"; } })(),
         sidebarCollapsed: false,
         mobileNavOpen: false,
 
@@ -1684,20 +2111,6 @@
         payments: [],
         liveDashboard: null,
         loadingData: false,
-
-        // ---- Assign Workouts view state ----
-        workoutPlans: [],
-        sentAssignments: [],
-        assignForm: {
-          search: "", selectedUser: null, coachUserId: "", mode: "CATALOG", selectedPlanId: null, note: "",
-          title: "", description: "", durationMinutes: "", difficulty: "BEGINNER", categoryKey: "GENERAL_FITNESS",
-          exercises: [{ name: "", muscleGroup: "", sets: "", reps: "" }]
-        },
-        assignFormError: "",
-        assignFormSaving: false,
-        editingAssignment: null,
-        editAssignmentNote: "",
-        editCustomForm: { title: "", description: "", durationMinutes: "", difficulty: "BEGINNER", categoryKey: "GENERAL_FITNESS" },
 
         // ---- DB Explorer State ----
         dbSchema: [],
@@ -1726,16 +2139,37 @@
         // ---- Payments view state ----
         paymentsFilters: { status: "ALL", page: 1 },
 
+        // ---- Support / coach reports / integrations ----
+        supportTickets: [],
+        supportCounts: {},
+        supportFilters: { status: "OPEN", search: "" },
+        activeTicket: null,
+        ticketForm: { status: "OPEN", adminReply: "", category: "GENERAL", subject: "", message: "" },
+        savingTicket: false,
+        coachReports: [],
+        reportCounts: {},
+        reportFilter: "OPEN",
+        activeReport: null,
+        reportForm: { status: "OPEN", adminNote: "", newCoachId: "" },
+        savingReport: false,
+        meetStatus: null,
+        meetBusy: false,
+        storageTesting: false,
+
         // ---- Modals ----
-        modals: { addUser: false, editUser: false, changeRole: false, resetPassword: false, createCoach: false, editCoach: false, editAssignment: false, confirm: false, dbInsert: false, dbEdit: false },
+        modals: { addUser: false, editUser: false, changeRole: false, assignCoach: false, resetPassword: false, createCoach: false, editCoach: false, coachCredentials: false, confirm: false, dbInsert: false, dbEdit: false, supportTicket: false, coachReport: false },
         addUserForm: { fullName: "", email: "", phone: "", role: "USER" },
         editingUser: null,
         editForm: { fullName: "", username: "", email: "", phone: "" },
         roleDraft: "USER",
+        assignCoachDraft: "",
         tempPassword: null,
-        coachForm: { search: "", selectedUser: null, bio: "", specialties: "", experienceYears: "" },
+        coachForm: { mode: "new", fullName: "", email: "", password: "", phone: "", search: "", selectedUser: null, bio: "", specialties: "", experienceYears: "", isAcceptingClients: true, showPassword: false },
         editingCoach: null,
         editCoachForm: { bio: "", specialtiesText: "", experienceYears: "", isAcceptingClients: true },
+        coachCredentialsForm: { fullName: "", email: "", password: "", phone: "", showPassword: false, loading: false },
+        coachCredentialsResult: null,
+        coachCreatedCredentials: null,
         confirmAction: { type: null, target: null, title: "", description: "", confirmLabel: "Confirm" },
 
         // ---- Toasts ----
@@ -1745,6 +2179,7 @@
         // ================= INIT =================
         init() {
           this.loadState();
+          this.handleIntegrationRedirect();
           const saved = localStorage.getItem("fitnerveAdminAuth");
           if (saved) {
             const { admin, accessToken, refreshToken } = JSON.parse(saved);
@@ -1761,6 +2196,9 @@
         fetchLiveData() {
           if (!this.isAuthenticated) return;
           this.loadingData = true;
+          this.fetchSupportTickets();
+          this.fetchCoachReports();
+          this.fetchMeetStatus();
           Promise.all([
             this.apiRequest("GET", "/api/v1/admin/dashboard").catch(() => null),
             this.apiRequest("GET", "/api/v1/admin/users?limit=100").catch(() => null),
@@ -1768,8 +2206,7 @@
             this.apiRequest("GET", "/api/v1/admin/audit-logs?limit=100").catch(() => null),
             this.apiRequest("GET", "/api/v1/admin/payments?limit=100").catch(() => null),
             this.apiRequest("GET", "/api/v1/admin/db/tables").catch(() => null),
-            this.apiRequest("GET", "/api/v1/workouts?limit=100").catch(() => null),
-          ]).then(([dashData, usersRes, coachesRes, auditRes, paymentsRes, dbSchemaRes, workoutsRes]) => {
+          ]).then(([dashData, usersRes, coachesRes, auditRes, paymentsRes, dbSchemaRes]) => {
             this.loadingData = false;
             if (dashData) this.liveDashboard = dashData;
             // Admin list endpoints respond with `data` as the raw array
@@ -1795,15 +2232,7 @@
                 this.fetchTableRows(this.activeTableName);
               }
             }
-            if (Array.isArray(workoutsRes)) this.workoutPlans = workoutsRes;
-            else if (workoutsRes?.items) this.workoutPlans = workoutsRes.items;
-            this.fetchSentAssignments();
           });
-        },
-
-        goAssignWorkouts() {
-          this.currentView = "assign-workouts";
-          this.fetchSentAssignments();
         },
 
         selectTable(tableName) {
@@ -1886,9 +2315,18 @@
             this.activeModelInfo.fields.forEach(f => {
               if ((f.kind === 'scalar' || f.kind === 'enum') && !f.isId && f.name !== 'createdAt' && f.name !== 'updatedAt') {
                 let value = initialData !== null ? (initialData[f.name] ?? (f.type === 'Boolean' ? false : f.type === 'Int' || f.type === 'Float' ? '' : '')) : '';
+                let originalIso = null;
                 // Format datetime values for input[type=datetime-local]
                 if (f.type === 'DateTime' && value) {
-                  try { value = new Date(value).toISOString().slice(0, 16); } catch (_) {}
+                  // datetime-local inputs show and return LOCAL time, so convert from the stored instant
+                  // (toISOString alone showed UTC, and saving then moved the time back 5½ hours in IST).
+                  // The original is kept so a field nobody touched is saved back exactly as it was.
+                  const instant = new Date(value);
+                  if (!isNaN(instant)) {
+                    originalIso = instant.toISOString();
+                    instant.setMinutes(instant.getMinutes() - instant.getTimezoneOffset());
+                    value = instant.toISOString().slice(0, 16);
+                  }
                 }
                 const relation = this.relationFor(f.name);
                 fields.push({
@@ -1898,6 +2336,8 @@
                   required: f.isRequired && !f.hasDefaultValue,
                   enumValues: f.enumValues || [],
                   value,
+                  initialValue: value,
+                  originalIso,
                   isRelation: Boolean(relation),
                   relatedModel: relation?.relatedModel || null,
                 });
@@ -1928,7 +2368,7 @@
             } else if (f.type === 'Float') {
               data[f.name] = parseFloat(f.value);
             } else if (f.type === 'DateTime' && f.value) {
-              data[f.name] = new Date(f.value).toISOString();
+              data[f.name] = f.originalIso && f.value === f.initialValue ? f.originalIso : new Date(f.value).toISOString();
             } else {
               data[f.name] = f.value;
             }
@@ -2056,7 +2496,7 @@
           this.currentView = "dashboard";
         },
 
-        apiRequest(method, path, body = null) {
+        apiRequest(method, path, body = null, retried = false) {
           const headers = { "Content-Type": "application/json" };
           if (this.accessToken) {
             headers.Authorization = `Bearer ${this.accessToken}`;
@@ -2068,6 +2508,10 @@
           }).then(async (res) => {
             const payload = await res.json().catch(() => null);
             if (!res.ok) {
+              if (res.status === 401 && !retried && !path.includes("/auth/") && (await this.refreshAccess())) {
+                return this.apiRequest(method, path, body, true);
+              }
+              if (res.status === 401 && !path.includes("/auth/")) this.logout();
               const message = payload?.message || `Request failed with status ${res.status}`;
               throw new Error(message);
             }
@@ -2077,6 +2521,7 @@
 
         toggleTheme() {
           this.themeMode = this.themeMode === "dark" ? "light" : "dark";
+          try { localStorage.setItem("fitnerve-admin-theme", this.themeMode); } catch {}
         },
 
         goBack() {
@@ -2085,13 +2530,244 @@
           }
         },
 
+        // ================= IMAGE STORAGE SELF-TEST =================
+        testStorage() {
+          this.storageTesting = true;
+          this.apiRequest("GET", "/api/v1/admin/storage/check")
+            .then((r) => {
+              const lines = r.steps.map((s) => `${s.ok ? "✓" : "✗"} ${s.name}: ${s.detail}`);
+              const cfg = `driver=${r.driver}, bucket ${r.config.bucketSet ? "set" : "MISSING"}, endpoint ${r.config.endpointSet ? "set" : "not set"}, region=${r.config.region}`;
+              window.alert(`${r.ok ? "Image storage is working." : "Image storage has problems."}\n\n${cfg}\n\n${lines.join("\n")}`);
+            })
+            .catch((err) => this.showToast(err.message || "Storage test failed", "error"))
+            .finally(() => { this.storageTesting = false; });
+        },
+
+        // ================= REFRESH =================
+        // Re-fetches everything the portal shows, including the view that is open.
+        refreshAll() {
+          if (!this.isAuthenticated) return;
+          this.fetchLiveData();
+          this.showToast("Refreshing with the latest data…");
+        },
+
+        // ================= SUPPORT REQUESTS =================
+        fetchSupportTickets() {
+          if (!this.isAuthenticated) return Promise.resolve();
+          const q = new URLSearchParams({ limit: "100" });
+          if (this.supportFilters.status !== "ALL") q.set("status", this.supportFilters.status);
+          if (this.supportFilters.search.trim()) q.set("search", this.supportFilters.search.trim());
+          return this.apiRequestWithMeta("GET", `/api/v1/admin/support/tickets?${q}`)
+            .then(({ data, meta }) => {
+              this.supportTickets = data || [];
+              this.supportCounts = meta?.counts || {};
+            })
+            .catch((err) => this.showToast(err.message || "Failed to load support requests", "error"));
+        },
+
+        ticketBadge(status) {
+          return { OPEN: "badge-orange", IN_PROGRESS: "badge-indigo", RESOLVED: "badge-green", CLOSED: "badge-slate" }[status] || "badge-slate";
+        },
+
+        openTicket(t) {
+          this.activeTicket = t;
+          this.ticketForm = {
+            status: t.status === "OPEN" ? "IN_PROGRESS" : t.status,
+            adminReply: t.adminReply || "",
+            category: t.category,
+            subject: t.subject,
+            message: t.message
+          };
+          this.modals.supportTicket = true;
+        },
+
+        saveTicket() {
+          const t = this.activeTicket;
+          if (!t) return;
+          this.savingTicket = true;
+          this.apiRequest("PATCH", `/api/v1/admin/support/tickets/${t.id}`, {
+            status: this.ticketForm.status,
+            adminReply: this.ticketForm.adminReply.trim() || null,
+            category: this.ticketForm.category,
+            subject: this.ticketForm.subject.trim(),
+            message: this.ticketForm.message.trim()
+          })
+            .then(() => {
+              this.modals.supportTicket = false;
+              this.showToast("Support request updated. The user has been notified.");
+              this.fetchSupportTickets();
+            })
+            .catch((err) => this.showToast(err.message || "Failed to update the request", "error"))
+            .finally(() => { this.savingTicket = false; });
+        },
+
+        deleteTicket() {
+          const t = this.activeTicket;
+          if (!t) return;
+          if (!window.confirm(`Delete "${t.subject}" from ${t.user?.fullName || "this user"}? This can't be undone.`)) return;
+          this.savingTicket = true;
+          this.apiRequest("DELETE", `/api/v1/admin/support/tickets/${t.id}`)
+            .then(() => {
+              this.modals.supportTicket = false;
+              this.showToast("Support request deleted");
+              this.fetchSupportTickets();
+            })
+            .catch((err) => this.showToast(err.message || "Failed to delete the request", "error"))
+            .finally(() => { this.savingTicket = false; });
+        },
+
+        // ================= COACH REPORTS =================
+        fetchCoachReports() {
+          if (!this.isAuthenticated) return Promise.resolve();
+          const q = new URLSearchParams({ limit: "100" });
+          if (this.reportFilter !== "ALL") q.set("status", this.reportFilter);
+          return this.apiRequestWithMeta("GET", `/api/v1/admin/coach-reports?${q}`)
+            .then(({ data, meta }) => {
+              this.coachReports = data || [];
+              this.reportCounts = meta?.counts || {};
+            })
+            .catch((err) => this.showToast(err.message || "Failed to load coach reports", "error"));
+        },
+
+        reportBadge(status) {
+          return { OPEN: "badge-orange", REVIEWING: "badge-indigo", RESOLVED: "badge-green", DISMISSED: "badge-slate" }[status] || "badge-slate";
+        },
+
+        openReport(r) {
+          this.activeReport = r;
+          this.reportForm = { status: r.status === "OPEN" ? "REVIEWING" : r.status, adminNote: r.adminNote || "", newCoachId: "" };
+          this.modals.coachReport = true;
+        },
+
+        saveReport() {
+          const r = this.activeReport;
+          if (!r) return;
+          this.savingReport = true;
+          this.apiRequest("PATCH", `/api/v1/admin/coach-reports/${r.id}`, {
+            status: this.reportForm.status,
+            adminNote: this.reportForm.adminNote.trim() || null
+          })
+            .then(() => {
+              this.modals.coachReport = false;
+              this.showToast("Report updated");
+              this.fetchCoachReports();
+            })
+            .catch((err) => this.showToast(err.message || "Failed to update the report", "error"))
+            .finally(() => { this.savingReport = false; });
+        },
+
+        reassignReport() {
+          const r = this.activeReport;
+          if (!r || !this.reportForm.newCoachId) return;
+          const coachId = this.reportForm.newCoachId === "__none__" ? null : this.reportForm.newCoachId;
+          this.savingReport = true;
+          this.apiRequest("POST", `/api/v1/admin/coach-reports/${r.id}/reassign`, {
+            coachId,
+            adminNote: this.reportForm.adminNote.trim() || undefined
+          })
+            .then(() => {
+              this.modals.coachReport = false;
+              this.showToast(coachId ? "User moved to the new coach" : "Coach removed from the user");
+              this.fetchCoachReports();
+              this.fetchLiveData();
+            })
+            .catch((err) => this.showToast(err.message || "Failed to change the coach", "error"))
+            .finally(() => { this.savingReport = false; });
+        },
+
+        // ================= GOOGLE MEET (platform account) =================
+        fetchMeetStatus() {
+          if (!this.isAuthenticated) return Promise.resolve();
+          return this.apiRequest("GET", "/api/v1/admin/integrations/google-meet")
+            .then((status) => { this.meetStatus = status; })
+            .catch(() => { this.meetStatus = null; });
+        },
+
+        connectMeet() {
+          this.meetBusy = true;
+          this.apiRequest("POST", "/api/v1/admin/integrations/google-meet/connect")
+            .then((res) => { window.location.href = res.url; })
+            .catch((err) => {
+              this.meetBusy = false;
+              this.showToast(err.message || "Couldn't start the Google connection", "error");
+            });
+        },
+
+        disconnectMeet() {
+          if (!window.confirm("Disconnect the Google account? New sessions will no longer get automatic Meet links (existing links keep working).")) return;
+          this.meetBusy = true;
+          this.apiRequest("DELETE", "/api/v1/admin/integrations/google-meet")
+            .then(() => {
+              this.showToast("Google account disconnected");
+              this.fetchMeetStatus();
+            })
+            .catch((err) => this.showToast(err.message || "Failed to disconnect", "error"))
+            .finally(() => { this.meetBusy = false; });
+        },
+
+        // Google sends the browser back to /admin?integration=google-meet&status=…
+        handleIntegrationRedirect() {
+          const params = new URLSearchParams(window.location.search);
+          if (params.get("integration") !== "google-meet") return;
+          if (params.get("status") === "connected") {
+            this.showToast(`Google account connected${params.get("account") ? ` (${params.get("account")})` : ""}. Sessions will now get Meet links automatically.`);
+          } else {
+            this.showToast(params.get("message") || "Google connection failed", "error", 6000);
+          }
+          window.history.replaceState({}, "", window.location.pathname);
+        },
+
+        // ================= SESSION =================
+        // Access tokens last 15 minutes; swap in a fresh one once before giving up.
+        refreshAccess() {
+          if (!this.refreshToken) return Promise.resolve(false);
+          if (!_adminRefreshPromise) {
+            _adminRefreshPromise = fetch("/api/v1/auth/refresh", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ refreshToken: this.refreshToken })
+            })
+              .then(async (res) => {
+                const payload = await res.json().catch(() => null);
+                if (!res.ok || !payload?.data?.accessToken) return false;
+                this.accessToken = payload.data.accessToken;
+                this.refreshToken = payload.data.refreshToken || this.refreshToken;
+                localStorage.setItem(
+                  "fitnerveAdminAuth",
+                  JSON.stringify({ admin: this.admin, accessToken: this.accessToken, refreshToken: this.refreshToken })
+                );
+                return true;
+              })
+              .catch(() => false)
+              .finally(() => { _adminRefreshPromise = null; });
+          }
+          return _adminRefreshPromise;
+        },
+
+        // Like apiRequest but also returns the response's `meta` (pagination + counts).
+        apiRequestWithMeta(method, path, body = null, retried = false) {
+          const headers = { "Content-Type": "application/json" };
+          if (this.accessToken) headers.Authorization = `Bearer ${this.accessToken}`;
+          return fetch(path, { method, headers, body: body ? JSON.stringify(body) : null }).then(async (res) => {
+            const payload = await res.json().catch(() => null);
+            if (!res.ok) {
+              if (res.status === 401 && !retried && (await this.refreshAccess())) {
+                return this.apiRequestWithMeta(method, path, body, true);
+              }
+              if (res.status === 401) this.logout();
+              throw new Error(payload?.message || `Request failed with status ${res.status}`);
+            }
+            return { data: payload?.data ?? null, meta: payload?.meta ?? null };
+          });
+        },
+
         // ================= NAV HELPERS =================
         goUsers() {
           this.currentView = "users";
         },
 
         breadcrumbLabel() {
-          return { users: "Users", "user-detail": "User Detail", coaches: "Coaches", "assign-workouts": "Assign Workouts", "audit-logs": "Audit Logs", payments: "Payments" }[this.currentView] || "";
+          return { users: "Users", "user-detail": "User Detail", coaches: "Coaches", "audit-logs": "Audit Logs", payments: "Payments", support: "Support Requests", "coach-reports": "Coach Reports", "db-explorer": "Database" }[this.currentView] || "";
         },
 
         refreshAdminData() {
@@ -2279,15 +2955,14 @@
             this.showToast("Full name and email are required.", "error");
             return;
           }
-          const tempPw = this.generatePassword();
           if (this.isAuthenticated) {
-            this.apiRequest("POST", "/api/v1/auth/register", {
+            this.apiRequest("POST", "/api/v1/admin/users", {
               fullName: f.fullName.trim(),
               email: f.email.trim(),
               phone: f.phone.trim() || undefined,
-              password: tempPw,
               role: f.role
-            }).then(() => {
+            }).then((data) => {
+              const tempPw = data.temporaryPassword;
               this.fetchLiveData();
               this.modals.addUser = false;
               navigator.clipboard?.writeText(tempPw).catch(() => {});
@@ -2311,6 +2986,7 @@
             this.users.unshift(newUser);
             this.persist();
             this.modals.addUser = false;
+            const tempPw = this.generatePassword();
             navigator.clipboard?.writeText(tempPw).catch(() => {});
             this.showToast(`User created. Temporary password (copied): ${tempPw}`, "success", 8000);
           }
@@ -2380,6 +3056,36 @@
           }
         },
 
+        // ================= ASSIGN COACH =================
+        openAssignCoach(u) {
+          this.editingUser = u;
+          this.assignCoachDraft = u.assignedCoachId || "";
+          this.modals.assignCoach = true;
+        },
+
+        submitAssignCoach() {
+          const u = this.editingUser;
+          if (!u) return;
+          const coachId = this.assignCoachDraft || null;
+          if ((u.assignedCoachId || null) === coachId) {
+            this.modals.assignCoach = false;
+            return;
+          }
+          this.apiRequest("PUT", `/api/v1/admin/users/${u.id}/coach`, { coachId }).then((res) => {
+            // Reflect the change locally right away (list, detail page), then
+            // refresh from the server so coach client counts stay accurate.
+            const patch = { assignedCoachId: res?.assignedCoachId ?? null, assignedCoach: res?.assignedCoach ?? null };
+            const listed = this.users.find((x) => x.id === u.id);
+            if (listed) Object.assign(listed, patch);
+            if (this.selectedUser && this.selectedUser.id === u.id) Object.assign(this.selectedUser, patch);
+            this.modals.assignCoach = false;
+            this.fetchLiveData();
+            this.showToast(coachId ? "Coach assigned" : "Coach unassigned");
+          }).catch((err) => {
+            this.showToast(err.message || "Failed to assign coach", "error");
+          });
+        },
+
         // ================= RESET PASSWORD =================
         openResetPassword(u) {
           this.editingUser = u;
@@ -2441,7 +3147,6 @@
             activate: { title: "Activate this user?", description: `${target.fullName} will be able to log in again.`, confirmLabel: "Activate" },
             delete: { title: "Delete this user?", description: `This permanently deletes ${target.fullName} and all of their data. This cannot be undone.`, confirmLabel: "Delete" },
             "delete-coach": { title: "Remove this coach?", description: `This removes ${target.user?.fullName || 'this coach'}'s profile. Their user account is not affected.`, confirmLabel: "Remove" },
-            "delete-assignment": { title: "Remove this assignment?", description: `This removes "${target.title || 'this workout'}" from ${target.user?.fullName || "the recipient's"} account.`, confirmLabel: "Remove" },
           };
           this.confirmAction = { type, target, ...map[type] };
           this.modals.confirm = true;
@@ -2459,19 +3164,11 @@
               promise = this.apiRequest("DELETE", `/api/v1/admin/users/${target.id}`).then(() => "User deleted");
             } else if (type === "delete-coach") {
               promise = this.apiRequest("DELETE", `/api/v1/admin/coaches/${target.id}`).then(() => "Coach removed");
-            } else if (type === "delete-assignment") {
-              promise = target.type === "custom"
-                ? this.apiRequest("DELETE", `/api/v1/admin/db/tables/custom_workouts/${target.id}`).then(() => "Custom workout removed")
-                : this.apiRequest("DELETE", `/api/v1/workout-assignments/${target.id}`).then(() => "Assignment removed");
             }
 
             if (promise) {
               promise.then((msg) => {
-                if (type === "delete-assignment") {
-                  this.fetchSentAssignments();
-                } else {
-                  this.fetchLiveData();
-                }
+                this.fetchLiveData();
                 this.modals.confirm = false;
                 this.showToast(msg);
                 if (type === "delete" && this.currentView === "user-detail") this.goUsers();
@@ -2506,16 +3203,31 @@
 
         // ================= CREATE COACH =================
         openCreateCoach() {
-          this.coachForm = { search: "", selectedUser: null, bio: "", specialties: "", experienceYears: "" };
+          this.coachForm = {
+            mode: "new",
+            fullName: "",
+            email: "",
+            password: this.generateStrongPassword(),
+            phone: "",
+            search: "",
+            selectedUser: null,
+            bio: "",
+            specialties: "",
+            experienceYears: "",
+            isAcceptingClients: true,
+            showPassword: false
+          };
+          this.coachCreatedCredentials = null;
           this.modals.createCoach = true;
         },
 
         closeCreateCoach() {
           this.modals.createCoach = false;
+          this.coachCreatedCredentials = null;
         },
 
         coachCandidateUsers() {
-          const search = this.coachForm.search.toLowerCase();
+          const search = (this.coachForm.search || "").toLowerCase();
           const coachedUserIds = new Set(this.coaches.map((c) => c.userId));
           return this.users
             .filter((u) => u.role === "USER" && !coachedUserIds.has(u.id))
@@ -2525,39 +3237,196 @@
 
         submitCreateCoach() {
           const f = this.coachForm;
-          if (!f.selectedUser) return;
-          const specialties = f.specialties ? f.specialties.split(",").map((s) => s.trim()).filter(Boolean) : [];
-          if (this.isAuthenticated) {
-            this.apiRequest("POST", "/api/v1/admin/coaches", {
-              userId: f.selectedUser.id,
-              bio: f.bio || undefined,
-              specialties,
-              experienceYears: f.experienceYears ? Number(f.experienceYears) : undefined
-            }).then(() => {
-              this.fetchLiveData();
+          const specialties = f.specialties
+            ? (Array.isArray(f.specialties) ? f.specialties : f.specialties.split(",").map((s) => s.trim()).filter(Boolean))
+            : [];
+
+          if (f.mode === "new") {
+            if (!f.fullName || !f.email) {
+              this.showToast("Full name and email are required", "error");
+              return;
+            }
+
+            if (this.isAuthenticated) {
+              this.apiRequest("POST", "/api/v1/admin/coaches", {
+                fullName: f.fullName.trim(),
+                email: f.email.trim(),
+                password: f.password ? f.password.trim() : undefined,
+                phone: f.phone ? f.phone.trim() : undefined,
+                bio: f.bio ? f.bio.trim() : undefined,
+                specialties,
+                experienceYears: f.experienceYears ? Number(f.experienceYears) : undefined,
+                isAcceptingClients: !!f.isAcceptingClients
+              }).then((res) => {
+                this.fetchLiveData();
+                this.coachCreatedCredentials = {
+                  fullName: f.fullName.trim(),
+                  email: f.email.trim(),
+                  password: res.temporaryPassword || f.password || "(Generated)",
+                  loginUrl: window.location.origin + "/coach/"
+                };
+                this.showToast("Coach created successfully");
+              }).catch((err) => {
+                this.showToast(err.message || "Failed to create coach", "error");
+              });
+            } else {
+              const newCoach = {
+                id: "coach-" + Date.now(),
+                userId: "user-" + Date.now(),
+                bio: f.bio || null,
+                specialties,
+                experienceYears: f.experienceYears ? Number(f.experienceYears) : null,
+                isAcceptingClients: !!f.isAcceptingClients,
+                createdAt: new Date().toISOString(),
+                user: { fullName: f.fullName.trim(), email: f.email.trim(), isActive: true, role: "COACH" }
+              };
+              this.coaches.unshift(newCoach);
+              this.persist();
+              this.coachCreatedCredentials = {
+                fullName: f.fullName.trim(),
+                email: f.email.trim(),
+                password: f.password || this.generateStrongPassword(),
+                loginUrl: window.location.origin + "/coach/"
+              };
+              this.showToast("Coach created");
+            }
+          } else {
+            // Promote existing user
+            if (!f.selectedUser) return;
+            if (this.isAuthenticated) {
+              this.apiRequest("POST", "/api/v1/admin/coaches", {
+                userId: f.selectedUser.id,
+                password: f.password ? f.password.trim() : undefined,
+                bio: f.bio ? f.bio.trim() : undefined,
+                specialties,
+                experienceYears: f.experienceYears ? Number(f.experienceYears) : undefined,
+                isAcceptingClients: !!f.isAcceptingClients
+              }).then((res) => {
+                this.fetchLiveData();
+                if (f.password) {
+                  this.coachCreatedCredentials = {
+                    fullName: f.selectedUser.fullName,
+                    email: f.selectedUser.email,
+                    password: res.temporaryPassword || f.password,
+                    loginUrl: window.location.origin + "/coach/"
+                  };
+                } else {
+                  this.modals.createCoach = false;
+                }
+                this.showToast("User promoted to coach");
+              }).catch((err) => {
+                this.showToast(err.message || "Failed to promote user", "error");
+              });
+            } else {
+              const user = this.users.find((u) => u.id === f.selectedUser.id);
+              if (user) user.role = "COACH";
+              const newCoach = {
+                id: "coach-" + Date.now(),
+                userId: f.selectedUser.id,
+                bio: f.bio || null,
+                specialties,
+                experienceYears: f.experienceYears ? Number(f.experienceYears) : null,
+                isAcceptingClients: !!f.isAcceptingClients,
+                createdAt: new Date().toISOString(),
+                user: { fullName: f.selectedUser.fullName, email: f.selectedUser.email, isActive: f.selectedUser.isActive, role: "COACH" }
+              };
+              this.coaches.unshift(newCoach);
+              this.persist();
               this.modals.createCoach = false;
-              this.showToast("Coach created in database");
+              this.showToast("User promoted to coach");
+            }
+          }
+        },
+
+        // ================= COACH CREDENTIALS =================
+        openCoachCredentials(c) {
+          this.editingCoach = c;
+          this.coachCredentialsForm = {
+            fullName: c.user?.fullName || "",
+            email: c.user?.email || "",
+            password: "",
+            phone: c.user?.phone || "",
+            showPassword: false,
+            loading: false
+          };
+          this.coachCredentialsResult = null;
+          this.modals.coachCredentials = true;
+        },
+
+        closeCoachCredentials() {
+          this.modals.coachCredentials = false;
+          this.coachCredentialsResult = null;
+          this.editingCoach = null;
+        },
+
+        generateCoachPassword() {
+          this.coachCredentialsForm.password = this.generateStrongPassword();
+          this.coachCredentialsForm.showPassword = true;
+        },
+
+        generateStrongPassword() {
+          const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+          let p = "Coach@";
+          for (let i = 0; i < 4; i++) p += chars[Math.floor(Math.random() * chars.length)];
+          p += "!" + Math.floor(10 + Math.random() * 90);
+          return p;
+        },
+
+        submitCoachCredentials() {
+          const c = this.editingCoach;
+          if (!c) return;
+          const f = this.coachCredentialsForm;
+          if (!f.email) {
+            this.showToast("Email address is required", "error");
+            return;
+          }
+          if (f.password && f.password.length < 6) {
+            this.showToast("Password must be at least 6 characters", "error");
+            return;
+          }
+
+          if (this.isAuthenticated) {
+            this.coachCredentialsForm.loading = true;
+            this.apiRequest("PUT", `/api/v1/admin/coaches/${c.id}/credentials`, {
+              email: f.email.trim(),
+              password: f.password ? f.password.trim() : undefined,
+              fullName: f.fullName ? f.fullName.trim() : undefined,
+              phone: f.phone ? f.phone.trim() : undefined
+            }).then((res) => {
+              this.coachCredentialsForm.loading = false;
+              this.coachCredentialsResult = {
+                fullName: res.fullName || f.fullName,
+                email: res.email || f.email,
+                password: res.temporaryPassword || f.password || "(Unchanged)",
+                loginUrl: window.location.origin + "/coach/"
+              };
+              this.fetchLiveData();
+              this.showToast("Coach credentials updated successfully");
             }).catch((err) => {
-              this.showToast(err.message || "Failed to create coach", "error");
+              this.coachCredentialsForm.loading = false;
+              this.showToast(err.message || "Failed to update credentials", "error");
             });
           } else {
-            const user = this.users.find((u) => u.id === f.selectedUser.id);
-            if (user) user.role = "COACH";
-            const newCoach = {
-              id: "coach-" + Date.now(),
-              userId: f.selectedUser.id,
-              bio: f.bio || null,
-              specialties,
-              experienceYears: f.experienceYears ? Number(f.experienceYears) : null,
-              isAcceptingClients: true,
-              createdAt: new Date().toISOString(),
-              user: { fullName: f.selectedUser.fullName, email: f.selectedUser.email, isActive: f.selectedUser.isActive },
+            if (c.user) {
+              c.user.email = f.email.trim();
+              if (f.fullName) c.user.fullName = f.fullName.trim();
+            }
+            this.coachCredentialsResult = {
+              fullName: f.fullName,
+              email: f.email.trim(),
+              password: f.password || "(Unchanged)",
+              loginUrl: window.location.origin + "/coach/"
             };
-            this.coaches.unshift(newCoach);
             this.persist();
-            this.modals.createCoach = false;
-            this.showToast("Coach created");
+            this.showToast("Coach credentials updated");
           }
+        },
+
+        copyCoachCredentials(creds) {
+          if (!creds) return;
+          const text = `FitNerve Coach Credentials:\nPortal: ${creds.loginUrl}\nEmail: ${creds.email}\nPassword: ${creds.password}`;
+          navigator.clipboard.writeText(text);
+          this.showToast("Credentials copied to clipboard");
         },
 
         // ================= EDIT COACH =================
@@ -2602,176 +3471,6 @@
             this.modals.editCoach = false;
             this.showToast("Coach updated");
           }
-        },
-
-        // ================= ASSIGN WORKOUTS =================
-        assignCandidateUsers() {
-          const search = this.assignForm.search.toLowerCase().trim();
-          return this.users
-            .filter((u) => u.role === "USER")
-            .filter((u) => !search || `${u.fullName} ${u.username ?? ""} ${u.email}`.toLowerCase().includes(search));
-        },
-
-        resetAssignForm() {
-          this.assignForm = {
-            search: "", selectedUser: null, coachUserId: "", mode: "CATALOG", selectedPlanId: null, note: "",
-            title: "", description: "", durationMinutes: "", difficulty: "BEGINNER", categoryKey: "GENERAL_FITNESS",
-            exercises: [{ name: "", muscleGroup: "", sets: "", reps: "" }]
-          };
-          this.assignFormError = "";
-        },
-
-        addAssignExerciseRow() {
-          this.assignForm.exercises.push({ name: "", muscleGroup: "", sets: "", reps: "" });
-        },
-
-        removeAssignExerciseRow(idx) {
-          if (this.assignForm.exercises.length > 1) this.assignForm.exercises.splice(idx, 1);
-        },
-
-        submitAssignWorkout() {
-          this.assignFormError = "";
-          const f = this.assignForm;
-
-          if (!f.selectedUser) {
-            this.assignFormError = "Pick who you're sending this workout to.";
-            return;
-          }
-
-          if (!f.coachUserId) {
-            this.assignFormError = "Select which coach this workout should come from.";
-            return;
-          }
-
-          if (f.mode === "CATALOG") {
-            if (!f.selectedPlanId) {
-              this.assignFormError = "Choose a workout from the library.";
-              return;
-            }
-            this.assignFormSaving = true;
-            this.apiRequest("POST", `/api/v1/workout-assignments/${f.selectedUser.id}/plan`, {
-              planId: f.selectedPlanId,
-              note: f.note.trim() || undefined,
-              asCoachUserId: f.coachUserId
-            }).then(() => {
-              this.showToast(`Sent to ${f.selectedUser.fullName}.`);
-              this.resetAssignForm();
-              this.fetchSentAssignments();
-            }).catch((err) => {
-              this.assignFormError = err.message || "Unable to assign this workout. Please try again.";
-            }).finally(() => {
-              this.assignFormSaving = false;
-            });
-            return;
-          }
-
-          if (!f.title.trim()) {
-            this.assignFormError = "Give the workout a title.";
-            return;
-          }
-          const validExercises = f.exercises.filter((row) => row.name.trim());
-          if (validExercises.length === 0) {
-            this.assignFormError = "Add at least one exercise.";
-            return;
-          }
-
-          this.assignFormSaving = true;
-          this.apiRequest("POST", `/api/v1/workout-assignments/${f.selectedUser.id}/custom`, {
-            title: f.title.trim(),
-            description: f.description.trim() || undefined,
-            durationMinutes: f.durationMinutes ? Number(f.durationMinutes) : undefined,
-            difficulty: f.difficulty,
-            categoryKey: f.categoryKey,
-            exercises: validExercises.map((row) => ({
-              name: row.name.trim(),
-              muscleGroup: row.muscleGroup.trim() || undefined,
-              sets: row.sets ? Number(row.sets) : undefined,
-              reps: row.reps ? Number(row.reps) : undefined
-            })),
-            asCoachUserId: f.coachUserId
-          }).then(() => {
-            this.showToast(`Sent to ${f.selectedUser.fullName}.`);
-            this.resetAssignForm();
-            this.fetchSentAssignments();
-          }).catch((err) => {
-            this.assignFormError = err.message || "Unable to assign this workout. Please try again.";
-          }).finally(() => {
-            this.assignFormSaving = false;
-          });
-        },
-
-        fetchSentAssignments() {
-          if (!this.isAuthenticated) return;
-          this.apiRequest("GET", "/api/v1/workout-assignments/mine?limit=100")
-            .then((res) => {
-              const plans = (res?.planAssignments?.items || []).map((a) => ({ ...a, type: "plan", title: a.plan?.title }));
-              const customs = (res?.customAssignments?.items || []).map((a) => ({ ...a, type: "custom" }));
-              this.sentAssignments = [...plans, ...customs].sort(
-                (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-              );
-            })
-            .catch((err) => {
-              this.showToast(err.message || "Failed to load sent workouts", "error");
-            });
-        },
-
-        openEditSentAssignment(a) {
-          this.editingAssignment = a;
-          if (a.type === "custom") {
-            this.editCustomForm = {
-              title: a.title || "",
-              description: a.description || "",
-              durationMinutes: a.durationMinutes ?? "",
-              difficulty: a.difficulty || "BEGINNER",
-              categoryKey: a.categoryKey || "GENERAL_FITNESS"
-            };
-          } else {
-            this.editAssignmentNote = a.note || "";
-          }
-          this.modals.editAssignment = true;
-        },
-
-        submitEditSentAssignment() {
-          const a = this.editingAssignment;
-          if (!a) return;
-
-          if (a.type === "custom") {
-            const f = this.editCustomForm;
-            if (!f.title.trim()) {
-              this.showToast("Title can't be empty", "error");
-              return;
-            }
-            this.apiRequest("PUT", `/api/v1/admin/db/tables/custom_workouts/${a.id}`, {
-              title: f.title.trim(),
-              description: f.description.trim() || null,
-              durationMinutes: f.durationMinutes ? Number(f.durationMinutes) : null,
-              difficulty: f.difficulty,
-              categoryKey: f.categoryKey
-            })
-              .then(() => {
-                this.showToast("Custom workout updated");
-                this.modals.editAssignment = false;
-                this.fetchSentAssignments();
-              })
-              .catch((err) => {
-                this.showToast(err.message || "Failed to update workout", "error");
-              });
-            return;
-          }
-
-          this.apiRequest("PATCH", `/api/v1/workout-assignments/${a.id}`, { note: this.editAssignmentNote.trim() || null })
-            .then(() => {
-              this.showToast("Note updated");
-              this.modals.editAssignment = false;
-              this.fetchSentAssignments();
-            })
-            .catch((err) => {
-              this.showToast(err.message || "Failed to update note", "error");
-            });
-        },
-
-        deleteSentAssignment(a) {
-          this.openConfirm("delete-assignment", a);
         },
 
         // ================= UTILITIES =================

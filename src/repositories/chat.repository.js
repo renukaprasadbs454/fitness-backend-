@@ -10,7 +10,7 @@ const chatRepository = {
     prisma.chatRoom.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, fullName: true, profile: { select: { profileImageUrl: true } } } },
+        user: { select: { id: true, fullName: true, isActive: true, assignedCoachId: true, profile: { select: { profileImageUrl: true } } } },
         coach: {
           select: {
             id: true,
@@ -39,10 +39,50 @@ const chatRepository = {
       where: { coachId },
       orderBy: { lastMessageAt: "desc" },
       include: {
-        user: { select: { id: true, fullName: true, profile: { select: { profileImageUrl: true } } } },
+        user: { select: { id: true, fullName: true, isActive: true, assignedCoachId: true, profile: { select: { profileImageUrl: true } } } },
         messages: { orderBy: { createdAt: "desc" }, take: 1 }
       }
     }),
+
+  // Head coach oversight: every conversation on the platform.
+  listAllRooms: () =>
+    prisma.chatRoom.findMany({
+      orderBy: { lastMessageAt: "desc" },
+      include: {
+        user: { select: { id: true, fullName: true, profile: { select: { profileImageUrl: true } } } },
+        coach: { select: { id: true, userId: true, user: { select: { fullName: true } } } },
+        messages: { orderBy: { createdAt: "desc" }, take: 1 }
+      }
+    }),
+
+  // Sessions that qualify the user for a chat with a coach: booked or completed, never cancelled.
+  qualifyingSessions: (userId) =>
+    prisma.appointment.findMany({
+      where: { userId, status: { in: ["PENDING", "CONFIRMED", "COMPLETED"] } },
+      select: { coachId: true, createdAt: true }
+    }),
+
+  // The same sessions seen from a coach: per client, when their latest qualifying one was booked.
+  latestQualifyingSessionByClient: (coachId) =>
+    prisma.appointment.groupBy({
+      by: ["userId"],
+      where: { coachId, status: { in: ["PENDING", "CONFIRMED", "COMPLETED"] } },
+      _max: { createdAt: true }
+    }),
+
+  // Rooms the user was swapped away from, with when that happened.
+  closedRoomsForUser: (userId) =>
+    prisma.chatRoom.findMany({ where: { userId, closedForUserAt: { not: null } }, select: { coachId: true, closedForUserAt: true } }),
+
+  // Clients who were swapped away from this coach, with when that happened.
+  closedRoomsForCoach: (coachId) =>
+    prisma.chatRoom.findMany({ where: { coachId, closedForUserAt: { not: null } }, select: { userId: true, closedForUserAt: true } }),
+
+  closeRoomForUser: (userId, coachId) =>
+    prisma.chatRoom.updateMany({ where: { userId, coachId }, data: { closedForUserAt: new Date() } }),
+
+  hasMessageFrom: async (roomId, senderId, body) =>
+    Boolean(await prisma.chatMessage.findFirst({ where: { roomId, senderId, body }, select: { id: true } })),
 
   touchRoom: (id, when) => prisma.chatRoom.update({ where: { id }, data: { lastMessageAt: when } }),
 

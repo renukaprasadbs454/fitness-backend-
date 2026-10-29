@@ -46,9 +46,11 @@ const env = {
   otp: {
     expiresMin: parseInt(process.env.OTP_EXPIRES_MIN || "10", 10),
     maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || "5", 10),
-    // TEMPORARY escape hatch: when set, this code is accepted for ANY account in
-    // place of the emailed one. Leave unset (the default) to disable it.
-    bypassCode: (process.env.OTP_BYPASS_CODE || "").trim()
+    // Fixed OTP bypasses are forbidden in production.
+    bypassCode: process.env.NODE_ENV === "production" ? "" : (process.env.OTP_BYPASS_CODE || "").trim(),
+    // When "true", client accounts must verify their email before they can sign in;
+    // signing in unverified sends a fresh code instead. Coaches/admins are exempt.
+    requireVerifiedLogin: process.env.REQUIRE_EMAIL_VERIFICATION === "true"
   },
 
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || "12", 10),
@@ -60,7 +62,8 @@ const env = {
 
   rateLimit: {
     windowMin: parseInt(process.env.RATE_LIMIT_WINDOW_MIN || "15", 10),
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100", 10),
+    // One app screen can fire ~8 requests, and people on the same Wi-Fi share an IP.
+    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "300", 10),
     authMaxRequests: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || "10", 10)
   },
 
@@ -114,7 +117,13 @@ const env = {
     webClientSecret: process.env.GOOGLE_WEB_CLIENT_SECRET || "",
     scopes: process.env.GOOGLE_CALENDAR_SCOPES || "https://www.googleapis.com/auth/calendar.readonly",
     // 32-byte key, hex-encoded (64 hex chars) — generate with `openssl rand -hex 32`.
-    tokenEncryptionKey: process.env.GOOGLE_TOKEN_ENCRYPTION_KEY || ""
+    tokenEncryptionKey: process.env.GOOGLE_TOKEN_ENCRYPTION_KEY || "",
+    // Platform Google account used to create one Google Meet link per session.
+    // The redirect URI must be listed on the Web OAuth client in Google Cloud;
+    // when unset it is derived from the request host.
+    meetRedirectUri: process.env.GOOGLE_MEET_REDIRECT_URI || "",
+    // Email the user and coach a calendar invite for each generated meeting.
+    meetSendInvites: process.env.GOOGLE_MEET_SEND_INVITES !== "false"
   },
 
   cron: {

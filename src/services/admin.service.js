@@ -4,6 +4,7 @@ const coachRepository = require("../repositories/coach.repository");
 const adminRepository = require("../repositories/admin.repository");
 const ApiError = require("../utils/ApiError");
 const { hashPassword } = require("../utils/password");
+const { generateUniqueUsername } = require("../utils/username");
 const { parsePagination, buildMeta } = require("../utils/pagination");
 const { toIstIsoString } = require("../utils/timezone");
 
@@ -93,11 +94,45 @@ async function changeUserRole(adminId, id, role) {
     throw ApiError.badRequest("You cannot demote your own admin account");
   }
   const updated = await userRepository.updateRole(id, role);
+  // Only plain users are clients — drop the assignment if they stop being one.
+  if (role !== "USER" && existing.assignedCoachId) {
+    await userRepository.setAssignedCoach(id, null);
+  }
   await adminRepository.createAuditLog(adminId, "CHANGE_ROLE", "USER", id, {
     from: existing.role,
     to: role
   });
   return updated;
+}
+
+/** Assigns a user to a coach (or unassigns with coachId = null). One coach per user. */
+async function assignCoach(adminId, userId, coachId) {
+  const user = await userRepository.findById(userId);
+  if (!user) throw ApiError.notFound("User not found");
+  if (user.role !== "USER") throw ApiError.badRequest("Only regular users can be assigned to a coach");
+
+  if (coachId) {
+    const coach = await coachRepository.findById(coachId);
+    if (!coach) throw ApiError.notFound("Coach not found");
+    if (coach.userId === userId) throw ApiError.badRequest("A user cannot be their own coach");
+  }
+
+  if ((user.assignedCoachId ?? null) === (coachId ?? null)) {
+    return userRepository.setAssignedCoach(userId, coachId ?? null); // no-op, nothing to audit
+  }
+
+  const updated = await userRepository.setAssignedCoach(userId, coachId ?? null);
+  await adminRepository.createAuditLog(adminId, "ASSIGN_COACH", "USER", userId, {
+    from: user.assignedCoachId ?? null,
+    to: coachId ?? null
+  });
+  return updated;
+}
+
+async function listCoachClients(coachId) {
+  const coach = await coachRepository.findById(coachId);
+  if (!coach) throw ApiError.notFound("Coach not found");
+  return userRepository.listClientsOfCoach(coachId);
 }
 
 async function resetUserPassword(adminId, id, newPassword) {
@@ -115,6 +150,29 @@ async function resetUserPassword(adminId, id, newPassword) {
 
   // Returned once, out-of-band — never persisted or logged in plaintext elsewhere.
   return { userId: id, temporaryPassword: tempPassword };
+}
+
+// Admin creates an account directly. It's marked verified (the admin vouches for the
+// address) and the temporary password is returned once so the admin can hand it over.
+async function createUser(adminId, { fullName, email, phone, role, password }) {
+  if (await userRepository.findByEmail(email)) throw ApiError.conflict("An account with this email already exists");
+  if (phone && (await userRepository.findByPhone(phone))) throw ApiError.conflict("An account with this phone number already exists");
+
+  const tempPassword = password || crypto.randomBytes(9).toString("base64url");
+  const user = await userRepository.create({
+    fullName,
+    email,
+    phone,
+    passwordHash: await hashPassword(tempPassword),
+    role,
+    username: await generateUniqueUsername(email),
+    isEmailVerified: true
+  });
+  await userRepository.createProfile(user.id, {});
+  if (role === "COACH") await coachRepository.create({ userId: user.id, specialties: [] });
+
+  await adminRepository.createAuditLog(adminId, "CREATE_USER", "USER", user.id, { role, generated: !password });
+  return { user: await userRepository.findById(user.id), temporaryPassword: tempPassword };
 }
 
 async function deleteUser(adminId, id) {
@@ -138,21 +196,145 @@ async function listCoaches(query) {
   return { items, meta: buildMeta(page, limit, total) };
 }
 
-/** Promotes an existing user to COACH and creates/updates their Coach profile. */
-async function createCoach(adminId, { userId, ...coachData }) {
-  const user = await userRepository.findById(userId);
-  if (!user) throw ApiError.notFound("User not found");
+/** Creates a new coach (with user account & credentials) OR promotes an existing user to COACH. */
+async function createCoach(adminId, data) {
+  const { userId, fullName, email, password, phone, bio, specialties = [], experienceYears, isAcceptingClients = true } = data;
 
-  let coach = await coachRepository.findByUserId(userId);
-  if (user.role !== "COACH") {
-    await userRepository.updateRole(userId, "COACH");
+  if (userId) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw ApiError.notFound("User not found");
+
+    if (user.role !== "COACH") {
+      await userRepository.updateRole(userId, "COACH");
+    }
+
+    let tempPassword = null;
+    if (password && password.trim()) {
+      tempPassword = password.trim();
+      const passwordHash = await hashPassword(tempPassword);
+      await userRepository.updatePassword(userId, passwordHash);
+      await userRepository.revokeAllRefreshTokens(userId);
+    }
+
+    let coach = await coachRepository.findByUserId(userId);
+    coach = coach
+      ? await coachRepository.update(coach.id, { bio, specialties, experienceYears, isAcceptingClients })
+      : await coachRepository.create({ userId, bio, specialties, experienceYears, isAcceptingClients });
+
+    await adminRepository.createAuditLog(adminId, "CREATE_COACH", "COACH", coach.id, { userId });
+    const fullCoach = await coachRepository.findById(coach.id);
+    return { ...fullCoach, temporaryPassword: tempPassword };
   }
-  coach = coach
-    ? await coachRepository.update(coach.id, coachData)
-    : await coachRepository.create({ userId, specialties: [], ...coachData });
 
-  await adminRepository.createAuditLog(adminId, "CREATE_COACH", "COACH", coach.id, { userId });
-  return coach;
+  // Brand new coach with credentials
+  const cleanEmail = email.trim().toLowerCase();
+  if (await userRepository.findByEmail(cleanEmail)) {
+    throw ApiError.conflict("An account with this email already exists");
+  }
+  const cleanPhone = phone ? phone.trim() : null;
+  if (cleanPhone && (await userRepository.findByPhone(cleanPhone))) {
+    throw ApiError.conflict("An account with this phone number already exists");
+  }
+
+  const tempPassword = password && password.trim() ? password.trim() : ("Coach@" + crypto.randomBytes(3).toString("hex") + "!");
+  const username = await generateUniqueUsername(cleanEmail);
+  const user = await userRepository.create({
+    fullName: fullName.trim(),
+    email: cleanEmail,
+    phone: cleanPhone,
+    passwordHash: await hashPassword(tempPassword),
+    role: "COACH",
+    username,
+    isEmailVerified: true
+  });
+
+  await userRepository.createProfile(user.id, {});
+  const coach = await coachRepository.create({
+    userId: user.id,
+    bio: bio || null,
+    specialties: Array.isArray(specialties) ? specialties : [],
+    experienceYears: experienceYears ?? null,
+    isAcceptingClients: isAcceptingClients ?? true
+  });
+
+  await adminRepository.createAuditLog(adminId, "CREATE_COACH", "COACH", coach.id, {
+    userId: user.id,
+    email: cleanEmail,
+    generatedPassword: !password
+  });
+
+  const fullCoach = await coachRepository.findById(coach.id);
+  return { ...fullCoach, temporaryPassword: tempPassword };
+}
+
+/** Updates a coach's login credentials (email, password, full name, phone) and revokes old sessions. */
+async function updateCoachCredentials(adminId, id, { email, password, fullName, phone }) {
+  const coach = await coachRepository.findById(id);
+  if (!coach) throw ApiError.notFound("Coach not found");
+
+  const user = await userRepository.findById(coach.userId);
+  if (!user) throw ApiError.notFound("Underlying user account not found");
+
+  const updates = {};
+
+  if (fullName && fullName.trim() && fullName.trim() !== user.fullName) {
+    updates.fullName = fullName.trim();
+  }
+
+  if (email && email.trim()) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail !== user.email.toLowerCase()) {
+      const existingEmail = await userRepository.findByEmail(cleanEmail);
+      if (existingEmail && existingEmail.id !== user.id) {
+        throw ApiError.conflict("An account with this email already exists");
+      }
+      updates.email = cleanEmail;
+    }
+  }
+
+  if (phone !== undefined) {
+    if (phone && phone.trim()) {
+      const cleanPhone = phone.trim();
+      if (cleanPhone !== (user.phone || "")) {
+        const existingPhone = await userRepository.findByPhone(cleanPhone);
+        if (existingPhone && existingPhone.id !== user.id) {
+          throw ApiError.conflict("An account with this phone number already exists");
+        }
+        updates.phone = cleanPhone;
+      }
+    } else if (phone === null || phone === "") {
+      updates.phone = null;
+    }
+  }
+
+  let tempPassword = null;
+  if (password && password.trim()) {
+    tempPassword = password.trim();
+    const passwordHash = await hashPassword(tempPassword);
+    await userRepository.updatePassword(user.id, passwordHash);
+    await userRepository.revokeAllRefreshTokens(user.id);
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await userRepository.updateBasicInfo(user.id, updates);
+  }
+
+  await adminRepository.createAuditLog(adminId, "UPDATE_COACH", "COACH", id, {
+    subAction: "UPDATE_CREDENTIALS",
+    userId: user.id,
+    updatedFields: Object.keys(updates),
+    passwordChanged: Boolean(tempPassword)
+  });
+
+  const updatedUser = await userRepository.findById(user.id);
+  return {
+    coachId: id,
+    userId: user.id,
+    fullName: updatedUser.fullName,
+    email: updatedUser.email,
+    phone: updatedUser.phone,
+    temporaryPassword: tempPassword
+  };
 }
 
 async function updateCoach(adminId, id, data) {
@@ -200,7 +382,15 @@ async function listPayments(query) {
 // ── Dynamic Database Schema & Table Explorer (Prisma Studio integration) ──
 
 const prisma = require("../database/prismaClient");
-const { getDatabaseSchema } = require("../utils/dbIntrospection");
+const { getDatabaseSchema: getFullSchema } = require("../utils/dbIntrospection");
+
+// Encrypted OAuth tokens for the platform Google account are not something to
+// browse or hand-edit; the integration is managed from its own admin screen.
+const EXPLORER_HIDDEN_MODELS = ["PlatformIntegration"];
+
+function getDatabaseSchema() {
+  return getFullSchema().filter((m) => !EXPLORER_HIDDEN_MODELS.includes(m.name));
+}
 const { resolveRelationLabels, getRelationOptions } = require("../utils/dbRelationLabels");
 
 async function getModelData(modelName, query = {}) {
@@ -342,11 +532,15 @@ module.exports = {
   updateUser,
   setUserActive,
   changeUserRole,
+  assignCoach,
+  listCoachClients,
   resetUserPassword,
+  createUser,
   deleteUser,
   listCoaches,
   createCoach,
   updateCoach,
+  updateCoachCredentials,
   deleteCoach,
   listAuditLogs,
   listPayments,

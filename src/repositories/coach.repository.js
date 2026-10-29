@@ -44,21 +44,30 @@ const coachRepository = {
       create: { coachId, ...data }
     }),
 
+  findAvailabilitySlot: (id) => prisma.coachAvailability.findUnique({ where: { id } }),
+
+  updateAvailabilitySlot: (id, data) => prisma.coachAvailability.update({ where: { id }, data }),
+
+  deleteAvailabilitySlot: (id) => prisma.coachAvailability.delete({ where: { id } }),
+
   listAvailability: (coachId) =>
     prisma.coachAvailability.findMany({ where: { coachId }, orderBy: { dayOfWeek: "asc" } }),
 
   // ── Appointments booked with this coach (as the coach, not the booker) ──
   listAppointmentsForCoach: (coachId, { skip, take, status }) =>
     prisma.appointment.findMany({
-      where: { coachId, status: status || undefined },
-      include: { user: { select: { id: true, fullName: true, username: true, email: true } } },
+      where: { coachId: coachId || undefined, status: status || undefined },
+      include: {
+        user: { select: { id: true, fullName: true, username: true, email: true } },
+        coach: { include: { user: { select: { fullName: true, email: true } } } }
+      },
       orderBy: { scheduledAt: "desc" },
       skip,
       take
     }),
 
   countAppointmentsForCoach: (coachId, status) =>
-    prisma.appointment.count({ where: { coachId, status: status || undefined } }),
+    prisma.appointment.count({ where: { coachId: coachId || undefined, status: status || undefined } }),
 
   // ── Admin ──────────────────────────────────────────────
   adminList: ({ skip, take, search, sortBy = "createdAt", sortOrder = "desc" }) =>
@@ -74,7 +83,8 @@ const coachRepository = {
           }
         : undefined,
       include: {
-        user: { select: { id: true, fullName: true, username: true, email: true, isActive: true, role: true } }
+        user: { select: { id: true, fullName: true, username: true, email: true, isActive: true, role: true } },
+        _count: { select: { clients: true } }
       },
       skip,
       take,

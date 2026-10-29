@@ -4,7 +4,7 @@ const ApiResponse = require("../utils/ApiResponse");
 const httpStatus = require("../constants/httpStatus");
 
 const searchUsers = asyncHandler(async (req, res) => {
-  const users = await assignedWorkoutService.searchUsers(req.user.id, req.query.search);
+  const users = await assignedWorkoutService.searchUsers(req.user.id, req.query.search, req.user.role);
   return ApiResponse.success(res, httpStatus.OK, "Users retrieved", users);
 });
 
@@ -41,7 +41,19 @@ const updateAssignedWorkoutPlan = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Assigned workout updated", assignment);
 });
 
+const updateCustomAssignment = asyncHandler(async (req, res) => {
+  const workout = await assignedWorkoutService.updateCustomAssignment(req.user.id, req.params.id, req.body);
+  return ApiResponse.success(res, httpStatus.OK, "Assigned workout updated", workout);
+});
+
+const removeCustomAssignment = asyncHandler(async (req, res) => {
+  await assignedWorkoutService.removeCustomAssignment(req.user.id, req.params.id);
+  return ApiResponse.success(res, httpStatus.OK, "Assigned workout removed", null);
+});
+
 module.exports = {
+  updateCustomAssignment,
+  removeCustomAssignment,
   searchUsers,
   assignWorkoutPlan,
   assignCustomWorkout,

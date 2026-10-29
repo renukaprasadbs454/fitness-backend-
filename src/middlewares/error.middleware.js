@@ -24,6 +24,9 @@ function normalizeError(err) {
   }
 
   if (err.name === "MulterError") {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return new ApiError(413, `That image is too large. The maximum size is ${env.storage.maxUploadSizeMb} MB.`);
+    }
     return ApiError.badRequest(`Upload error: ${err.message}`);
   }
 
@@ -46,6 +49,7 @@ function errorHandler(err, req, res, next) {
   res.status(apiError.statusCode || httpStatus.INTERNAL_SERVER_ERROR).json({
     success: false,
     message: apiError.message,
+    code: apiError.code,
     details: apiError.details && apiError.details.length ? apiError.details : undefined,
     stack: env.nodeEnv === "development" ? err.stack : undefined
   });

@@ -1,8 +1,9 @@
 const prisma = require("../database/prismaClient");
 
 const includeShape = {
-  coach: { include: { user: { select: { fullName: true } } } },
-  user: { select: { fullName: true, email: true } }
+  // Emails are needed to invite both people to a generated Google Meet event.
+  coach: { include: { user: { select: { fullName: true, email: true } } } },
+  user: { select: { id: true, fullName: true, email: true } }
 };
 
 const appointmentRepository = {
@@ -44,6 +45,25 @@ const appointmentRepository = {
       }
     }),
 
+  // Sessions per client, optionally only with one coach: { userId -> { total, upcoming } }.
+  countsByClient: async (userIds, coachId) => {
+    if (!userIds.length) return new Map();
+    const base = { userId: { in: userIds }, ...(coachId ? { coachId } : {}) };
+    const [all, upcoming] = await Promise.all([
+      prisma.appointment.groupBy({ by: ["userId"], where: base, _count: { _all: true } }),
+      prisma.appointment.groupBy({
+        by: ["userId"],
+        where: { ...base, status: { in: ["PENDING", "CONFIRMED"] }, scheduledAt: { gte: new Date() } },
+        _count: { _all: true }
+      })
+    ]);
+    const counts = new Map(all.map((row) => [row.userId, { total: row._count._all, upcoming: 0 }]));
+    upcoming.forEach((row) => {
+      if (counts.has(row.userId)) counts.get(row.userId).upcoming = row._count._all;
+    });
+    return counts;
+  },
+
   updateStatus: (id, status) =>
     prisma.appointment.update({ where: { id }, data: { status }, include: includeShape }),
 
@@ -52,7 +72,9 @@ const appointmentRepository = {
       where: { id },
       data: {
         scheduledAt,
-        durationMinutes: durationMinutes ?? undefined
+        durationMinutes: durationMinutes ?? undefined,
+        // A moved session needs a fresh reminder for its new time.
+        reminderSentAt: null
       },
       include: includeShape
     }),
@@ -68,6 +90,19 @@ const appointmentRepository = {
     }),
 
   remove: (id) => prisma.appointment.delete({ where: { id } }),
+
+  upcomingForUserWithCoach: (userId, coachId) =>
+    prisma.appointment.findMany({
+      where: { userId, coachId, status: { in: ["PENDING", "CONFIRMED"] }, scheduledAt: { gte: new Date() } },
+      include: includeShape
+    }),
+
+  updateMeeting: (id, { meetingLink, meetingProvider, meetingEventId }) =>
+    prisma.appointment.update({
+      where: { id },
+      data: { meetingLink, meetingProvider, meetingEventId },
+      include: includeShape
+    }),
 
   // ── Reminders (Phase 3) ─────────────────────────────────
   dueForReminder: (windowStart, windowEnd) =>

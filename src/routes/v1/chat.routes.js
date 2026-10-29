@@ -19,10 +19,12 @@ const schemas = require("../../validators/chat.validator");
  *     summary: List the current user's chat rooms (most recent first)
  *     tags: [Chat]
  *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - { in: query, name: scope, schema: { type: string, enum: [mine, all] }, description: "Head coach only: all = every coach's conversations" }
  *     responses:
  *       200: { description: Chat rooms retrieved }
  */
-router.get("/rooms", authenticate, chatController.listRooms);
+router.get("/rooms", authenticate, validate(schemas.listRooms), chatController.listRooms);
 
 /**
  * @swagger
@@ -42,6 +44,10 @@ router.get("/rooms", authenticate, chatController.listRooms);
  *               participantId:
  *                 type: string
  *                 description: Coach id (if caller is a USER) or User id (if caller is a COACH)
+ *               coachId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Head coach only - open the conversation for this coach instead of yourself
  *     responses:
  *       200: { description: Chat room ready }
  */

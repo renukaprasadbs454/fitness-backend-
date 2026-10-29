@@ -22,7 +22,9 @@ async function runAppointmentReminderSweep() {
         appt.userId,
         "APPOINTMENT_REMINDER",
         "Upcoming appointment",
-        `${appt.title} with ${appt.coach?.user?.fullName || "your coach"} in about ${minutesUntil} min`,
+        `${appt.title} with ${appt.coach?.user?.fullName || "your coach"} in about ${minutesUntil} min${
+          appt.meetingLink ? ". Open the app to join the call." : ""
+        }`,
         { data: { appointmentId: appt.id } }
       );
       await appointmentRepository.markReminded(appt.id);

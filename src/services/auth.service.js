@@ -38,7 +38,8 @@ async function issueOtp(userId, purpose, email) {
     purpose,
     expiresAt: new Date(Date.now() + env.otp.expiresMin * 60 * 1000)
   });
-  logger.info(`[otp] (dev) ${purpose} OTP for ${email}: ${code}`);
+  // Never in production: anyone who can read the server logs could use the code.
+  if (env.nodeEnv !== "production") logger.info(`[otp] (dev) ${purpose} OTP for ${email}: ${code}`);
 
   const copy = OTP_EMAIL_COPY[purpose];
   const delivery = await sendEmail({
@@ -58,7 +59,7 @@ async function issueOtp(userId, purpose, email) {
   // Outside production that is fine — the code is logged above and returned in the
   // API response — but in production a caller must never be told a code was sent
   // when it wasn't, or the user waits forever for an email that never arrives.
-  if (!delivery.sent && env.nodeEnv === "production" && !env.otp.bypassCode) {
+  if (!delivery.sent && env.nodeEnv === "production") {
     throw ApiError.internal("We couldn't send your verification email. Please try again in a moment.");
   }
 
@@ -139,6 +140,13 @@ async function login({ email, password }, ip) {
 
   const isMatch = await comparePassword(password, user.passwordHash);
   if (!isMatch) throw ApiError.unauthorized("Invalid email or password");
+
+  if (env.otp.requireVerifiedLogin && user.role === "USER" && !user.isEmailVerified) {
+    await issueOtp(user.id, "REGISTRATION", user.email);
+    const err = ApiError.forbidden("Please verify your email first. We've sent a new code to your inbox.");
+    err.code = "EMAIL_NOT_VERIFIED";
+    throw err;
+  }
 
   await userRepository.updateLastLogin(user.id);
   const tokens = await tokenService.issueTokenPair(user, ip);

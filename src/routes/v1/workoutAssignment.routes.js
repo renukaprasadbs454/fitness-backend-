@@ -8,14 +8,14 @@ const schemas = require("../../validators/workoutAssignment.validator");
  * @swagger
  * tags:
  *   name: WorkoutAssignments
- *   description: Any user sending a workout to another user
+ *   description: Coaches (to their assigned users) and admins (to anyone) sending a workout to a user
  */
 
 /**
  * @swagger
  * /workout-assignments/search-users:
  *   get:
- *     summary: Search other users to assign a workout to
+ *     summary: Search users to assign a workout to (coaches see only their assigned users; admins see all)
  *     tags: [WorkoutAssignments]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
@@ -77,6 +77,53 @@ router.get(
   validate(schemas.listMyAssignedWorkouts),
   workoutAssignmentController.listMyAssignedWorkouts
 );
+
+/**
+ * @swagger
+ * /workout-assignments/custom/{id}:
+ *   patch:
+ *     summary: Edit a custom workout you assigned (title, details and/or the full exercise list)
+ *     tags: [WorkoutAssignments]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title: { type: string }
+ *               description: { type: string, nullable: true }
+ *               durationMinutes: { type: integer, nullable: true }
+ *               difficulty: { type: string, enum: [BEGINNER, INTERMEDIATE, ADVANCED] }
+ *               categoryKey: { type: string }
+ *               exercises:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name: { type: string }
+ *                     muscleGroup: { type: string }
+ *                     sets: { type: integer }
+ *                     reps: { type: integer }
+ *     responses:
+ *       200: { description: Assigned workout updated }
+ *   delete:
+ *     summary: Remove a custom workout you assigned
+ *     tags: [WorkoutAssignments]
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+ *     responses:
+ *       200: { description: Assigned workout removed }
+ */
+router.patch(
+  "/custom/:id",
+  authenticate,
+  validate(schemas.updateCustomAssignment),
+  workoutAssignmentController.updateCustomAssignment
+);
+router.delete("/custom/:id", authenticate, validate(schemas.idParam), workoutAssignmentController.removeCustomAssignment);
 
 /**
  * @swagger

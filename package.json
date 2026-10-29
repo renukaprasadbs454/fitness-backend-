@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon --watch src --watch .env -e js,json,env src/server.js",
+    "admin": "node scripts/open-admin.js",
+    "start:admin": "node scripts/open-admin.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",

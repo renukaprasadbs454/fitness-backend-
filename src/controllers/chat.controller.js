@@ -5,12 +5,12 @@ const httpStatus = require("../constants/httpStatus");
 const ApiError = require("../utils/ApiError");
 
 const openRoom = asyncHandler(async (req, res) => {
-  const room = await chatService.getOrCreateRoom(req.user, req.body.participantId);
+  const room = await chatService.getOrCreateRoom(req.user, req.body.participantId, { coachId: req.body.coachId });
   return ApiResponse.success(res, httpStatus.OK, "Chat room ready", room);
 });
 
 const listRooms = asyncHandler(async (req, res) => {
-  const rooms = await chatService.listMyRooms(req.user);
+  const rooms = await chatService.listMyRooms(req.user, { all: req.query.scope === "all" });
   return ApiResponse.success(res, httpStatus.OK, "Chat rooms retrieved", rooms);
 });
 

@@ -2,8 +2,13 @@ const { z } = require("zod");
 
 const openRoom = {
   body: z.object({
-    participantId: z.string().uuid()
+    participantId: z.string().uuid(),
+    coachId: z.string().uuid().optional() // head coach only: open the chat for this coach
   })
+};
+
+const listRooms = {
+  query: z.object({ scope: z.enum(["mine", "all"]).optional() })
 };
 
 const roomIdParam = {
@@ -26,4 +31,4 @@ const sendMessage = {
   })
 };
 
-module.exports = { openRoom, roomIdParam, listMessages, sendMessage };
+module.exports = { listRooms, openRoom, roomIdParam, listMessages, sendMessage };
