@@ -21,6 +21,7 @@ systemctl enable --now docker nginx
 # Preserve SSH access before enabling the firewall. SSH rules for common ports;
 # custom SSH ports must be opened manually before running this setup.
 ufw allow OpenSSH || true
+# Host Nginx owns public 80/443 and proxies this hostname to 127.0.0.1:8088.
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw --force enable

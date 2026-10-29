@@ -1,11 +1,11 @@
 # FitNerve VPS deployment (development environment)
 
-This deploys the API, admin/coach web portals, PostgreSQL, and reverse proxy at
+This deploys the API and admin/coach web portals, PostgreSQL, and reverse proxy at
 `https://api-fitnerve.kwiko.org`. It does not host the Expo user app SPA; that
-needs its own web host/domain or native app build. PostgreSQL and the API are private to the Docker network; only Nginx
-publishes ports 80/443. Persistent named volumes hold PostgreSQL, uploads, and
+needs its own web host/domain or native app build. PostgreSQL and the API are private to the Docker network. Nginx publishes
+only loopback port 8088 (HTTP); host Nginx terminates TLS on public 443 and proxies to 127.0.0.1:8088.
+PostgreSQL has no host port. Persistent named volumes hold PostgreSQL, uploads, and
 logs. `deploy.sh` never deletes volumes or runs a Docker prune.
-
 ## 1. DNS and VPS
 
 Create an `A` record `api-fitnerve.kwiko.org` pointing at the VPS public IPv4
@@ -87,46 +87,35 @@ and an allowed sender. Never commit either env file. Production forcibly ignores
 `OTP_BYPASS_CODE`; no fixed OTP is accepted. Failed or missing production SMTP
 configuration returns an error instead of pretending an OTP was delivered.
 
-## 3. Issue TLS certificate
+## 3. Nginx and TLS
 
-For initial issuance, use the HTTP-only Nginx config and bind host HTTPS to
-loopback temporarily so another service on the VPS cannot conflict:
+FitNerve binds only `127.0.0.1:8088`; Postgres has no host port. Check public listeners and install the supplied site as an additional host Nginx virtual host. Existing domains are left intact:
+
+```bash
+ss -ltnp | grep -E ':(80|443)\b' || true
+install -m 644 BACKEND/deploy/nginx/host-api-fitnerve.conf /etc/nginx/sites-available/api-fitnerve.kwiko.org
+ln -s /etc/nginx/sites-available/api-fitnerve.kwiko.org /etc/nginx/sites-enabled/api-fitnerve.kwiko.org
+nginx -t && systemctl reload nginx
+```
+
+After the HTTP-only site is active and DNS points to the VPS, create the
+certificate. Certbot adds the HTTPS server block to this site:
+
+```bash
+certbot --nginx -d api-fitnerve.kwiko.org --email YOUR_REAL_EMAIL --agree-tos --no-eff-email
+nginx -t && systemctl reload nginx
+```
+
+Deploy and verify through both the internal loopback and public HTTPS routes:
 
 ```bash
 cd /opt/fitnerve
-mkdir -p BACKEND/deploy/certbot/www BACKEND/deploy/certbot/conf
-FITNERVE_NGINX_CONF=./BACKEND/deploy/nginx/api-fitnerve.conf \
-NGINX_HTTPS_BIND=127.0.0.1:8443 \
-  docker compose --env-file .env.deploy \
-  -f BACKEND/docker-compose.prod.yml up -d --build
-```
-
-Request the certificate via HTTP-01:
-
-```bash
-docker compose --env-file .env.deploy \
-  -f BACKEND/docker-compose.prod.yml --profile certbot run --rm certbot \
-  certonly --webroot -w /var/www/certbot \
-  -d api-fitnerve.kwiko.org \
-  --email YOUR_REAL_EMAIL --agree-tos --no-eff-email
-```
-
-Switch to HTTPS Nginx and verify health:
-
-```bash
-sed -i 's#FITNERVE_NGINX_CONF=.*#FITNERVE_NGINX_CONF=./BACKEND/deploy/nginx/api-fitnerve-ssl.conf#' .env.deploy
-sed -i 's#NGINX_HTTPS_BIND=.*#NGINX_HTTPS_BIND=0.0.0.0:443#' .env.deploy
-docker compose --env-file .env.deploy \
-  -f BACKEND/docker-compose.prod.yml up -d
+./BACKEND/deploy.sh
+curl -fsS http://127.0.0.1:8088/api/v1/health
 curl -fsS https://api-fitnerve.kwiko.org/api/v1/health
 ```
 
-`deploy.sh` uses the TLS config by default, applies Prisma migrations, rebuilds
-services, and checks the public health endpoint through local Nginx on port 8088.
-For later certificate renewal, run the same Certbot webroot command with
-`renew`, then reload Nginx. Schedule it with a systemd timer/cron after checking
-`certbot renew --dry-run`.
-
+Certbot's system timer handles renewals; verify with `certbot renew --dry-run`.
 ## 4. SMTP/OTP verification
 
 The app sends email through Nodemailer using `SMTP_HOST`, `SMTP_PORT`,
@@ -136,31 +125,29 @@ without printing credentials:
 
 ```bash
 nc -vz smtp.your-provider.example 587
-docker compose --env-file .env.deploy -f BACKEND/docker-compose.prod.yml logs --tail=100 backend
+docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml logs --tail=100 backend
 ```
 
 Register with a real test mailbox, inspect the message and enter the received
 code. A successful API response alone is not proof of mailbox delivery.
 
-## 5. Update deployment after a code change
+## 5. Update deployment after a backend code change
 
-Keep the backend and frontend changes pushed to their configured branches. The
-backend deploy script updates backend branch `suhas-changes-3` and frontend
-branch `main` by default; override either before running if your release branches
-differ:
+Push the backend change to the configured backend branch. The deploy script
+updates backend branch `suhas-changes-3` by default; override it if needed:
 
 ```bash
 cd /opt/fitnerve
-FITNERVE_BRANCH=suhas-changes-3 FITNERVE_FRONTEND_BRANCH=suhas-changes ./BACKEND/deploy.sh
+FITNERVE_BRANCH=suhas-changes-3 ./BACKEND/deploy.sh
 ```
 
 Inspect status/logs and stop/start without removing persistent data:
 
 ```bash
-docker compose --env-file .env.deploy -f BACKEND/docker-compose.prod.yml ps
-docker compose --env-file .env.deploy -f BACKEND/docker-compose.prod.yml logs -f backend nginx postgres
-docker compose --env-file .env.deploy -f BACKEND/docker-compose.prod.yml down
-docker compose --env-file .env.deploy -f BACKEND/docker-compose.prod.yml up -d
+docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml ps
+docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml logs -f backend nginx postgres
+docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml down
+docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml up -d
 ```
 
 `down` preserves named volumes. Do not use `down -v` unless intentionally

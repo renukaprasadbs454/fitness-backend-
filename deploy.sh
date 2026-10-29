@@ -5,7 +5,7 @@ umask 077
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="${FITNERVE_DIR:-$ROOT_DIR}"
 BRANCH="${FITNERVE_BRANCH:-suhas-changes-3}"
-COMPOSE=(docker compose --env-file "$APP_DIR/.env.deploy" -f "$APP_DIR/BACKEND/docker-compose.prod.yml")
+COMPOSE=(docker compose --project-directory "$APP_DIR/BACKEND" --env-file "$APP_DIR/.env.deploy" -f "$APP_DIR/BACKEND/docker-compose.prod.yml")
 
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -15,10 +15,10 @@ FitNerve VPS deploy
   First install: copy this checkout to /opt/fitnerve, create /opt/fitnerve/.env.deploy
                  and /opt/fitnerve/BACKEND/.env.production, then run sudo ./BACKEND/deploy.sh
   Update:        sudo ./BACKEND/deploy.sh
-  Logs:          docker compose --env-file .env.deploy -f BACKEND/docker-compose.prod.yml logs -f
+  Logs:          docker compose --project-directory BACKEND --env-file .env.deploy -f BACKEND/docker-compose.prod.yml logs -f
 
-Environment overrides: FITNERVE_DIR, FITNERVE_BRANCH. This updates backend on the
-current branch and the frontend from its configured origin/main branch; it does
+Environment overrides: FITNERVE_DIR, FITNERVE_BRANCH.
+The script updates the backend branch and does
 not delete volumes or run a destructive Docker prune.
 HELP
   exit 0
@@ -53,16 +53,7 @@ git -C "$APP_DIR/BACKEND" fetch origin "$BRANCH"
 git -C "$APP_DIR/BACKEND" checkout "$BRANCH"
 git -C "$APP_DIR/BACKEND" pull --ff-only origin "$BRANCH"
 
-printf 'Updating frontend main...\n'
-FRONTEND_BRANCH="${FITNERVE_FRONTEND_BRANCH:-suhas-changes}"
-if [[ ! -d "$APP_DIR/FRONTEND/.git" ]]; then
-  git clone --branch "$FRONTEND_BRANCH" https://github.com/renukaprasadbs454/fitness-frontend.git "$APP_DIR/FRONTEND"
-fi
-git -C "$APP_DIR/FRONTEND" fetch origin "$FRONTEND_BRANCH"
-git -C "$APP_DIR/FRONTEND" checkout "$FRONTEND_BRANCH"
-git -C "$APP_DIR/FRONTEND" pull --ff-only origin "$FRONTEND_BRANCH"
-
-docker compose --env-file "$APP_DIR/.env.deploy" -f docker-compose.prod.yml config --quiet
+"${COMPOSE[@]}" config --quiet
 
 printf 'Building and starting PostgreSQL, API and Nginx...\n'
 "${COMPOSE[@]}" up -d --build --remove-orphans
