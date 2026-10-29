@@ -41,7 +41,7 @@ const logout = asyncHandler(async (req, res) => {
 
 const forgotPassword = asyncHandler(async (req, res) => {
   const result = await authService.forgotPassword(req.body.email);
-  const data = env.nodeEnv !== "production" ? result : null; // otpCode only surfaced outside prod
+  const data = env.nodeEnv !== "production" ? result : null; // Dev only; production never returns OTP values.
   return ApiResponse.success(
     res,
     httpStatus.OK,

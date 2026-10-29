@@ -95,7 +95,7 @@ async function searchUsers(currentUserId, search, callerRole) {
     const coach = await coachRepository.findByUserId(currentUserId);
     if (!coach) return [];
     if (coach.isHeadCoach) wide = true; // the head coach can pick any client
-    else assignedCoachId = coach.id; // other coaches only see their own assigned users
+    else assignedCoachId = coach.id; // other coaches only see active clients assigned to them
   } else if (callerRole !== "ADMIN") {
     throw ApiError.forbidden("Only coaches and admins can search users");
   }
@@ -106,7 +106,7 @@ async function searchUsers(currentUserId, search, callerRole) {
     assignedCoachId,
     role: wide ? "USER" : undefined
   });
-  return results.filter((u) => u.id !== currentUserId);
+  return results.filter((u) => u.id !== currentUserId && u.isActive !== false);
 }
 
 async function assignPlan(callerId, { userId, planId, note, scheduledAt, asCoachUserId }, callerRole) {

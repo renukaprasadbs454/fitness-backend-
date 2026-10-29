@@ -10,7 +10,7 @@ const chatRepository = {
     prisma.chatRoom.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, fullName: true, profile: { select: { profileImageUrl: true } } } },
+        user: { select: { id: true, fullName: true, isActive: true, assignedCoachId: true, profile: { select: { profileImageUrl: true } } } },
         coach: {
           select: {
             id: true,
@@ -39,7 +39,7 @@ const chatRepository = {
       where: { coachId },
       orderBy: { lastMessageAt: "desc" },
       include: {
-        user: { select: { id: true, fullName: true, profile: { select: { profileImageUrl: true } } } },
+        user: { select: { id: true, fullName: true, isActive: true, assignedCoachId: true, profile: { select: { profileImageUrl: true } } } },
         messages: { orderBy: { createdAt: "desc" }, take: 1 }
       }
     }),

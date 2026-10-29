@@ -4,7 +4,7 @@ const adminRepository = require("../repositories/admin.repository");
 const ApiError = require("../utils/ApiError");
 const { parsePagination, buildMeta } = require("../utils/pagination");
 const appointmentRepository = require("../repositories/appointment.repository");
-const chatService = require("./chat.service");
+const prisma = require("../database/prismaClient");
 const { hashPassword } = require("../utils/password");
 const { generateUniqueUsername } = require("../utils/username");
 
@@ -172,16 +172,19 @@ async function listMyClients(userId) {
   const coach = await coachRepository.findByUserId(userId);
   if (!coach) throw ApiError.notFound("Coach profile not found for this account");
 
-  const ids = coach.isHeadCoach ? undefined : [...(await chatService.eligibleClientIdsForCoach(coach.id))];
+  // A coach's active client list follows the current assignment only. Historical
+  // bookings and messages remain available to admins, not to a former coach.
+  const ids = coach.isHeadCoach ? undefined : await userRepository.listClientIdsOfCoach(coach.id);
   const users = ids && !ids.length ? [] : await userRepository.listClientsOverview(ids);
+  const activeUsers = users.filter((u) => u.isActive);
   const counts = await appointmentRepository.countsByClient(
-    users.map((u) => u.id),
+    activeUsers.map((u) => u.id),
     coach.isHeadCoach ? undefined : coach.id
   );
 
-  const clients = users.map((u) => {
+  const clients = activeUsers.map((u) => {
     const mine = u.assignedCoachId === coach.id;
-    const relation = mine ? "mine" : !coach.isHeadCoach ? "booked" : u.assignedCoachId ? "other" : "unassigned";
+    const relation = mine ? "mine" : coach.isHeadCoach ? u.assignedCoachId ? "other" : "unassigned" : "booked";
     const { total = 0, upcoming = 0 } = counts.get(u.id) || {};
     return {
       id: u.id,
@@ -212,12 +215,21 @@ async function listMyAppointments(userId, query) {
   if (!coach) throw ApiError.notFound("Coach profile not found for this account");
 
   const { page, limit, skip } = parsePagination(query);
-  // The head coach sees every coach's sessions (pass coachId to narrow to one).
+  // The head coach sees every coach's sessions. Other coaches see sessions for
+  // their active, currently assigned clients only.
   const scopeCoachId = coach.isHeadCoach ? query.coachId || undefined : coach.id;
-  const [items, total] = await Promise.all([
+  let [items, total] = await Promise.all([
     coachRepository.listAppointmentsForCoach(scopeCoachId, { skip, take: limit, status: query.status }),
     coachRepository.countAppointmentsForCoach(scopeCoachId, query.status)
   ]);
+  if (!coach.isHeadCoach) {
+    const clientIds = await userRepository.listClientIdsOfCoach(coach.id);
+    const activeIds = new Set((await userRepository.listClientsOverview(clientIds)).filter((u) => u.isActive).map((u) => u.id));
+    items = items.filter((a) => activeIds.has(a.userId));
+    total = await prisma.appointment.count({
+      where: { coachId: coach.id, userId: { in: [...activeIds] }, status: query.status || undefined }
+    });
+  }
   return { items, meta: buildMeta(page, limit, total) };
 }
 

@@ -32,6 +32,7 @@ function getTransporter() {
 async function sendEmail({ to, subject, html }) {
   if (!env.email.smtpHost || !env.email.smtpUser || !env.email.smtpPass) {
     logger.warn("[email] SMTP not configured — skipping real email send.");
+    if (env.nodeEnv === "production") throw new Error("SMTP is not configured; OTP email could not be delivered.");
     return { sent: false };
   }
 
@@ -47,6 +48,7 @@ async function sendEmail({ to, subject, html }) {
     return { sent: true, id: info.messageId };
   } catch (err) {
     logger.warn(`[email] Send threw: ${err.message}`);
+    if (env.nodeEnv === "production") throw new Error("SMTP delivery failed; OTP email could not be delivered.");
     return { sent: false };
   }
 }

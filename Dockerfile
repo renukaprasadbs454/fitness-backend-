@@ -21,7 +21,7 @@ COPY . .
 # Ensure storage uploads and logs directories exist
 RUN mkdir -p uploads logs
 
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 ENV PORT=5050
 
 EXPOSE 5050

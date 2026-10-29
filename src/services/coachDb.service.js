@@ -54,8 +54,8 @@ const NO_GENERIC_CREATE = ["ChatMessage", "CustomWorkoutExercise"];
 // them hand a row to, or take one from, someone outside their scope).
 const PROTECTED_UPDATE_FIELDS = ["id", "userId", "coachId"];
 
-// A coach's clients are the users an admin assigned to them plus anyone who
-// has booked a session with them. `ownerIds` adds the coach's own account so
+// A coach's clients are only the users currently assigned to them.
+// `ownerIds` adds the coach's own account so
 // their own notifications, preferences and profile rows are visible too.
 async function getCoachContext(coachUserId) {
   const coach = await coachRepository.findByUserId(coachUserId);
@@ -64,11 +64,11 @@ async function getCoachContext(coachUserId) {
   if (coach.isHeadCoach) {
     return { coachId: coach.id, coachUserId, isHeadCoach: true, clientIds: [], ownerIds: [], appointmentIds: [] };
   }
-  const [assignedIds, appointments] = await Promise.all([
-    userRepository.listClientIdsOfCoach(coach.id),
-    prisma.appointment.findMany({ where: { coachId: coach.id }, select: { id: true, userId: true } })
-  ]);
-  const clientIds = [...new Set([...assignedIds, ...appointments.map((a) => a.userId)])];
+  const assignedIds = await userRepository.listClientIdsOfCoach(coach.id);
+  const appointments = assignedIds.length
+    ? await prisma.appointment.findMany({ where: { coachId: coach.id, userId: { in: assignedIds } }, select: { id: true, userId: true } })
+    : [];
+  const clientIds = assignedIds;
   return {
     coachId: coach.id,
     coachUserId,

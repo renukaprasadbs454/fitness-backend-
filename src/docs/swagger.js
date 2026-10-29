@@ -55,7 +55,7 @@ const options = {
           required: ["email", "code", "newPassword"],
           properties: {
             email: { type: "string" },
-            code: { type: "string", example: "123456" },
+            code: { type: "string", example: "six-digit code delivered by email" },
             newPassword: { type: "string" }
           }
         },
@@ -64,7 +64,7 @@ const options = {
           required: ["email", "code"],
           properties: {
             email: { type: "string" },
-            code: { type: "string", example: "123456" }
+            code: { type: "string", example: "six-digit code delivered by email" }
           }
         },
         ResendOtpRequest: {

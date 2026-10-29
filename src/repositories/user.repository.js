@@ -182,6 +182,7 @@ const userRepository = {
   searchLite: ({ search, take = 20, assignedCoachId, role }) =>
     prisma.user.findMany({
       where: {
+        isActive: true,
         ...(assignedCoachId ? { assignedCoachId } : {}),
         ...(role ? { role } : {}),
         ...(search

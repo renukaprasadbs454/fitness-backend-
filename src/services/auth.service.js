@@ -59,7 +59,7 @@ async function issueOtp(userId, purpose, email) {
   // Outside production that is fine — the code is logged above and returned in the
   // API response — but in production a caller must never be told a code was sent
   // when it wasn't, or the user waits forever for an email that never arrives.
-  if (!delivery.sent && env.nodeEnv === "production" && !env.otp.bypassCode) {
+  if (!delivery.sent && env.nodeEnv === "production") {
     throw ApiError.internal("We couldn't send your verification email. Please try again in a moment.");
   }
 

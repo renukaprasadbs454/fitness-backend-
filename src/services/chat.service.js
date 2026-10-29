@@ -122,8 +122,14 @@ async function getOrCreateRoom(requester, otherPartyId, { coachId: chosenCoachId
   }
 
   let room = await chatRepository.findRoomByUserAndCoach(userId, coachId);
-  if (requester.role === "USER" && !(await chatEligibleCoachIds(userId)).has(coachId)) {
-    throw ApiError.forbidden("Book a session with this coach to start a chat.");
+  if (requester.role === "USER" || requester.role === "ADMIN") {
+    const user = await userRepository.findById(userId);
+    if (requester.role === "USER" && user?.assignedCoachId && user.assignedCoachId !== coachId) {
+      throw ApiError.forbidden("You can only chat with your currently assigned coach.");
+    }
+    if (requester.role === "USER" && !(await chatEligibleCoachIds(userId)).has(coachId)) {
+      throw ApiError.forbidden("Book a session with this coach to start a chat.");
+    }
   }
   if (!room) {
     // A coach can only start a *new* conversation with a user assigned to them.
@@ -141,7 +147,9 @@ async function listMyRooms(currentUser, { all = false } = {}) {
     const coach = await coachRepository.findByUserId(currentUser.id);
     if (!coach) return [];
     const viewAll = all && coach.isHeadCoach;
-    const rooms = viewAll ? await chatRepository.listAllRooms() : await chatRepository.listRoomsForCoach(coach.id);
+    const rooms = viewAll
+      ? await chatRepository.listAllRooms()
+      : (await chatRepository.listRoomsForCoach(coach.id)).filter((r) => coach.isHeadCoach || r.user?.isActive && r.user?.assignedCoachId === coach.id);
     return Promise.all(
       rooms.map(async (r) => ({
         ...toRoomSummaryDto(r, "COACH"),
@@ -177,6 +185,14 @@ async function assertParticipant(roomId, currentUser) {
 
   if (!isUserSide && !isCoachSide && !isOverseer) {
     throw ApiError.forbidden("You are not a participant in this chat room");
+  }
+  // A client can only use the currently assigned coach's room. This invalidates
+  // old room access immediately after reassignment, including direct API/socket use.
+  if (isUserSide && currentUser.role === "USER") {
+    const user = await userRepository.findById(currentUser.id);
+    if (room.closedForUserAt || !user?.assignedCoachId || user.assignedCoachId !== room.coachId) {
+      throw ApiError.forbidden("This chat is no longer available because your coach changed");
+    }
   }
   return { room, isUserSide, isParticipant: isUserSide || isCoachSide };
 }

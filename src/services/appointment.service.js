@@ -79,6 +79,13 @@ async function assertNoConflict(coachId, scheduledAt, durationMinutes, excludeAp
 async function create(userId, { coachId, title, scheduledAt, durationMinutes = 45, notes }, { onChatMessage } = {}) {
   const coach = await coachRepository.findById(coachId);
   if (!coach) throw ApiError.notFound("Coach not found");
+  const user = await userRepository.findById(userId);
+  if (user?.role === "USER" && user.assignedCoachId && user.assignedCoachId !== coachId) {
+    throw ApiError.forbidden("You can only book sessions with your assigned coach. Report a problem to request a change.");
+  }
+  if (user?.role === "USER" && !user.assignedCoachId) {
+    await userRepository.setAssignedCoach(userId, coachId);
+  }
 
   await assertNoConflict(coachId, scheduledAt, durationMinutes);
 
@@ -313,6 +320,9 @@ async function remove(userId, userRole, id) {
  * chats are listed only for coaches the user is assigned to or has an active session with.
  */
 async function releaseUpcomingSessions(userId, coachId, reason = "your coach was changed") {
+  // Close chat access first so the old coach is blocked even if later calendar
+  // or notification cleanup encounters an external service failure.
+  await chatRepository.closeRoomForUser(userId, coachId);
   const upcoming = await appointmentRepository.upcomingForUserWithCoach(userId, coachId);
   for (const appt of upcoming) {
     await appointmentRepository.updateStatus(appt.id, "CANCELLED");
@@ -335,7 +345,6 @@ async function releaseUpcomingSessions(userId, coachId, reason = "your coach was
     }
   }
   // Take the chat with that coach off the user's list (history is kept for if they return).
-  await chatRepository.closeRoomForUser(userId, coachId);
   return upcoming.length;
 }
 
@@ -346,7 +355,7 @@ async function schedulableClients(coachUserId) {
   const coach = await coachRepository.findByUserId(coachUserId);
   if (!coach) throw ApiError.forbidden("Coach profile not found for this account");
 
-  const ids = [...(await chatService.eligibleClientIdsForCoach(coach.id))];
+  const ids = coach.isHeadCoach ? [...(await chatService.eligibleClientIdsForCoach(coach.id))] : await userRepository.listClientIdsOfCoach(coach.id);
   const users = ids.length ? await userRepository.listClientsLiteByIds(ids) : [];
   return {
     clients: users.map(({ assignedCoachId, ...user }) => ({ ...user, assigned: assignedCoachId === coach.id })),
@@ -377,9 +386,8 @@ async function scheduleSessions(coachUserId, { userId, coachId, title, scheduled
   const client = await userRepository.findById(userId);
   if (!client || client.role !== "USER") throw ApiError.notFound("Client not found");
 
-  // The head coach can work with any client (as with workouts and chats). Other coaches only with
-  // clients who are currently theirs: assigned to them, or booked with them since any coach swap.
-  if (!caller.isHeadCoach && !(await chatService.chatEligibleCoachIds(userId)).has(coach.id)) {
+  // Regular coaches can schedule only for active clients currently assigned to them.
+  if (!caller.isHeadCoach && (client.assignedCoachId !== coach.id || !client.isActive)) {
     throw ApiError.forbidden("You can only schedule sessions with your own clients");
   }
 

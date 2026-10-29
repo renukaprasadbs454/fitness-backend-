@@ -46,9 +46,8 @@ const env = {
   otp: {
     expiresMin: parseInt(process.env.OTP_EXPIRES_MIN || "10", 10),
     maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || "5", 10),
-    // TEMPORARY escape hatch: when set, this code is accepted for ANY account in
-    // place of the emailed one. Leave unset (the default) to disable it.
-    bypassCode: (process.env.OTP_BYPASS_CODE || "").trim(),
+    // Fixed OTP bypasses are forbidden in production.
+    bypassCode: process.env.NODE_ENV === "production" ? "" : (process.env.OTP_BYPASS_CODE || "").trim(),
     // When "true", client accounts must verify their email before they can sign in;
     // signing in unverified sends a fresh code instead. Coaches/admins are exempt.
     requireVerifiedLogin: process.env.REQUIRE_EMAIL_VERIFICATION === "true"
