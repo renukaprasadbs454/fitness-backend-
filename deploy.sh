@@ -33,17 +33,22 @@ docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 plugin is requ
 [[ -f "$APP_DIR/.env.production" ]] || fail "Missing $APP_DIR/.env.production"
 cd "$APP_DIR"
 
-grep -q '^POSTGRES_DB=.' "$APP_DIR/.env.deploy" || fail "Set POSTGRES_DB in .env.deploy"
-grep -q '^POSTGRES_USER=.' "$APP_DIR/.env.deploy" || fail "Set POSTGRES_USER in .env.deploy"
-grep -q '^POSTGRES_PASSWORD=.' "$APP_DIR/.env.deploy" || fail "Set POSTGRES_PASSWORD in .env.deploy"
-for name in JWT_ACCESS_SECRET JWT_REFRESH_SECRET SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS EMAIL_FROM CORS_ALLOWED_ORIGINS; do
-  grep -Eq "^${name}=.+" "$APP_DIR/.env.production" || fail "Set ${name} in .env.production"
+env_value() {
+  local file="$1" name="$2"
+  awk -F= -v key="$name" '$1 ~ "^[[:space:]]*" key "[[:space:]]*$" { sub(/^[^=]*=[[:space:]]*/, ""); value=$0 } END { sub(/^["'"'']/, "", value); sub(/["'"''][[:space:]]*$/, "", value); gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); print value }' "$file"
+}
+
+for name in POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD; do
+  [[ -n "$(env_value "$APP_DIR/.env.deploy" "$name")" ]] || fail "Set ${name} in .env.deploy"
 done
-grep -q '^NODE_ENV=production$' "$APP_DIR/.env.production" || fail "NODE_ENV must be production"
-if grep -Eq '^OTP_BYPASS_CODE=.+|^DATABASE_URL=.*localhost|^DATABASE_URL=.*127\.0\.0\.1' "$APP_DIR/.env.production"; then
+for name in JWT_ACCESS_SECRET JWT_REFRESH_SECRET SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS EMAIL_FROM CORS_ALLOWED_ORIGINS; do
+  [[ -n "$(env_value "$APP_DIR/.env.production" "$name")" ]] || fail "Set ${name} in .env.production"
+done
+[[ "$(env_value "$APP_DIR/.env.production" NODE_ENV)" == "production" ]] || fail "NODE_ENV must be production"
+if [[ -n "$(env_value "$APP_DIR/.env.production" OTP_BYPASS_CODE)" ]] || [[ "$(env_value "$APP_DIR/.env.production" DATABASE_URL)" == *localhost* ]] || [[ "$(env_value "$APP_DIR/.env.production" DATABASE_URL)" == *127.0.0.1* ]]; then
   fail "Remove OTP bypass and use the internal postgres service in DATABASE_URL"
 fi
-if ! grep -Eq '^DATABASE_URL=postgres(ql)?://[^:]+:[^@]+@postgres:5432/' "$APP_DIR/.env.production"; then
+if [[ ! "$(env_value "$APP_DIR/.env.production" DATABASE_URL)" =~ ^postgres(ql)?://[^:]+:[^@]+@postgres:5432/ ]]; then
   fail "DATABASE_URL must point to the internal postgres:5432 service"
 fi
 
