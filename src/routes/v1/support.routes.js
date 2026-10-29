@@ -60,16 +60,9 @@ router.post("/tickets", authenticate, validate(schemas.createSupportTicket), con
  *     responses:
  *       200: { description: Support request updated }
  *       409: { description: Support has already started on it }
- *   delete:
- *     summary: Delete your own support request
- *     tags: [Support]
- *     parameters:
- *       - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
- *     responses:
- *       200: { description: Support request deleted }
  */
 router.put("/tickets/:id", authenticate, validate(schemas.updateMySupportTicket), controller.updateMySupportTicket);
-router.delete("/tickets/:id", authenticate, validate(schemas.supportTicketIdParam), controller.deleteMySupportTicket);
+router.delete("/tickets/:id", authenticate, controller.deleteMySupportTicket);
 router.get("/tickets/mine", authenticate, controller.listMySupportTickets);
 
 module.exports = router;

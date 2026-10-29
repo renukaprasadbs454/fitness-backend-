@@ -122,6 +122,11 @@ const updateCoach = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Coach updated", coach);
 });
 
+const updateCoachCredentials = asyncHandler(async (req, res) => {
+  const result = await adminService.updateCoachCredentials(req.user.id, req.params.id, req.body);
+  return ApiResponse.success(res, httpStatus.OK, "Coach credentials updated", result);
+});
+
 const deleteCoach = asyncHandler(async (req, res) => {
   await adminService.deleteCoach(req.user.id, req.params.id);
   return ApiResponse.success(res, httpStatus.OK, "Coach deleted", null);
@@ -250,6 +255,7 @@ module.exports = {
   listCoaches,
   createCoach,
   updateCoach,
+  updateCoachCredentials,
   deleteCoach,
   listAuditLogs,
   listPayments,

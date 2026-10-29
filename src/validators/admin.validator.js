@@ -63,22 +63,50 @@ const listCoachesAdmin = {
 };
 
 const createCoach = {
-  body: z.object({
-    userId: z.string().uuid(),
-    bio: z.string().trim().max(2000).optional(),
-    specialties: z.array(z.string().trim().min(1)).max(20).optional(),
-    experienceYears: z.number().int().min(0).max(60).optional(),
-    isAcceptingClients: z.boolean().optional()
-  })
+  body: z
+    .object({
+      userId: z.string().uuid().optional(),
+      fullName: z.string().trim().min(2).max(100).optional(),
+      email: z.string().trim().toLowerCase().email().optional(),
+      password: z.string().min(6).max(128).optional(),
+      phone: z.string().trim().min(7).max(20).optional().nullable(),
+      bio: z.string().trim().max(2000).optional(),
+      specialties: z
+        .union([
+          z.array(z.string().trim().min(1)),
+          z.string().transform((val) => val.split(",").map((s) => s.trim()).filter(Boolean))
+        ])
+        .optional(),
+      experienceYears: z.coerce.number().int().min(0).max(60).optional(),
+      isAcceptingClients: z.boolean().optional()
+    })
+    .refine((data) => data.userId || (data.fullName && data.email), {
+      message: "Either userId or (fullName and email) must be provided"
+    })
 };
 
 const updateCoach = {
   params: idParam.params,
   body: z.object({
     bio: z.string().trim().max(2000).optional(),
-    specialties: z.array(z.string().trim().min(1)).max(20).optional(),
-    experienceYears: z.number().int().min(0).max(60).optional(),
+    specialties: z
+      .union([
+        z.array(z.string().trim().min(1)),
+        z.string().transform((val) => val.split(",").map((s) => s.trim()).filter(Boolean))
+      ])
+      .optional(),
+    experienceYears: z.coerce.number().int().min(0).max(60).optional(),
     isAcceptingClients: z.boolean().optional()
+  })
+};
+
+const updateCoachCredentials = {
+  params: idParam.params,
+  body: z.object({
+    email: z.string().trim().toLowerCase().email().optional(),
+    password: z.string().min(6).max(128).optional(),
+    fullName: z.string().trim().min(2).max(100).optional(),
+    phone: z.string().trim().min(7).max(20).optional().nullable()
   })
 };
 
@@ -119,6 +147,7 @@ module.exports = {
   listCoachesAdmin,
   createCoach,
   updateCoach,
+  updateCoachCredentials,
   listAuditLogs,
   listPayments,
   broadcastAnnouncement

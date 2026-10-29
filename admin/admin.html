@@ -1022,7 +1022,14 @@
                         </div>
                       </div>
                     </td>
-                    <td data-label="Email" class="hidden sm:table-cell px-4 py-3 text-slate-400" x-text="c.user.email"></td>
+                    <td data-label="Email" class="hidden sm:table-cell px-4 py-3 text-slate-400">
+                      <div class="flex items-center gap-1.5">
+                        <span class="truncate" x-text="c.user.email"></span>
+                        <button @click="openCoachCredentials(c)" title="Manage coach credentials & password" class="p-1 text-slate-500 hover:text-primary rounded hover:bg-white/5 transition-colors">
+                          <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                        </button>
+                      </div>
+                    </td>
                     <td data-label="Role" class="hidden sm:table-cell px-4 py-3">
                       <span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="c.user.role || 'COACH'"></span>
                     </td>
@@ -1043,8 +1050,15 @@
                         <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
                         </button>
-                        <div x-show="open" x-cloak x-transition class="absolute right-0 mt-1 w-44 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden z-30 text-sm">
-                          <button @click="open=false; openEditCoach(c)" class="w-full text-left px-3 py-2 hover:bg-white/5">Edit</button>
+                        <div x-show="open" x-cloak x-transition class="absolute right-0 mt-1 w-48 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden z-30 text-sm">
+                          <button @click="open=false; openCoachCredentials(c)" class="w-full text-left px-3 py-2 text-primary hover:bg-white/5 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                            <span>Credentials / Password</span>
+                          </button>
+                          <button @click="open=false; openEditCoach(c)" class="w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            <span>Edit Profile</span>
+                          </button>
                           <button @click="open=false; openChangeRole({ id: c.userId, role: c.user.role, fullName: c.user.fullName })" class="w-full text-left px-3 py-2 hover:bg-white/5">Change role</button>
                           <button @click="open=false; openConfirm('delete-coach', c)" class="w-full text-left px-3 py-2 text-red-400 hover:bg-red-500/10 border-t border-dark-border">Remove</button>
                         </div>
@@ -1435,52 +1449,353 @@
   <!-- Create Coach -->
   <div x-show="modals.createCoach" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 modal-backdrop" @click="closeCreateCoach()"></div>
-    <div class="relative modal-panel rounded-2xl w-full max-w-md p-6">
-      <h3 class="text-lg font-semibold mb-1">Add Coach</h3>
-      <p class="text-sm text-slate-400 mb-4">Promote an existing user to COACH and set up their coach profile.</p>
-
-      <template x-if="!coachForm.selectedUser">
-        <div class="space-y-2">
-          <div class="relative">
-            <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
-            <input x-model="coachForm.search" placeholder="Search users by name, username or email…" class="w-full pl-8 pr-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+    <div class="relative modal-panel rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+      
+      <!-- Created Credentials Success View -->
+      <template x-if="coachCreatedCredentials">
+        <div class="space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400 flex-shrink-0">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white">Coach Account Created!</h3>
+              <p class="text-xs text-slate-400">Login credentials have been generated and are ready to share.</p>
+            </div>
           </div>
-          <div class="max-h-56 overflow-y-auto rounded-lg border border-dark-border divide-y divide-dark-border">
-            <template x-for="u in coachCandidateUsers()" :key="u.id">
-              <button @click="coachForm.selectedUser = u" class="w-full flex items-center justify-between px-3 py-2 text-left text-sm hover:bg-white/5">
-                <span><span class="font-medium" x-text="u.fullName"></span> <span class="text-slate-500" x-text="'· @' + u.username"></span></span>
-              </button>
-            </template>
-            <p x-show="coachCandidateUsers().length === 0" class="p-4 text-center text-sm text-slate-500">No matching users found.</p>
+
+          <div class="rounded-xl bg-dark border border-dark-border p-4 space-y-3 font-mono text-xs">
+            <div>
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Coach Portal URL</span>
+              <a href="/coach/" target="_blank" class="text-primary hover:underline font-sans text-sm flex items-center gap-1.5 mt-0.5">
+                <span x-text="window.location.origin + '/coach/'"></span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+            </div>
+            <div class="border-t border-dark-border/50 pt-2">
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Coach Name</span>
+              <span class="text-white font-sans text-sm" x-text="coachCreatedCredentials.fullName"></span>
+            </div>
+            <div class="border-t border-dark-border/50 pt-2">
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Login Email</span>
+              <span class="text-white text-sm" x-text="coachCreatedCredentials.email"></span>
+            </div>
+            <div class="border-t border-dark-border/50 pt-2">
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Password</span>
+              <span class="text-amber-400 font-bold text-sm" x-text="coachCreatedCredentials.password"></span>
+            </div>
+          </div>
+
+          <div class="rounded-lg bg-primary/10 border border-primary/20 p-3 text-xs text-slate-300 flex items-start gap-2">
+            <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div>Share these credentials with the coach. They can sign in immediately at the Coach Portal.</div>
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button @click="copyCoachCredentials(coachCreatedCredentials)" class="btn-primary flex-1 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <span>Copy Login Credentials</span>
+            </button>
+            <button @click="closeCreateCoach()" class="px-4 py-2.5 bg-dark-muted hover:bg-dark-border rounded-lg text-sm font-semibold transition-colors">Done</button>
           </div>
         </div>
       </template>
 
-      <template x-if="coachForm.selectedUser">
-        <div class="space-y-3">
-          <div class="flex items-center justify-between rounded-lg border border-dark-border px-3 py-2">
-            <span class="text-sm"><span class="font-medium" x-text="coachForm.selectedUser.fullName"></span> <span class="text-slate-500" x-text="'· @' + coachForm.selectedUser.username"></span></span>
-            <button @click="coachForm.selectedUser = null" class="text-xs text-primary hover:underline">Change</button>
+      <!-- Create Form -->
+      <template x-if="!coachCreatedCredentials">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-lg font-bold text-white">Add Coach</h3>
+            <button @click="closeCreateCoach()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors">✕</button>
           </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Bio</label>
-            <input x-model="coachForm.bio" placeholder="Certified strength & conditioning coach" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+          <p class="text-xs text-slate-400 mb-4">Create a new coach account with login credentials, or promote an existing user.</p>
+
+          <!-- Mode Toggle Tabs -->
+          <div class="flex p-1 bg-dark rounded-xl border border-dark-border mb-4">
+            <button type="button" @click="coachForm.mode = 'new'"
+              class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all"
+              :class="coachForm.mode === 'new' ? 'bg-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'">
+              Create New Coach
+            </button>
+            <button type="button" @click="coachForm.mode = 'promote'"
+              class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all"
+              :class="coachForm.mode === 'promote' ? 'bg-primary text-white shadow-sm' : 'text-slate-400 hover:text-white'">
+              Promote Existing User
+            </button>
           </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Specialties (comma-separated)</label>
-            <input x-model="coachForm.specialties" placeholder="Strength, Weight Loss" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Years of experience</label>
-            <input type="number" min="0" x-model="coachForm.experienceYears" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
-          </div>
+
+          <!-- Mode: Create New Coach -->
+          <template x-if="coachForm.mode === 'new'">
+            <div class="space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Full Name <span class="text-red-400">*</span></label>
+                  <input type="text" x-model="coachForm.fullName" placeholder="e.g. Rahul Sharma"
+                    class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Login Email <span class="text-red-400">*</span></label>
+                  <input type="email" x-model="coachForm.email" placeholder="rahul.coach@fitnerve.com"
+                    class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                </div>
+              </div>
+
+              <!-- Password row with generate button -->
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-xs font-medium text-slate-300">Login Password</label>
+                  <button type="button" @click="coachForm.password = generateStrongPassword(); coachForm.showPassword = true"
+                    class="text-xs text-primary hover:text-primary-light flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Generate Strong
+                  </button>
+                </div>
+                <div class="relative">
+                  <input :type="coachForm.showPassword ? 'text' : 'password'" x-model="coachForm.password"
+                    placeholder="Enter password or click Generate"
+                    class="w-full pl-3 pr-10 py-2 bg-dark border border-dark-border rounded-lg text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-primary">
+                  <button type="button" @click="coachForm.showPassword = !coachForm.showPassword"
+                    class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                    <svg x-show="!coachForm.showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    <svg x-show="coachForm.showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"/></svg>
+                  </button>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1">If left blank, a secure random password will be auto-generated.</p>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Phone Number (optional)</label>
+                  <input type="tel" x-model="coachForm.phone" placeholder="+91 9876543210"
+                    class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-300 mb-1">Years of Experience</label>
+                  <input type="number" min="0" x-model="coachForm.experienceYears" placeholder="e.g. 5"
+                    class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Specialties (comma-separated)</label>
+                <input x-model="coachForm.specialties" placeholder="Strength Training, Weight Loss, Nutrition"
+                  class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Bio / Notes</label>
+                <textarea rows="2" x-model="coachForm.bio" placeholder="Certified personal trainer specializing in functional fitness..."
+                  class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white"></textarea>
+              </div>
+
+              <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer pt-1">
+                <input type="checkbox" x-model="coachForm.isAcceptingClients" class="rounded border-dark-border bg-dark">
+                <span>Accepting new clients immediately</span>
+              </label>
+
+              <div class="flex justify-end gap-2 mt-5 pt-3 border-t border-dark-border">
+                <button type="button" @click="closeCreateCoach()" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
+                <button type="button" @click="submitCreateCoach()" :disabled="!coachForm.fullName || !coachForm.email"
+                  class="btn-primary px-5 py-2 text-sm font-bold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">
+                  Create Coach & Credentials
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <!-- Mode: Promote Existing User -->
+          <template x-if="coachForm.mode === 'promote'">
+            <div class="space-y-3">
+              <template x-if="!coachForm.selectedUser">
+                <div class="space-y-2">
+                  <div class="relative">
+                    <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+                    <input x-model="coachForm.search" placeholder="Search users by name, username or email…" class="w-full pl-8 pr-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                  </div>
+                  <div class="max-h-52 overflow-y-auto rounded-lg border border-dark-border divide-y divide-dark-border">
+                    <template x-for="u in coachCandidateUsers()" :key="u.id">
+                      <button @click="coachForm.selectedUser = u" class="w-full flex items-center justify-between px-3 py-2 text-left text-sm hover:bg-white/5">
+                        <span><span class="font-medium text-white" x-text="u.fullName"></span> <span class="text-slate-400" x-text="'· ' + u.email"></span></span>
+                        <span class="text-xs text-primary">Select</span>
+                      </button>
+                    </template>
+                    <p x-show="coachCandidateUsers().length === 0" class="p-4 text-center text-sm text-slate-500">No matching users found.</p>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="coachForm.selectedUser">
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between rounded-lg border border-dark-border bg-dark px-3 py-2">
+                    <div>
+                      <p class="font-medium text-sm text-white" x-text="coachForm.selectedUser.fullName"></p>
+                      <p class="text-xs text-slate-400" x-text="coachForm.selectedUser.email"></p>
+                    </div>
+                    <button @click="coachForm.selectedUser = null" class="text-xs text-primary hover:underline">Change</button>
+                  </div>
+
+                  <div>
+                    <div class="flex items-center justify-between mb-1">
+                      <label class="block text-xs font-medium text-slate-300">Set New Password (optional)</label>
+                      <button type="button" @click="coachForm.password = generateStrongPassword(); coachForm.showPassword = true"
+                        class="text-xs text-primary hover:text-primary-light">Generate</button>
+                    </div>
+                    <input :type="coachForm.showPassword ? 'text' : 'password'" x-model="coachForm.password" placeholder="Leave empty to keep existing password"
+                      class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm font-mono focus:outline-none focus:border-primary text-white">
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Bio</label>
+                    <input x-model="coachForm.bio" placeholder="Certified coach" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Specialties (comma-separated)</label>
+                    <input x-model="coachForm.specialties" placeholder="Strength, Weight Loss" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Years of experience</label>
+                    <input type="number" min="0" x-model="coachForm.experienceYears" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
+                  </div>
+                </div>
+              </template>
+
+              <div class="flex justify-end gap-2 mt-5 pt-3 border-t border-dark-border">
+                <button type="button" @click="closeCreateCoach()" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
+                <button type="button" @click="submitCreateCoach()" :disabled="!coachForm.selectedUser" class="btn-primary px-4 py-2 text-sm font-bold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Promote to Coach</button>
+              </div>
+            </div>
+          </template>
         </div>
       </template>
+    </div>
+  </div>
 
-      <div class="flex justify-end gap-2 mt-5">
-        <button @click="closeCreateCoach()" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
-        <button @click="submitCreateCoach()" :disabled="!coachForm.selectedUser" class="px-4 py-2 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Create coach</button>
+  <!-- Coach Credentials & Reset Password Modal -->
+  <div x-show="modals.coachCredentials" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 modal-backdrop" @click="closeCoachCredentials()"></div>
+    <div class="relative modal-panel rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center text-primary flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Coach Credentials & Access</h3>
+            <p class="text-xs text-slate-400">Manage login email & password for <span class="font-mono text-primary font-semibold">/coach/</span></p>
+          </div>
+        </div>
+        <button @click="closeCoachCredentials()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors">✕</button>
       </div>
+
+      <!-- Coach Info -->
+      <template x-if="editingCoach">
+        <div class="flex items-center justify-between rounded-xl bg-dark/60 border border-dark-border px-4 py-3 mb-4">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-full bg-accent/20 text-accent font-bold text-xs flex items-center justify-center flex-shrink-0" x-text="initials(editingCoach.user?.fullName)"></div>
+            <div class="min-w-0">
+              <p class="font-medium text-sm text-white truncate" x-text="editingCoach.user?.fullName"></p>
+              <p class="text-xs text-slate-400 truncate" x-text="'@' + (editingCoach.user?.username || '') + ' · Current email: ' + (editingCoach.user?.email || '')"></p>
+            </div>
+          </div>
+          <span class="badge badge-blue">COACH</span>
+        </div>
+      </template>
+
+      <!-- Updated Success View -->
+      <template x-if="coachCredentialsResult">
+        <div class="space-y-4">
+          <div class="rounded-xl bg-emerald-500/10 border border-emerald-500/25 p-4">
+            <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm mb-1">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Credentials Updated Successfully</span>
+            </div>
+            <p class="text-xs text-slate-300">Active sessions have been revoked. The coach can now log in immediately with the credentials below.</p>
+          </div>
+
+          <div class="rounded-xl bg-dark border border-dark-border p-4 space-y-3 font-mono text-xs">
+            <div>
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Coach Portal URL</span>
+              <a href="/coach/" target="_blank" class="text-primary hover:underline font-sans text-sm flex items-center gap-1.5 mt-0.5">
+                <span x-text="window.location.origin + '/coach/'"></span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+            </div>
+            <div class="border-t border-dark-border/50 pt-2">
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Login Email</span>
+              <span class="text-white text-sm" x-text="coachCredentialsResult.email"></span>
+            </div>
+            <div class="border-t border-dark-border/50 pt-2">
+              <span class="text-slate-500 block uppercase tracking-wider text-[10px]">Password</span>
+              <span class="text-amber-400 font-bold text-sm" x-text="coachCredentialsResult.password"></span>
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button @click="copyCoachCredentials(coachCredentialsResult)" class="btn-primary flex-1 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <span>Copy Login Credentials</span>
+            </button>
+            <button @click="closeCoachCredentials()" class="px-4 py-2.5 bg-dark-muted hover:bg-dark-border rounded-lg text-sm font-semibold transition-colors">Done</button>
+          </div>
+        </div>
+      </template>
+
+      <!-- Edit Credentials Form -->
+      <template x-if="!coachCredentialsResult">
+        <form @submit.prevent="submitCoachCredentials()" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Coach Full Name</label>
+            <input type="text" x-model="coachCredentialsForm.fullName" required
+              class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm text-white focus:outline-none focus:border-primary">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Login Email Address <span class="text-red-400">*</span>
+            </label>
+            <input type="email" x-model="coachCredentialsForm.email" required
+              class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm text-white focus:outline-none focus:border-primary"
+              placeholder="coach@fitnerve.com">
+            <p class="text-[11px] text-slate-500 mt-1">This is the email address used to log in at <span class="font-mono text-slate-400" x-text="window.location.origin + '/coach/'"></span>.</p>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Create / Reset Password
+              </label>
+              <button type="button" @click="generateCoachPassword()" class="text-xs text-primary hover:text-primary-light flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Generate Strong
+              </button>
+            </div>
+            <div class="relative">
+              <input :type="coachCredentialsForm.showPassword ? 'text' : 'password'" x-model="coachCredentialsForm.password"
+                placeholder="Leave blank to keep existing, or type new password"
+                class="w-full pl-3 pr-10 py-2.5 bg-dark border border-dark-border rounded-lg text-sm text-white font-mono placeholder-slate-600 focus:outline-none focus:border-primary">
+              <button type="button" @click="coachCredentialsForm.showPassword = !coachCredentialsForm.showPassword"
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                <svg x-show="!coachCredentialsForm.showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <svg x-show="coachCredentialsForm.showPassword" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"/></svg>
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">If entered, the password will be immediately updated and old sessions revoked.</p>
+          </div>
+
+          <div class="rounded-xl border border-dark-border/60 bg-dark/40 p-3 text-xs text-slate-400 flex items-start gap-2">
+            <svg class="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div>After saving, you can copy the login credentials and sign in to <a href="/coach/" target="_blank" class="text-primary underline">Coach Portal</a>.</div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-dark-border">
+            <button type="button" @click="closeCoachCredentials()" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
+            <button type="submit" :disabled="coachCredentialsForm.loading" class="btn-primary px-5 py-2 text-sm font-bold rounded-lg transition-colors flex items-center gap-2">
+              <span x-show="coachCredentialsForm.loading" class="loader w-3.5 h-3.5 border-white border-t-transparent"></span>
+              <span>Save & Update Credentials</span>
+            </button>
+          </div>
+        </form>
+      </template>
     </div>
   </div>
 
@@ -1488,30 +1803,46 @@
   <div x-show="modals.editCoach" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60" @click="modals.editCoach = false"></div>
     <div class="relative bg-dark-card border border-dark-border rounded-2xl w-full max-w-md p-6">
-      <h3 class="text-lg font-semibold mb-4">Edit Coach</h3>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">Edit Coach</h3>
+        <button @click="modals.editCoach = false" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors">✕</button>
+      </div>
       <template x-if="editingCoach">
         <div class="space-y-3">
+          <!-- Credentials shortcut bar -->
+          <div class="p-3 rounded-xl bg-dark/60 border border-dark-border flex items-center justify-between">
+            <div class="min-w-0 pr-2">
+              <p class="text-xs font-semibold text-slate-300">Login Account</p>
+              <p class="text-[11px] text-slate-400 truncate" x-text="editingCoach.user?.email"></p>
+            </div>
+            <button type="button" @click="modals.editCoach = false; openCoachCredentials(editingCoach)"
+              class="px-2.5 py-1.5 text-xs bg-primary/15 text-primary-light border border-primary/25 hover:bg-primary/25 rounded-lg transition-colors flex items-center gap-1.5 font-medium flex-shrink-0">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+              <span>Manage Credentials</span>
+            </button>
+          </div>
+
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Bio</label>
-            <input x-model="editCoachForm.bio" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+            <input x-model="editCoachForm.bio" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Specialties (comma-separated)</label>
-            <input x-model="editCoachForm.specialtiesText" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+            <input x-model="editCoachForm.specialtiesText" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Years of experience</label>
-            <input type="number" min="0" x-model="editCoachForm.experienceYears" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
+            <input type="number" min="0" x-model="editCoachForm.experienceYears" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary text-white">
           </div>
-          <label class="flex items-center gap-2 text-sm text-slate-300">
+          <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
             <input type="checkbox" x-model="editCoachForm.isAcceptingClients" class="rounded border-dark-border bg-dark">
-            Accepting new clients
+            <span>Accepting new clients</span>
           </label>
         </div>
       </template>
-      <div class="flex justify-end gap-2 mt-5">
+      <div class="flex justify-end gap-2 mt-5 pt-3 border-t border-dark-border">
         <button @click="modals.editCoach = false" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
-        <button @click="submitEditCoach()" class="px-4 py-2 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors">Save changes</button>
+        <button @click="submitEditCoach()" class="btn-primary px-4 py-2 text-sm font-bold rounded-lg transition-colors">Save changes</button>
       </div>
     </div>
   </div>
@@ -1553,12 +1884,9 @@
         class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary"></textarea>
       <p x-show="activeTicket?.repliedAt" class="text-[11px] text-slate-500 mt-1" x-text="activeTicket?.repliedAt ? 'Last replied ' + formatDateTime(activeTicket.repliedAt) : ''"></p>
 
-      <div class="flex items-center justify-between gap-2 mt-5">
-        <button @click="deleteTicket()" :disabled="savingTicket" class="px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 border border-red-500/30 rounded-lg transition-colors disabled:opacity-50">Delete request</button>
-        <div class="flex gap-2">
+      <div class="flex items-center justify-end gap-2 mt-5">
         <button @click="modals.supportTicket = false" class="px-4 py-2 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Cancel</button>
         <button @click="saveTicket()" :disabled="savingTicket" class="px-4 py-2 text-sm bg-primary hover:bg-primary-light text-dark font-bold rounded-lg transition-colors disabled:opacity-50" x-text="savingTicket ? 'Saving…' : 'Save & notify user'"></button>
-        </div>
       </div>
     </div>
   </div>
@@ -1829,16 +2157,19 @@
         storageTesting: false,
 
         // ---- Modals ----
-        modals: { addUser: false, editUser: false, changeRole: false, assignCoach: false, resetPassword: false, createCoach: false, editCoach: false, confirm: false, dbInsert: false, dbEdit: false, supportTicket: false, coachReport: false },
+        modals: { addUser: false, editUser: false, changeRole: false, assignCoach: false, resetPassword: false, createCoach: false, editCoach: false, coachCredentials: false, confirm: false, dbInsert: false, dbEdit: false, supportTicket: false, coachReport: false },
         addUserForm: { fullName: "", email: "", phone: "", role: "USER" },
         editingUser: null,
         editForm: { fullName: "", username: "", email: "", phone: "" },
         roleDraft: "USER",
         assignCoachDraft: "",
         tempPassword: null,
-        coachForm: { search: "", selectedUser: null, bio: "", specialties: "", experienceYears: "" },
+        coachForm: { mode: "new", fullName: "", email: "", password: "", phone: "", search: "", selectedUser: null, bio: "", specialties: "", experienceYears: "", isAcceptingClients: true, showPassword: false },
         editingCoach: null,
         editCoachForm: { bio: "", specialtiesText: "", experienceYears: "", isAcceptingClients: true },
+        coachCredentialsForm: { fullName: "", email: "", password: "", phone: "", showPassword: false, loading: false },
+        coachCredentialsResult: null,
+        coachCreatedCredentials: null,
         confirmAction: { type: null, target: null, title: "", description: "", confirmLabel: "Confirm" },
 
         // ---- Toasts ----
@@ -2872,16 +3203,31 @@
 
         // ================= CREATE COACH =================
         openCreateCoach() {
-          this.coachForm = { search: "", selectedUser: null, bio: "", specialties: "", experienceYears: "" };
+          this.coachForm = {
+            mode: "new",
+            fullName: "",
+            email: "",
+            password: this.generateStrongPassword(),
+            phone: "",
+            search: "",
+            selectedUser: null,
+            bio: "",
+            specialties: "",
+            experienceYears: "",
+            isAcceptingClients: true,
+            showPassword: false
+          };
+          this.coachCreatedCredentials = null;
           this.modals.createCoach = true;
         },
 
         closeCreateCoach() {
           this.modals.createCoach = false;
+          this.coachCreatedCredentials = null;
         },
 
         coachCandidateUsers() {
-          const search = this.coachForm.search.toLowerCase();
+          const search = (this.coachForm.search || "").toLowerCase();
           const coachedUserIds = new Set(this.coaches.map((c) => c.userId));
           return this.users
             .filter((u) => u.role === "USER" && !coachedUserIds.has(u.id))
@@ -2891,39 +3237,196 @@
 
         submitCreateCoach() {
           const f = this.coachForm;
-          if (!f.selectedUser) return;
-          const specialties = f.specialties ? f.specialties.split(",").map((s) => s.trim()).filter(Boolean) : [];
-          if (this.isAuthenticated) {
-            this.apiRequest("POST", "/api/v1/admin/coaches", {
-              userId: f.selectedUser.id,
-              bio: f.bio || undefined,
-              specialties,
-              experienceYears: f.experienceYears ? Number(f.experienceYears) : undefined
-            }).then(() => {
-              this.fetchLiveData();
+          const specialties = f.specialties
+            ? (Array.isArray(f.specialties) ? f.specialties : f.specialties.split(",").map((s) => s.trim()).filter(Boolean))
+            : [];
+
+          if (f.mode === "new") {
+            if (!f.fullName || !f.email) {
+              this.showToast("Full name and email are required", "error");
+              return;
+            }
+
+            if (this.isAuthenticated) {
+              this.apiRequest("POST", "/api/v1/admin/coaches", {
+                fullName: f.fullName.trim(),
+                email: f.email.trim(),
+                password: f.password ? f.password.trim() : undefined,
+                phone: f.phone ? f.phone.trim() : undefined,
+                bio: f.bio ? f.bio.trim() : undefined,
+                specialties,
+                experienceYears: f.experienceYears ? Number(f.experienceYears) : undefined,
+                isAcceptingClients: !!f.isAcceptingClients
+              }).then((res) => {
+                this.fetchLiveData();
+                this.coachCreatedCredentials = {
+                  fullName: f.fullName.trim(),
+                  email: f.email.trim(),
+                  password: res.temporaryPassword || f.password || "(Generated)",
+                  loginUrl: window.location.origin + "/coach/"
+                };
+                this.showToast("Coach created successfully");
+              }).catch((err) => {
+                this.showToast(err.message || "Failed to create coach", "error");
+              });
+            } else {
+              const newCoach = {
+                id: "coach-" + Date.now(),
+                userId: "user-" + Date.now(),
+                bio: f.bio || null,
+                specialties,
+                experienceYears: f.experienceYears ? Number(f.experienceYears) : null,
+                isAcceptingClients: !!f.isAcceptingClients,
+                createdAt: new Date().toISOString(),
+                user: { fullName: f.fullName.trim(), email: f.email.trim(), isActive: true, role: "COACH" }
+              };
+              this.coaches.unshift(newCoach);
+              this.persist();
+              this.coachCreatedCredentials = {
+                fullName: f.fullName.trim(),
+                email: f.email.trim(),
+                password: f.password || this.generateStrongPassword(),
+                loginUrl: window.location.origin + "/coach/"
+              };
+              this.showToast("Coach created");
+            }
+          } else {
+            // Promote existing user
+            if (!f.selectedUser) return;
+            if (this.isAuthenticated) {
+              this.apiRequest("POST", "/api/v1/admin/coaches", {
+                userId: f.selectedUser.id,
+                password: f.password ? f.password.trim() : undefined,
+                bio: f.bio ? f.bio.trim() : undefined,
+                specialties,
+                experienceYears: f.experienceYears ? Number(f.experienceYears) : undefined,
+                isAcceptingClients: !!f.isAcceptingClients
+              }).then((res) => {
+                this.fetchLiveData();
+                if (f.password) {
+                  this.coachCreatedCredentials = {
+                    fullName: f.selectedUser.fullName,
+                    email: f.selectedUser.email,
+                    password: res.temporaryPassword || f.password,
+                    loginUrl: window.location.origin + "/coach/"
+                  };
+                } else {
+                  this.modals.createCoach = false;
+                }
+                this.showToast("User promoted to coach");
+              }).catch((err) => {
+                this.showToast(err.message || "Failed to promote user", "error");
+              });
+            } else {
+              const user = this.users.find((u) => u.id === f.selectedUser.id);
+              if (user) user.role = "COACH";
+              const newCoach = {
+                id: "coach-" + Date.now(),
+                userId: f.selectedUser.id,
+                bio: f.bio || null,
+                specialties,
+                experienceYears: f.experienceYears ? Number(f.experienceYears) : null,
+                isAcceptingClients: !!f.isAcceptingClients,
+                createdAt: new Date().toISOString(),
+                user: { fullName: f.selectedUser.fullName, email: f.selectedUser.email, isActive: f.selectedUser.isActive, role: "COACH" }
+              };
+              this.coaches.unshift(newCoach);
+              this.persist();
               this.modals.createCoach = false;
-              this.showToast("Coach created in database");
+              this.showToast("User promoted to coach");
+            }
+          }
+        },
+
+        // ================= COACH CREDENTIALS =================
+        openCoachCredentials(c) {
+          this.editingCoach = c;
+          this.coachCredentialsForm = {
+            fullName: c.user?.fullName || "",
+            email: c.user?.email || "",
+            password: "",
+            phone: c.user?.phone || "",
+            showPassword: false,
+            loading: false
+          };
+          this.coachCredentialsResult = null;
+          this.modals.coachCredentials = true;
+        },
+
+        closeCoachCredentials() {
+          this.modals.coachCredentials = false;
+          this.coachCredentialsResult = null;
+          this.editingCoach = null;
+        },
+
+        generateCoachPassword() {
+          this.coachCredentialsForm.password = this.generateStrongPassword();
+          this.coachCredentialsForm.showPassword = true;
+        },
+
+        generateStrongPassword() {
+          const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+          let p = "Coach@";
+          for (let i = 0; i < 4; i++) p += chars[Math.floor(Math.random() * chars.length)];
+          p += "!" + Math.floor(10 + Math.random() * 90);
+          return p;
+        },
+
+        submitCoachCredentials() {
+          const c = this.editingCoach;
+          if (!c) return;
+          const f = this.coachCredentialsForm;
+          if (!f.email) {
+            this.showToast("Email address is required", "error");
+            return;
+          }
+          if (f.password && f.password.length < 6) {
+            this.showToast("Password must be at least 6 characters", "error");
+            return;
+          }
+
+          if (this.isAuthenticated) {
+            this.coachCredentialsForm.loading = true;
+            this.apiRequest("PUT", `/api/v1/admin/coaches/${c.id}/credentials`, {
+              email: f.email.trim(),
+              password: f.password ? f.password.trim() : undefined,
+              fullName: f.fullName ? f.fullName.trim() : undefined,
+              phone: f.phone ? f.phone.trim() : undefined
+            }).then((res) => {
+              this.coachCredentialsForm.loading = false;
+              this.coachCredentialsResult = {
+                fullName: res.fullName || f.fullName,
+                email: res.email || f.email,
+                password: res.temporaryPassword || f.password || "(Unchanged)",
+                loginUrl: window.location.origin + "/coach/"
+              };
+              this.fetchLiveData();
+              this.showToast("Coach credentials updated successfully");
             }).catch((err) => {
-              this.showToast(err.message || "Failed to create coach", "error");
+              this.coachCredentialsForm.loading = false;
+              this.showToast(err.message || "Failed to update credentials", "error");
             });
           } else {
-            const user = this.users.find((u) => u.id === f.selectedUser.id);
-            if (user) user.role = "COACH";
-            const newCoach = {
-              id: "coach-" + Date.now(),
-              userId: f.selectedUser.id,
-              bio: f.bio || null,
-              specialties,
-              experienceYears: f.experienceYears ? Number(f.experienceYears) : null,
-              isAcceptingClients: true,
-              createdAt: new Date().toISOString(),
-              user: { fullName: f.selectedUser.fullName, email: f.selectedUser.email, isActive: f.selectedUser.isActive },
+            if (c.user) {
+              c.user.email = f.email.trim();
+              if (f.fullName) c.user.fullName = f.fullName.trim();
+            }
+            this.coachCredentialsResult = {
+              fullName: f.fullName,
+              email: f.email.trim(),
+              password: f.password || "(Unchanged)",
+              loginUrl: window.location.origin + "/coach/"
             };
-            this.coaches.unshift(newCoach);
             this.persist();
-            this.modals.createCoach = false;
-            this.showToast("Coach created");
+            this.showToast("Coach credentials updated");
           }
+        },
+
+        copyCoachCredentials(creds) {
+          if (!creds) return;
+          const text = `FitNerve Coach Credentials:\nPortal: ${creds.loginUrl}\nEmail: ${creds.email}\nPassword: ${creds.password}`;
+          navigator.clipboard.writeText(text);
+          this.showToast("Credentials copied to clipboard");
         },
 
         // ================= EDIT COACH =================

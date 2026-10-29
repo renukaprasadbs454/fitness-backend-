@@ -196,21 +196,145 @@ async function listCoaches(query) {
   return { items, meta: buildMeta(page, limit, total) };
 }
 
-/** Promotes an existing user to COACH and creates/updates their Coach profile. */
-async function createCoach(adminId, { userId, ...coachData }) {
-  const user = await userRepository.findById(userId);
-  if (!user) throw ApiError.notFound("User not found");
+/** Creates a new coach (with user account & credentials) OR promotes an existing user to COACH. */
+async function createCoach(adminId, data) {
+  const { userId, fullName, email, password, phone, bio, specialties = [], experienceYears, isAcceptingClients = true } = data;
 
-  let coach = await coachRepository.findByUserId(userId);
-  if (user.role !== "COACH") {
-    await userRepository.updateRole(userId, "COACH");
+  if (userId) {
+    const user = await userRepository.findById(userId);
+    if (!user) throw ApiError.notFound("User not found");
+
+    if (user.role !== "COACH") {
+      await userRepository.updateRole(userId, "COACH");
+    }
+
+    let tempPassword = null;
+    if (password && password.trim()) {
+      tempPassword = password.trim();
+      const passwordHash = await hashPassword(tempPassword);
+      await userRepository.updatePassword(userId, passwordHash);
+      await userRepository.revokeAllRefreshTokens(userId);
+    }
+
+    let coach = await coachRepository.findByUserId(userId);
+    coach = coach
+      ? await coachRepository.update(coach.id, { bio, specialties, experienceYears, isAcceptingClients })
+      : await coachRepository.create({ userId, bio, specialties, experienceYears, isAcceptingClients });
+
+    await adminRepository.createAuditLog(adminId, "CREATE_COACH", "COACH", coach.id, { userId });
+    const fullCoach = await coachRepository.findById(coach.id);
+    return { ...fullCoach, temporaryPassword: tempPassword };
   }
-  coach = coach
-    ? await coachRepository.update(coach.id, coachData)
-    : await coachRepository.create({ userId, specialties: [], ...coachData });
 
-  await adminRepository.createAuditLog(adminId, "CREATE_COACH", "COACH", coach.id, { userId });
-  return coach;
+  // Brand new coach with credentials
+  const cleanEmail = email.trim().toLowerCase();
+  if (await userRepository.findByEmail(cleanEmail)) {
+    throw ApiError.conflict("An account with this email already exists");
+  }
+  const cleanPhone = phone ? phone.trim() : null;
+  if (cleanPhone && (await userRepository.findByPhone(cleanPhone))) {
+    throw ApiError.conflict("An account with this phone number already exists");
+  }
+
+  const tempPassword = password && password.trim() ? password.trim() : ("Coach@" + crypto.randomBytes(3).toString("hex") + "!");
+  const username = await generateUniqueUsername(cleanEmail);
+  const user = await userRepository.create({
+    fullName: fullName.trim(),
+    email: cleanEmail,
+    phone: cleanPhone,
+    passwordHash: await hashPassword(tempPassword),
+    role: "COACH",
+    username,
+    isEmailVerified: true
+  });
+
+  await userRepository.createProfile(user.id, {});
+  const coach = await coachRepository.create({
+    userId: user.id,
+    bio: bio || null,
+    specialties: Array.isArray(specialties) ? specialties : [],
+    experienceYears: experienceYears ?? null,
+    isAcceptingClients: isAcceptingClients ?? true
+  });
+
+  await adminRepository.createAuditLog(adminId, "CREATE_COACH", "COACH", coach.id, {
+    userId: user.id,
+    email: cleanEmail,
+    generatedPassword: !password
+  });
+
+  const fullCoach = await coachRepository.findById(coach.id);
+  return { ...fullCoach, temporaryPassword: tempPassword };
+}
+
+/** Updates a coach's login credentials (email, password, full name, phone) and revokes old sessions. */
+async function updateCoachCredentials(adminId, id, { email, password, fullName, phone }) {
+  const coach = await coachRepository.findById(id);
+  if (!coach) throw ApiError.notFound("Coach not found");
+
+  const user = await userRepository.findById(coach.userId);
+  if (!user) throw ApiError.notFound("Underlying user account not found");
+
+  const updates = {};
+
+  if (fullName && fullName.trim() && fullName.trim() !== user.fullName) {
+    updates.fullName = fullName.trim();
+  }
+
+  if (email && email.trim()) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail !== user.email.toLowerCase()) {
+      const existingEmail = await userRepository.findByEmail(cleanEmail);
+      if (existingEmail && existingEmail.id !== user.id) {
+        throw ApiError.conflict("An account with this email already exists");
+      }
+      updates.email = cleanEmail;
+    }
+  }
+
+  if (phone !== undefined) {
+    if (phone && phone.trim()) {
+      const cleanPhone = phone.trim();
+      if (cleanPhone !== (user.phone || "")) {
+        const existingPhone = await userRepository.findByPhone(cleanPhone);
+        if (existingPhone && existingPhone.id !== user.id) {
+          throw ApiError.conflict("An account with this phone number already exists");
+        }
+        updates.phone = cleanPhone;
+      }
+    } else if (phone === null || phone === "") {
+      updates.phone = null;
+    }
+  }
+
+  let tempPassword = null;
+  if (password && password.trim()) {
+    tempPassword = password.trim();
+    const passwordHash = await hashPassword(tempPassword);
+    await userRepository.updatePassword(user.id, passwordHash);
+    await userRepository.revokeAllRefreshTokens(user.id);
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await userRepository.updateBasicInfo(user.id, updates);
+  }
+
+  await adminRepository.createAuditLog(adminId, "UPDATE_COACH", "COACH", id, {
+    subAction: "UPDATE_CREDENTIALS",
+    userId: user.id,
+    updatedFields: Object.keys(updates),
+    passwordChanged: Boolean(tempPassword)
+  });
+
+  const updatedUser = await userRepository.findById(user.id);
+  return {
+    coachId: id,
+    userId: user.id,
+    fullName: updatedUser.fullName,
+    email: updatedUser.email,
+    phone: updatedUser.phone,
+    temporaryPassword: tempPassword
+  };
 }
 
 async function updateCoach(adminId, id, data) {
@@ -416,6 +540,7 @@ module.exports = {
   listCoaches,
   createCoach,
   updateCoach,
+  updateCoachCredentials,
   deleteCoach,
   listAuditLogs,
   listPayments,

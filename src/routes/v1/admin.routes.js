@@ -222,6 +222,24 @@ router.put("/coaches/:id", validate(schemas.updateCoach), adminController.update
 
 /**
  * @swagger
+ * /admin/coaches/{id}/credentials:
+ *   put:
+ *     summary: Update a coach's login credentials (email, password, full name, phone)
+ *     tags: [Admin]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Coach credentials updated }
+ *       404: { description: Coach not found }
+ *       409: { description: Email already in use }
+ */
+router.put(
+  "/coaches/:id/credentials",
+  validate(schemas.updateCoachCredentials),
+  adminController.updateCoachCredentials
+);
+
+/**
+ * @swagger
  * /admin/coaches/{id}:
  *   delete:
  *     summary: Remove a coach profile and demote the user back to USER

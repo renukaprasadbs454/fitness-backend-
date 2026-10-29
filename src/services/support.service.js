@@ -31,8 +31,7 @@ async function updateMine(userId, id, { category, subject, message }) {
 }
 
 async function removeMine(userId, id) {
-  await findOwn(userId, id);
-  await prisma.supportTicket.delete({ where: { id } });
+  throw ApiError.forbidden("Support requests cannot be deleted. You can edit your request while it is open.");
 }
 
 async function listMine(userId) {

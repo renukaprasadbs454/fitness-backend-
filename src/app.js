@@ -34,7 +34,7 @@ app.use(
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:"],
         frameSrc: ["'self'", "http://localhost:5555"],
-        connectSrc: ["'self'", "http://localhost:4000", "https://localhost:4000"],
+        connectSrc: ["'self'", "http://localhost:5050", "https://localhost:5050", "http://localhost:4000", "https://localhost:4000", "http://localhost:*", "http://127.0.0.1:*"],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         frameAncestors: ["'self'"]
@@ -151,6 +151,9 @@ app.use(
 app.use(`/api/${env.apiVersion}`, signS3Urls(), v1Routes);
 
 app.get("/", (req, res) => {
+  if (req.accepts("html") && !req.xhr && req.headers.accept && req.headers.accept.includes("text/html")) {
+    return res.redirect("/admin");
+  }
   res.json({ success: true, message: "FitNerve API is running", docs: "/api-docs", admin: "/admin", coach: "/coach" });
 });
 
