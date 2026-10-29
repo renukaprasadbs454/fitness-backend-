@@ -34,8 +34,19 @@ docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 plugin is requ
 cd "$APP_DIR"
 
 env_value() {
-  local file="$1" name="$2"
-  awk -F= -v key="$name" '$1 ~ "^[[:space:]]*" key "[[:space:]]*$" { sub(/^[^=]*=[[:space:]]*/, ""); value=$0 } END { sub(/^["'"'']/, "", value); sub(/["'"''][[:space:]]*$/, "", value); gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); print value }' "$file"
+  local file="$1" name="$2" line value first last
+  line="$(grep -E "^[[:space:]]*${name}[[:space:]]*=" "$file" | tail -n 1 || true)"
+  [[ -n "$line" ]] || return 0
+  value="${line#*=}"
+  value="$(printf '%s' "$value" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+  if [[ ${#value} -ge 2 ]]; then
+    first="${value:0:1}"
+    last="${value: -1}"
+    if [[ "$first" == "$last" && ( "$first" == "\"" || "$first" == "'" ) ]]; then
+      value="${value:1:${#value}-2}"
+    fi
+  fi
+  printf '%s' "$value"
 }
 
 for name in POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD; do
