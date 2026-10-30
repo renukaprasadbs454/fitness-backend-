@@ -1649,6 +1649,15 @@
           }
         },
 
+        // Shared by the sidebar, dashboard shortcuts, and mobile navigation.
+        // Keep this independent of the database page so every portal control
+        // can navigate after the coach-only database explorer is removed.
+        openView(key) {
+          if (!this.navItems.some((item) => item.key === key)) return;
+          this.currentView = key;
+          this.mobileNavOpen = false;
+        },
+
         bootstrap() {
           this.fetchProfile();
           this.fetchAvailability();
