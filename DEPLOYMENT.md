@@ -52,7 +52,6 @@ JWT_ACCESS_SECRET=REPLACE_WITH_AT_LEAST_64_RANDOM_HEX_CHARACTERS
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=REPLACE_WITH_A_DIFFERENT_64_RANDOM_HEX_CHARACTERS
 JWT_REFRESH_EXPIRES_IN=30d
-REQUIRE_EMAIL_VERIFICATION=true
 OTP_EXPIRES_MIN=10
 OTP_MAX_ATTEMPTS=5
 OTP_BYPASS_CODE=
@@ -153,7 +152,33 @@ docker compose --project-directory . --env-file .env.deploy -f docker-compose.pr
 `down` preserves named volumes. Do not use `down -v` unless intentionally
 destroying the development database/uploads.
 
-## 6. Push the backend repository
+## 6. Provision the first administrator
+
+Deploy and migrate first, then check whether the advertised demo administrator
+exists in this database. The regular Prisma seed does **not** create an admin,
+and `deploy.sh` does not run `scripts/create-admin.js` automatically:
+
+```bash
+cd /opt/fitnerve
+docker compose --env-file .env.deploy -f docker-compose.prod.yml exec -T backend node - <<'NODE'
+const { PrismaClient } = require('@prisma/client');
+const p = new PrismaClient();
+p.user.findUnique({ where: { email: 'admin@fitnerve.in' }, select: { id: true, email: true, role: true, isActive: true, isEmailVerified: true } })
+  .then((user) => console.log(user || 'ADMIN_NOT_FOUND'))
+  .catch((error) => { console.error(error.message); process.exitCode = 1; })
+  .finally(() => p.$disconnect());
+NODE
+```
+
+If the result is `ADMIN_NOT_FOUND`, you can create the documented demo admin
+with `docker compose --env-file .env.deploy -f docker-compose.prod.yml exec -T backend node scripts/create-admin.js`.
+That script uses the public development password `Admin@1234`; change it
+immediately before using the portal for anything beyond development. For an
+existing admin with an unknown password, reset its `passwordHash` with bcrypt
+and verify `role=ADMIN`, `isActive=true`, and `isEmailVerified=true`. Never
+print or paste production credentials into support chats.
+
+## 7. Push the backend repository
 
 From the developer workstation, push only the backend repository for this VPS deployment:
 

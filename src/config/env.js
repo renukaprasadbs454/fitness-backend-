@@ -50,7 +50,7 @@ const env = {
     bypassCode: process.env.NODE_ENV === "production" ? "" : (process.env.OTP_BYPASS_CODE || "").trim(),
     // When "true", client accounts must verify their email before they can sign in;
     // signing in unverified sends a fresh code instead. Coaches/admins are exempt.
-    requireVerifiedLogin: process.env.REQUIRE_EMAIL_VERIFICATION === "true"
+    requireVerifiedLogin: process.env.REQUIRE_EMAIL_VERIFICATION !== "false"
   },
 
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || "12", 10),
