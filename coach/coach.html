@@ -38,6 +38,9 @@
       border: 1px solid #1e293b;
       border-radius: 20px;
     }
+    .availability-stat-card { background: rgba(17,26,46,0.72); }
+    .availability-day-card { background: linear-gradient(135deg, #111a2e 0%, #0e1526 100%); }
+    .availability-slot-card { background: rgba(11,17,32,0.55); }
     .nav-item-active {
       background: linear-gradient(90deg, rgba(37,99,235,0.14) 0%, rgba(37,99,235,0.04) 100%);
       color: #60a5fa;
@@ -132,6 +135,8 @@
     body.theme-light .border-dark-border { border-color: #cbd5e1 !important; }
     body.theme-light .bg-dark\/40 { background-color: #f1f5f9 !important; }
     body.theme-light .card { background: #ffffff !important; border-color: #e2e8f0 !important; }
+    body.theme-light .availability-stat-card, body.theme-light .availability-day-card { background: linear-gradient(135deg,#ffffff,#f8fafc) !important; border-color: #e2e8f0 !important; }
+    body.theme-light .availability-slot-card { background: #f8fafc !important; border-color: #e2e8f0 !important; }
     body.theme-light .text-slate-300 { color: #334155 !important; }
     body.theme-light .text-slate-400 { color: #64748b !important; }
     body.theme-light .text-slate-500 { color: #64748b !important; }
@@ -543,50 +548,116 @@
                 <button x-show="managingOther" @click="switchManaged('')" class="text-xs text-slate-400 hover:text-white flex-shrink-0">Back to my profile</button>
               </div>
 
-              <div class="card p-6 mb-6 max-w-2xl">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4" x-text="editingSlotId ? 'Edit slot' : 'Add a Slot'"></h3>
+              <div class="card p-5 sm:p-6 mb-6 max-w-4xl relative overflow-hidden">
+                <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-sky-400 to-emerald-400"></div>
+                <div class="flex items-start justify-between gap-4 mb-5">
+                  <div>
+                    <h3 class="text-base font-bold text-white" x-text="editingSlotId ? 'Edit availability' : 'Build your weekly schedule'"></h3>
+                    <p class="text-xs text-slate-500 mt-1">Choose a day and time window clients can book.</p>
+                  </div>
+                  <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary-light">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/></svg>
+                    Weekly schedule
+                  </span>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                   <div class="sm:col-span-2">
-                    <label class="block text-xs text-slate-500 mb-1.5">Day</label>
-                    <select x-model="slotForm.dayOfWeek" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-white text-sm">
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Day</label>
+                    <select x-model="slotForm.dayOfWeek" class="w-full px-3.5 py-3 bg-dark border border-dark-border rounded-xl text-white text-sm transition-colors focus:border-primary/60">
                       <template x-for="d in days" :key="d"><option :value="d" x-text="d"></option></template>
                     </select>
                   </div>
                   <div>
-                    <label class="block text-xs text-slate-500 mb-1.5">Start</label>
-                    <input type="time" x-model="slotForm.startTime" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-white text-sm">
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Start time</label>
+                    <input type="time" x-model="slotForm.startTime" class="w-full px-3.5 py-3 bg-dark border border-dark-border rounded-xl text-white text-sm">
                   </div>
                   <div>
-                    <label class="block text-xs text-slate-500 mb-1.5">End</label>
-                    <input type="time" x-model="slotForm.endTime" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-white text-sm">
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">End time</label>
+                    <input type="time" x-model="slotForm.endTime" class="w-full px-3.5 py-3 bg-dark border border-dark-border rounded-xl text-white text-sm">
                   </div>
                 </div>
                 <div x-show="slotError" x-cloak class="text-sm text-red-400 mt-3" x-text="slotError"></div>
-                <div class="flex items-center gap-3 mt-4">
-                  <button @click="addSlot()" :disabled="savingSlot" class="btn-primary px-5 py-2.5 rounded-xl text-sm disabled:opacity-50">
+                <div class="flex flex-wrap items-center gap-3 mt-5">
+                  <button @click="addSlot()" :disabled="savingSlot" class="btn-primary inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm disabled:opacity-50">
+                    <svg x-show="!savingSlot && !editingSlotId" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14m7-7H5"/></svg>
                     <span x-text="savingSlot ? 'Saving…' : (editingSlotId ? 'Save changes' : 'Add Slot')"></span>
                   </button>
-                  <button x-show="editingSlotId" x-cloak @click="cancelSlotEdit()" class="px-4 py-2.5 rounded-xl text-sm border border-dark-border text-slate-300 hover:bg-white/5">Cancel</button>
+                  <button x-show="editingSlotId" x-cloak @click="cancelSlotEdit()" class="px-4 py-3 rounded-xl text-sm border border-dark-border text-slate-300 hover:bg-white/5">Cancel</button>
                 </div>
               </div>
 
-              <div class="card p-6">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Your Slots</h3>
-                <div x-show="availability.length === 0" class="text-sm text-slate-500">No availability slots yet.</div>
-                <div class="space-y-2">
-                  <template x-for="slot in availability" :key="slot.id">
-                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3" :class="editingSlotId === slot.id ? 'border-primary/60' : 'border-dark-border'">
-                      <span class="text-sm font-semibold w-28" x-text="slot.dayOfWeek"></span>
-                      <span class="text-sm text-slate-400" x-text="slot.startTime + ' – ' + slot.endTime"></span>
-                      <span class="badge" :class="slot.isActive ? 'badge-green' : 'badge-slate'" x-text="slot.isActive ? 'Active' : 'Inactive'"></span>
-                      <div class="flex gap-2">
-                        <button @click="toggleSlot(slot)" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border" x-text="slot.isActive ? 'Turn off' : 'Turn on'"></button>
-                        <button @click="editSlot(slot)" class="px-3 py-1.5 rounded-lg bg-primary/15 text-primary-light text-xs font-semibold hover:bg-primary/25">Edit</button>
-                        <button @click="deleteSlot(slot)" class="px-3 py-1.5 rounded-lg text-red-400 text-xs font-semibold border border-red-500/30 hover:bg-red-500/10">Delete</button>
-                      </div>
-                    </div>
-                  </template>
+              <div class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="availability-stat-card rounded-2xl border border-dark-border p-4">
+                  <p class="text-[10px] uppercase tracking-[0.14em] text-slate-500">Active time blocks</p>
+                  <p class="mt-2 text-2xl font-bold text-white" x-text="availability.filter((slot) => slot.isActive).length"></p>
+                  <p class="mt-1 text-xs text-slate-500">Open for client bookings</p>
                 </div>
+                <div class="availability-stat-card rounded-2xl border border-dark-border p-4">
+                  <p class="text-[10px] uppercase tracking-[0.14em] text-slate-500">Days available</p>
+                  <p class="mt-2 text-2xl font-bold text-white" x-text="activeAvailabilityDays"></p>
+                  <p class="mt-1 text-xs text-slate-500">Across your weekly schedule</p>
+                </div>
+                <div class="availability-stat-card rounded-2xl border border-dark-border p-4">
+                  <p class="text-[10px] uppercase tracking-[0.14em] text-slate-500">Paused time blocks</p>
+                  <p class="mt-2 text-2xl font-bold text-white" x-text="availability.filter((slot) => !slot.isActive).length"></p>
+                  <p class="mt-1 text-xs text-slate-500">Hidden from new bookings</p>
+                </div>
+              </div>
+
+              <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h3 class="text-lg font-bold text-white">Weekly availability</h3>
+                  <p class="mt-1 text-xs text-slate-500">Your time blocks are grouped by day and sorted by start time.</p>
+                </div>
+                <span class="rounded-full border border-dark-border bg-dark-card px-3 py-1.5 text-xs font-semibold text-slate-400" x-text="availability.length + (availability.length === 1 ? ' time block' : ' time blocks')"></span>
+              </div>
+
+              <div x-show="availabilityByDay.length === 0" class="card flex flex-col items-center px-6 py-12 text-center">
+                <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary-light">
+                  <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 012 2v13a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                </div>
+                <p class="text-sm font-semibold text-slate-200">No availability added yet</p>
+                <p class="mt-1 max-w-sm text-xs leading-5 text-slate-500">Add your first weekly time block above so clients know when they can book you.</p>
+              </div>
+
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <template x-for="group in availabilityByDay" :key="group.day">
+                  <section class="availability-day-card rounded-2xl border border-dark-border p-4 sm:p-5">
+                    <div class="mb-4 flex items-center justify-between gap-3 border-b border-dark-border/80 pb-3">
+                      <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary-light">
+                          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 012 2v13a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                        </div>
+                        <div>
+                          <h4 class="text-sm font-bold text-white" x-text="group.day.charAt(0) + group.day.slice(1).toLowerCase()"></h4>
+                          <p class="mt-0.5 text-[11px] text-slate-500" x-text="group.slots.filter((slot) => slot.isActive).length + ' open · ' + group.slots.length + ' total'"></p>
+                        </div>
+                      </div>
+                      <span class="rounded-full bg-dark px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500" x-text="group.slots.length + (group.slots.length === 1 ? ' slot' : ' slots')"></span>
+                    </div>
+                    <div class="space-y-2.5">
+                      <template x-for="slot in group.slots" :key="slot.id">
+                        <div class="availability-slot-card rounded-xl border p-3 transition-colors" :class="editingSlotId === slot.id ? 'border-primary/60 bg-primary/5' : 'border-dark-border/80'">
+                          <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex min-w-0 items-center gap-3">
+                              <div class="h-9 w-1 rounded-full" :class="slot.isActive ? 'bg-emerald-400' : 'bg-slate-600'"></div>
+                              <div>
+                                <p class="text-sm font-bold tabular-nums text-slate-100" x-text="slot.startTime + ' – ' + slot.endTime"></p>
+                                <p class="mt-1 text-[10px] text-slate-500" x-text="slot.isActive ? 'Accepting bookings' : 'Not shown to clients'"></p>
+                              </div>
+                            </div>
+                            <span class="badge" :class="slot.isActive ? 'badge-green' : 'badge-slate'" x-text="slot.isActive ? 'Active' : 'Paused'"></span>
+                          </div>
+                          <div class="mt-3 flex flex-wrap gap-2 border-t border-dark-border/70 pt-3">
+                            <button @click="toggleSlot(slot)" class="rounded-lg border border-dark-border bg-dark-muted px-3 py-2 text-[11px] font-semibold text-slate-300 hover:border-slate-500 hover:text-white" x-text="slot.isActive ? 'Pause' : 'Activate'"></button>
+                            <button @click="editSlot(slot)" class="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-[11px] font-semibold text-primary-light hover:bg-primary/20">Edit time</button>
+                            <button @click="deleteSlot(slot)" class="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-[11px] font-semibold text-red-400 hover:bg-red-500/10">Delete</button>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </section>
+                </template>
               </div>
             </div>
           </template>
@@ -1504,6 +1575,22 @@
 
         get targetCoachId() {
           return this.managingOther ? this.managedCoachId : this.coach?.id;
+        },
+
+        get availabilityByDay() {
+          return this.days
+            .map((day) => ({
+              day,
+              slots: this.availability
+                .filter((slot) => slot.dayOfWeek === day)
+                .slice()
+                .sort((a, b) => a.startTime.localeCompare(b.startTime) || a.endTime.localeCompare(b.endTime))
+            }))
+            .filter((group) => group.slots.length > 0);
+        },
+
+        get activeAvailabilityDays() {
+          return new Set(this.availability.filter((slot) => slot.isActive).map((slot) => slot.dayOfWeek)).size;
         },
 
         get myUserId() {
