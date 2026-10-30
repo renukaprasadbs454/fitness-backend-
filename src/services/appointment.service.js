@@ -125,10 +125,10 @@ async function list(userId, query) {
   return { items, meta: buildMeta(page, limit, total) };
 }
 
-async function getById(userId, id) {
+async function getById(userId, id, userRole) {
   const appointment = await appointmentRepository.findById(id);
   if (!appointment) throw ApiError.notFound("Appointment not found");
-  if (appointment.userId !== userId && appointment.coach?.userId !== userId) {
+  if (appointment.userId !== userId && userRole !== "ADMIN" && !(await isCoachCurrentlyAssigned(userId, userRole, appointment))) {
     throw ApiError.forbidden("Not your appointment");
   }
   return appointment;
@@ -160,17 +160,19 @@ async function autoGenerateMeeting(appointment) {
   }
 }
 
-/** The head coach oversees every coach's sessions, so they can approve, cancel and edit any of them. */
-async function isHeadCoachUser(userId, userRole) {
+/** A coach may manage a session only while the client is actively assigned to that coach. */
+async function isCoachCurrentlyAssigned(userId, userRole, appointment) {
   if (userRole !== "COACH") return false;
   const coach = await coachRepository.findByUserId(userId);
-  return Boolean(coach?.isHeadCoach);
+  if (!coach || appointment.coachId !== coach.id) return false;
+  const client = await userRepository.findById(appointment.userId);
+  return Boolean(client?.isActive && client.assignedCoachId === coach.id);
 }
 
 async function loadForMeetingChange(userId, userRole, id) {
   const appointment = await appointmentRepository.findById(id);
   if (!appointment) throw ApiError.notFound("Appointment not found");
-  if (appointment.coach?.userId !== userId && userRole !== "ADMIN" && !(await isHeadCoachUser(userId, userRole))) {
+  if (userRole !== "ADMIN" && !(await isCoachCurrentlyAssigned(userId, userRole, appointment))) {
     throw ApiError.forbidden("Only the session's coach or an admin can manage its meeting link");
   }
   if (appointment.status === "CANCELLED" || appointment.status === "COMPLETED") {
@@ -212,7 +214,7 @@ async function updateStatus(userId, userRole, id, status) {
   if (!appointment) throw ApiError.notFound("Appointment not found");
 
   const isOwner = appointment.userId === userId;
-  const isCoachOnAppointment = appointment.coach?.userId === userId || (await isHeadCoachUser(userId, userRole));
+  const isCoachOnAppointment = await isCoachCurrentlyAssigned(userId, userRole, appointment);
   if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
     throw ApiError.forbidden("You cannot modify this appointment");
   }
@@ -239,7 +241,7 @@ async function reschedule(userId, userRole, id, { scheduledAt, durationMinutes }
   if (!appointment) throw ApiError.notFound("Appointment not found");
 
   const isOwner = appointment.userId === userId;
-  const isCoachOnAppointment = appointment.coach?.userId === userId || (await isHeadCoachUser(userId, userRole));
+  const isCoachOnAppointment = await isCoachCurrentlyAssigned(userId, userRole, appointment);
   if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
     throw ApiError.forbidden("You cannot modify this appointment");
   }
@@ -286,7 +288,7 @@ async function updateDetails(userId, userRole, id, { title, notes }) {
   if (!appointment) throw ApiError.notFound("Appointment not found");
 
   const isOwner = appointment.userId === userId;
-  const isCoachOnAppointment = appointment.coach?.userId === userId || (await isHeadCoachUser(userId, userRole));
+  const isCoachOnAppointment = await isCoachCurrentlyAssigned(userId, userRole, appointment);
   if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
     throw ApiError.forbidden("You cannot modify this appointment");
   }
@@ -299,7 +301,7 @@ async function remove(userId, userRole, id) {
   if (!appointment) throw ApiError.notFound("Appointment not found");
 
   const isOwner = appointment.userId === userId;
-  const isCoachOnAppointment = appointment.coach?.userId === userId || (await isHeadCoachUser(userId, userRole));
+  const isCoachOnAppointment = await isCoachCurrentlyAssigned(userId, userRole, appointment);
   if (!isOwner && !isCoachOnAppointment && userRole !== "ADMIN") {
     throw ApiError.forbidden("You cannot delete this appointment");
   }
@@ -355,12 +357,12 @@ async function schedulableClients(coachUserId) {
   const coach = await coachRepository.findByUserId(coachUserId);
   if (!coach) throw ApiError.forbidden("Coach profile not found for this account");
 
-  const ids = coach.isHeadCoach ? [...(await chatService.eligibleClientIdsForCoach(coach.id))] : await userRepository.listClientIdsOfCoach(coach.id);
+  const ids = await userRepository.listClientIdsOfCoach(coach.id);
   const users = ids.length ? await userRepository.listClientsLiteByIds(ids) : [];
   return {
     clients: users.map(({ assignedCoachId, ...user }) => ({ ...user, assigned: assignedCoachId === coach.id })),
     // The head coach can also schedule with any other client, found through the client search.
-    canScheduleAnyone: Boolean(coach.isHeadCoach)
+    canScheduleAnyone: false
   };
 }
 
@@ -375,19 +377,14 @@ async function scheduleSessions(coachUserId, { userId, coachId, title, scheduled
   const caller = await coachRepository.findByUserId(coachUserId);
   if (!caller) throw ApiError.forbidden("Coach profile not found for this account");
 
-  // The head coach may book the session on any coach's calendar; everyone else books only for themselves.
-  let coach = caller;
-  if (coachId && coachId !== caller.id) {
-    if (!caller.isHeadCoach) throw ApiError.forbidden("Only the head coach can schedule a session for another coach");
-    coach = await coachRepository.findById(coachId);
-    if (!coach) throw ApiError.notFound("Coach not found");
-  }
+  if (coachId && coachId !== caller.id) throw ApiError.forbidden("You can only schedule sessions as yourself");
+  const coach = caller;
 
   const client = await userRepository.findById(userId);
   if (!client || client.role !== "USER") throw ApiError.notFound("Client not found");
 
-  // Regular coaches can schedule only for active clients currently assigned to them.
-  if (!caller.isHeadCoach && (client.assignedCoachId !== coach.id || !client.isActive)) {
+  // Coaches can schedule only for active clients currently assigned to them.
+  if (client.assignedCoachId !== coach.id || !client.isActive) {
     throw ApiError.forbidden("You can only schedule sessions with your own clients");
   }
 

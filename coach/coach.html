@@ -273,19 +273,6 @@
           </button>
         </template>
 
-        <div class="px-3 pt-4 pb-1.5" x-show="!sidebarCollapsed">
-          <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Database Tables</span>
-        </div>
-        <div x-show="sidebarCollapsed" class="my-2 mx-2 border-t border-dark-border/50"></div>
-
-        <template x-for="t in dbSchema" :key="t.name">
-          <button @click="selectTable(t.name)"
-            :class="[currentView === 'database' && activeTableName === t.name ? 'nav-item-active' : 'nav-item text-slate-500', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
-            class="w-full flex items-center gap-2.5 py-2 rounded-lg text-xs font-medium" :title="t.tableName || t.name">
-            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 18h18M3 6h18"/></svg>
-            <span x-show="!sidebarCollapsed" class="truncate font-mono" x-text="t.tableName || t.name"></span>
-          </button>
-        </template>
       </nav>
 
       <button @click="sidebarCollapsed = !sidebarCollapsed" class="flex items-center justify-center gap-2 border-t border-dark-border p-3 text-xs text-slate-500 hover:bg-white/5 hover:text-slate-300 transition-colors">
@@ -316,17 +303,6 @@
             </button>
           </template>
 
-          <div class="px-3 pt-4 pb-1.5">
-            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Database Tables</span>
-          </div>
-          <template x-for="t in dbSchema" :key="t.name">
-            <button @click="selectTable(t.name); mobileNavOpen = false"
-              :class="currentView === 'database' && activeTableName === t.name ? 'bg-primary/15 text-primary-light' : 'text-slate-500 hover:text-white hover:bg-white/5'"
-              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors">
-              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M3 18h18M3 6h18"/></svg>
-              <span class="truncate font-mono" x-text="t.tableName || t.name"></span>
-            </button>
-          </template>
         </nav>
         <button @click="logout()" class="flex items-center justify-center gap-2 border-t border-dark-border p-3 text-xs text-red-400 hover:bg-red-500/10 transition-colors">
           Log out
@@ -621,14 +597,14 @@
               <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-6">
                 <div>
                   <h2 class="text-2xl font-bold mb-1">Appointments</h2>
-                  <p class="text-slate-400 text-sm" x-text="coach?.isHeadCoach ? 'Sessions across every coach. Each one can carry its own meeting link, which the client sees in the app.' : 'Your 1:1 sessions. Each one can carry its own meeting link, which the client sees in the app.'"></p>
+                  <p class="text-slate-400 text-sm">Your sessions with clients currently assigned to you. Each session can carry its own meeting link.</p>
                   <p class="text-xs mt-1" :class="meetingStatus.googleMeetConnected ? 'text-emerald-400' : 'text-slate-500'"
                     x-text="meetingStatus.googleMeetConnected ? 'Google Meet links are generated automatically when you confirm a session.' : 'Automatic Google Meet links are off — paste a link per session, or ask an admin to connect a Google account.'"></p>
                 </div>
                 <button @click="openSchedule()" class="btn-primary px-4 py-2.5 rounded-xl text-sm flex-shrink-0">+ Schedule Session</button>
               </div>
 
-              <div x-show="coach?.isHeadCoach" x-cloak class="flex items-center gap-2 mb-4">
+              <div x-show="false" x-cloak class="flex items-center gap-2 mb-4">
                 <label class="text-xs text-slate-500">Working as</label>
                 <select x-model="appointmentsCoachId" @change="fetchAppointments()" class="px-3 py-2 bg-dark border border-dark-border rounded-xl text-sm text-white">
                   <option value="">All coaches</option>
@@ -684,10 +660,10 @@
           <template x-if="currentView === 'clients'">
             <div>
               <h2 class="text-2xl font-bold mb-1">Clients</h2>
-              <p class="text-slate-400 text-sm mb-4" x-text="coach?.isHeadCoach ? 'Every client on the platform and the coach each one is assigned to.' : 'People assigned to you by an admin, and anyone who has booked a session with you.'"></p>
+              <p class="text-slate-400 text-sm mb-4">Active users currently assigned to you.</p>
 
               <!-- Head coach: how the clients are split between coaches. Tap one to filter. -->
-              <div x-show="coach?.isHeadCoach" x-cloak class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+              <div x-show="false" x-cloak class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                 <button @click="clientsFilter = 'all'" class="card p-3 text-left" :class="clientsFilter === 'all' ? 'ring-1 ring-primary' : ''">
                   <p class="text-[11px] uppercase tracking-wider text-slate-500">All clients</p>
                   <p class="text-2xl font-bold" x-text="clientsData.summary.total"></p>
@@ -708,7 +684,7 @@
 
               <div class="flex flex-col sm:flex-row gap-3 mb-4">
                 <input x-model="clientsSearch" type="search" placeholder="Search by name, username, email or coach…" class="flex-1 px-3.5 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white placeholder-slate-600">
-                <select x-show="coach?.isHeadCoach" x-cloak x-model="clientsFilter" class="sm:w-64 px-3 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white">
+                <select x-show="false" x-cloak x-model="clientsFilter" class="sm:w-64 px-3 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white">
                   <option value="all">All coaches</option>
                   <option value="mine" x-text="'Assigned to me (' + clientsData.summary.mine + ')'"></option>
                   <option value="unassigned" x-text="'No coach yet (' + clientsData.summary.unassigned + ')'"></option>
@@ -737,8 +713,8 @@
                       <p class="text-xs text-slate-500 mt-0.5" x-text="c.email + ' · ' + c.sessions + ' session' + (c.sessions === 1 ? '' : 's') + (c.upcomingSessions ? ' · ' + c.upcomingSessions + ' upcoming' : '')"></p>
                     </div>
                     <div class="flex flex-wrap gap-2 sm:justify-end">
-                      <button x-show="coach?.isHeadCoach || c.relation === 'mine'" @click="currentView = 'chat'; newChatCoachId = ''; startChatWith(c)" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Message</button>
-                      <button x-show="coach?.isHeadCoach || c.relation === 'mine'" @click="currentView = 'workouts'; assignForm.selectedUser = c" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Assign workout</button>
+                  <button x-show="c.relation === 'mine'" @click="currentView = 'chat'; newChatCoachId = ''; startChatWith(c)" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Message</button>
+                  <button x-show="c.relation === 'mine'" @click="currentView = 'workouts'; assignForm.selectedUser = c" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Assign workout</button>
                       <button @click="openSchedule(c)" class="px-3 py-1.5 rounded-lg bg-primary/15 text-primary-light text-xs font-semibold hover:bg-primary/25">Schedule</button>
                     </div>
                   </div>
@@ -758,7 +734,7 @@
                 <div class="card p-5">
                   <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">New Assignment</h3>
 
-                  <div x-show="coach?.isHeadCoach" x-cloak class="mb-4">
+                  <div x-show="false" x-cloak class="mb-4">
                     <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Step 1 — Coach</label>
                     <select x-model="assignForm.coachUserId" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white">
                       <option value="" x-text="'Me (' + (coach?.user?.fullName || '') + ')'"></option>
@@ -770,7 +746,7 @@
                   </div>
 
                   <div class="mb-4">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2" x-text="coach?.isHeadCoach ? 'Step 2 — Client' : 'Step 1 — Client'"></label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Client</label>
                     <template x-if="!assignForm.selectedUser">
                       <div class="space-y-2">
                         <input x-model="clientSearch" @input.debounce.300ms="searchClients(clientSearch)" placeholder="Search your clients by name, username or email…"
@@ -782,7 +758,7 @@
                               <span class="min-w-0"><span class="font-medium block truncate" x-text="u.fullName"></span><span class="text-xs text-slate-500 block truncate" x-text="u.email"></span></span>
                             </button>
                           </template>
-                          <p x-show="clientResults.length === 0" class="p-3 text-center text-xs text-slate-500" x-text="coach?.isHeadCoach ? 'No matching users.' : 'No clients are assigned to you yet. An admin assigns clients to coaches.'"></p>
+                          <p x-show="clientResults.length === 0" class="p-3 text-center text-xs text-slate-500">No active clients are assigned to you yet. An admin can assign clients.</p>
                         </div>
                       </div>
                     </template>
@@ -928,8 +904,8 @@
                 <h2 class="text-2xl font-bold">Messages</h2>
                 <span class="badge" :class="chatConnected ? 'badge-green' : 'badge-slate'" x-text="chatConnected ? 'Live' : 'Reconnecting…'"></span>
               </div>
-              <p class="text-slate-400 text-sm mb-4" x-text="coach?.isHeadCoach ? (chatScope === 'all' ? 'Every coach\'s conversations with their clients. You can read them and reply.' : 'Your own conversations with your clients.') : 'Your conversations with the clients assigned to you.'"></p>
-              <div x-show="coach?.isHeadCoach" x-cloak class="flex gap-2 mb-4">
+              <p class="text-slate-400 text-sm mb-4">Your conversations with clients currently assigned to you. Previous conversations remain available as read-only history.</p>
+              <div x-show="false" x-cloak class="flex gap-2 mb-4">
                 <button @click="setChatScope('mine')" :class="chatScope === 'mine' ? 'bg-primary text-white' : 'bg-dark-card text-slate-400 border border-dark-border'" class="px-3.5 py-1.5 rounded-full text-xs font-semibold">My chats</button>
                 <button @click="setChatScope('all')" :class="chatScope === 'all' ? 'bg-primary text-white' : 'bg-dark-card text-slate-400 border border-dark-border'" class="px-3.5 py-1.5 rounded-full text-xs font-semibold">All coaches</button>
               </div>
@@ -940,7 +916,7 @@
                   <div class="p-3 border-b border-dark-border space-y-2">
                     <button @click="openNewChat()" class="btn-primary w-full py-2 rounded-xl text-xs">+ New Chat</button>
                     <input x-model="chatSearch" type="search" placeholder="Search by client or coach name" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white placeholder-slate-600">
-                    <select x-show="coach?.isHeadCoach && chatScope === 'all'" x-cloak x-model="chatCoachFilter" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white">
+                    <select x-show="false" x-cloak x-model="chatCoachFilter" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white">
                       <option value="all" x-text="'All coaches (' + chatRooms.length + ')'"></option>
                       <template x-for="g in chatCoachGroups" :key="g.id">
                         <option :value="g.id" x-text="(g.isMine ? 'Me · ' : '') + g.name + ' (' + g.count + ')'"></option>
@@ -967,6 +943,7 @@
                             <span class="text-sm font-semibold truncate" x-text="r.participant.name"></span>
                             <span class="text-[10px] text-slate-500 flex-shrink-0" x-text="r.lastMessageAt ? shortTime(r.lastMessageAt) : ''"></span>
                           </span>
+                          <span x-show="r.isArchived" class="inline-flex mt-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">Read-only history</span>
                           <span x-show="coach?.isHeadCoach && chatScope === 'all' && r.coach" class="block mt-0.5">
                             <span class="inline-flex items-center rounded-full bg-amber-500/15 text-amber-400 px-2 py-0.5 text-[10px] font-semibold max-w-full truncate" x-text="'Coach: ' + (r.isMine ? 'you' : r.coach?.name)"></span>
                           </span>
@@ -1009,6 +986,7 @@
                       <p x-show="activeRoom.isMine === false" x-cloak class="px-4 py-2 text-[11px] text-amber-400 bg-amber-500/10 border-b border-dark-border">
                         This is <span class="font-semibold" x-text="activeRoom.coach?.name"></span>'s conversation with <span class="font-semibold" x-text="activeRoom.participant.name"></span>. Anything you send is sent as you (<span x-text="coach?.user?.fullName"></span>).
                       </p>
+                      <p x-show="activeRoom.canSend === false" x-cloak class="px-4 py-2 text-[11px] text-amber-400 bg-amber-500/10 border-b border-dark-border">This client is no longer assigned to you. You can read the conversation history, but cannot send new messages.</p>
 
                       <div id="chatScroll" class="flex-1 overflow-y-auto px-4 py-4 space-y-2">
                         <p x-show="chatLoading" class="text-center text-xs text-slate-500">Loading…</p>
@@ -1033,7 +1011,7 @@
                         <p x-show="!chatLoading && chatMessages.length === 0" class="text-center text-xs text-slate-500 py-8">No messages yet. Type below to send the first one.</p>
                       </div>
 
-                      <form @submit.prevent="sendChat()" class="flex items-end gap-2 p-3 border-t border-dark-border">
+                      <form x-show="activeRoom.canSend !== false" @submit.prevent="sendChat()" class="flex items-end gap-2 p-3 border-t border-dark-border">
                         <label class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 cursor-pointer" title="Send a photo">
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                           <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="sendChatImage($event)">
@@ -1123,124 +1101,7 @@
             </div>
           </template>
 
-          <!-- Database (full explorer, same pattern as the admin panel) -->
-          <template x-if="currentView === 'database'">
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <h2 class="text-2xl font-bold">Database</h2>
-                <span class="badge badge-green">Your Data</span>
-              </div>
-              <p class="text-slate-400 text-sm mb-6">Data for you and your clients (users assigned to you or who booked a session with you), plus shared tables such as workouts and content. Tables marked read-only can be viewed but not changed here.</p>
 
-              <!-- Search & Filter bar with Table & Column Dropdowns -->
-              <div class="mb-4 flex flex-col sm:flex-row sm:items-center gap-3 bg-dark-card border border-dark-border p-3 rounded-2xl">
-                <div class="flex items-center gap-2 flex-1 min-w-0 flex-wrap sm:flex-nowrap">
-
-                  <!-- Select Table Dropdown -->
-                  <div class="relative min-w-[150px] sm:min-w-[180px]" x-data="{ open: false }" @click.outside="open = false">
-                    <button @click="open = !open" type="button" class="w-full flex items-center justify-between gap-2 px-3 py-2 bg-dark border border-dark-border hover:border-primary/50 rounded-xl text-xs font-mono font-bold text-primary-light transition-colors">
-                      <div class="flex items-center gap-1.5 min-w-0">
-                        <svg class="w-3.5 h-3.5 text-primary-light flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
-                        <span class="truncate" x-text="activeTableName || 'Select a table…'"></span>
-                      </div>
-                      <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0 transition-transform duration-150" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    <div x-show="open" x-cloak x-transition class="absolute left-0 mt-1.5 w-60 max-h-64 overflow-y-auto modal-panel rounded-xl shadow-2xl border border-dark-border z-40 p-1 space-y-0.5">
-                      <div class="px-2.5 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Database Table</div>
-                      <template x-for="t in dbSchema" :key="t.name">
-                        <button @click="selectTable(t.name); open = false" type="button"
-                          :class="t.name.toLowerCase() === activeTableName.toLowerCase() ? 'bg-primary/15 text-primary-light font-bold' : 'text-slate-300 hover:bg-white/5'"
-                          class="w-full text-left px-3 py-2 rounded-lg text-xs font-mono transition-colors flex items-center justify-between">
-                          <span x-text="t.tableName || t.name"></span>
-                          <svg x-show="t.name.toLowerCase() === activeTableName.toLowerCase()" class="w-3.5 h-3.5 text-primary-light" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                        </button>
-                      </template>
-                    </div>
-                  </div>
-
-                  <!-- Column Filter Dropdown -->
-                  <div class="relative min-w-[120px] sm:min-w-[150px]" x-data="{ open: false }" @click.outside="open = false">
-                    <button @click="open = !open" type="button" class="w-full flex items-center justify-between gap-2 px-3 py-2 bg-dark border border-dark-border hover:border-slate-500 rounded-xl text-xs font-medium text-slate-300 transition-colors">
-                      <span class="truncate" x-text="tableSearchColumn === 'ALL' ? 'All Fields' : tableSearchColumn"></span>
-                      <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0 transition-transform duration-150" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-                    <div x-show="open" x-cloak x-transition class="absolute left-0 mt-1.5 w-52 max-h-64 overflow-y-auto modal-panel rounded-xl shadow-2xl border border-dark-border z-40 p-1 space-y-0.5">
-                      <div class="px-2.5 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Search Field Filter</div>
-                      <button @click="tableSearchColumn = 'ALL'; open = false" type="button"
-                        :class="tableSearchColumn === 'ALL' ? 'bg-primary/15 text-primary-light font-bold' : 'text-slate-300 hover:bg-white/5'"
-                        class="w-full text-left px-3 py-2 rounded-lg text-xs font-mono transition-colors flex items-center justify-between">
-                        <span>All Fields</span>
-                        <svg x-show="tableSearchColumn === 'ALL'" class="w-3.5 h-3.5 text-primary-light" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                      </button>
-                      <div class="my-1 border-t border-dark-border/40"></div>
-                      <template x-for="col in tableColumns()" :key="col">
-                        <button @click="tableSearchColumn = col; open = false" type="button"
-                          :class="tableSearchColumn === col ? 'bg-primary/15 text-primary-light font-bold' : 'text-slate-300 hover:bg-white/5'"
-                          class="w-full text-left px-3 py-2 rounded-lg text-xs font-mono transition-colors flex items-center justify-between">
-                          <span x-text="col"></span>
-                          <svg x-show="tableSearchColumn === col" class="w-3.5 h-3.5 text-primary-light" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                        </button>
-                      </template>
-                    </div>
-                  </div>
-
-                  <!-- Search Input -->
-                  <div class="relative flex-1 min-w-[160px]">
-                    <svg class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
-                    <input x-model="tableSearch" placeholder="Filter rows in this table..." class="w-full pl-8 pr-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-primary transition-colors">
-                  </div>
-                </div>
-
-                <button x-show="!activeModelInfo?.readOnly" @click="openInsertRow()" :disabled="!activeTableName" class="px-3.5 py-2 bg-primary hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 flex-shrink-0">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-                  Insert Row
-                </button>
-              </div>
-
-              <div class="card overflow-hidden" x-show="activeTableName">
-                <div class="flex items-center justify-between px-5 py-3 border-b border-dark-border">
-                  <span class="text-sm font-bold font-mono text-primary-light" x-text="activeTableName"></span>
-                  <span class="flex items-center gap-2">
-                    <span class="text-[11px] text-slate-500" x-text="activeModelInfo?.scopeNote || ''"></span>
-                    <span x-show="activeModelInfo?.readOnly" class="badge badge-orange">Read-only</span>
-                    <span class="badge badge-slate" x-text="filteredTableRows().length + ' rows'"></span>
-                  </span>
-                </div>
-                <div class="overflow-x-auto max-h-[560px]">
-                  <table class="w-full text-left text-xs">
-                    <thead class="bg-dark/90 text-slate-400 font-semibold border-b border-dark-border sticky top-0 z-10">
-                      <tr>
-                        <template x-for="col in tableColumns()" :key="col">
-                          <th class="px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-slate-300 whitespace-nowrap" x-text="col"></th>
-                        </template>
-                        <th class="px-4 py-3 text-right whitespace-nowrap">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-dark-border/50 text-slate-300 font-mono text-[11px]">
-                      <template x-for="row in filteredTableRows()" :key="row.id || JSON.stringify(row)">
-                        <tr class="hover:bg-white/5 transition-colors">
-                          <template x-for="col in tableColumns()" :key="col">
-                            <td class="px-4 py-2.5 max-w-xs truncate" :title="String(row[col] ?? '')" x-text="cellDisplay(row, col)"></td>
-                          </template>
-                          <td class="px-4 py-2.5 text-right whitespace-nowrap">
-                            <span x-show="activeModelInfo?.readOnly" class="text-slate-600">—</span>
-                            <button x-show="!activeModelInfo?.readOnly" @click="openEditRow(row)" class="px-2 py-1 bg-white/5 hover:bg-white/10 text-slate-300 rounded-md transition-colors mr-1">Edit</button>
-                            <button x-show="!activeModelInfo?.readOnly" @click="deleteDbRow(row)" class="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-md transition-colors">Delete</button>
-                          </td>
-                        </tr>
-                      </template>
-                      <tr x-show="!filteredTableRows().length">
-                        <td :colspan="tableColumns().length + 1" class="px-4 py-8 text-center text-slate-500">
-                          No rows found<span x-show="activeTableName"> in <span class="font-bold" x-text="activeTableName"></span></span>.
-                          <span class="block mt-1 text-xs text-slate-600" x-show="activeModelInfo?.scopeNote === 'Your clients and you'">This table only shows records for you and your clients.</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </template>
 
         </div>
       </main>
@@ -1353,7 +1214,7 @@
         <h3 class="text-lg font-bold">Start a chat</h3>
         <button @click="modals.newChat = false" class="text-slate-400 hover:text-white w-8 h-8 rounded-lg hover:bg-white/5">✕</button>
       </div>
-      <div x-show="coach?.isHeadCoach" x-cloak class="mb-3">
+      <div x-show="false" x-cloak class="mb-3">
         <label class="block text-xs text-slate-500 mb-1.5">Chat on behalf of coach</label>
         <select x-model="newChatCoachId" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white">
           <option value="" x-text="'Me (' + (coach?.user?.fullName || '') + ')'"></option>
@@ -1362,7 +1223,7 @@
           </template>
         </select>
       </div>
-      <input x-model="clientSearch" @input.debounce.300ms="searchClients(clientSearch)" :placeholder="coach?.isHeadCoach ? 'Search any client…' : 'Search your clients…'"
+      <input x-model="clientSearch" @input.debounce.300ms="searchClients(clientSearch)" placeholder="Search your active clients…"
         class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-600 mb-3">
       <div class="max-h-64 overflow-y-auto rounded-xl border border-dark-border divide-y divide-dark-border">
         <template x-for="u in clientResults" :key="u.id">
@@ -1448,7 +1309,7 @@
       <h3 class="text-lg font-bold mb-1">Schedule a session</h3>
       <p class="text-xs text-slate-500 mb-4">Sessions are confirmed straight away and appear in the client's app with their join link.</p>
 
-      <template x-if="coach?.isHeadCoach">
+      <template x-if="false">
         <div>
           <label class="block text-xs text-slate-500 mb-1.5">Coach</label>
           <select x-model="scheduleForm.coachId" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3">
@@ -1635,7 +1496,6 @@
           { key: "workouts", label: "Assign Workouts", icon: "M4 10v4M20 10v4M7 8v8M17 8v8M7 12h10" },
           { key: "chat", label: "Messages", icon: "M8 10h8M8 14h5m-9 6l3.5-3.5H18a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14z" },
           { key: "coaches", label: "Coaches", icon: "M20.24 12.24a6 6 0 00-8.49-8.49L5 10.5V19h8.5l6.74-6.76z" },
-          { key: "database", label: "Database", icon: "M3 10h18M3 14h18M3 18h18M3 6h18" }
         ],
 
         appointments: [],
@@ -1655,14 +1515,6 @@
 
         allCoaches: [],
         coachesSearch: "",
-
-        dbSchema: [],
-        activeTableName: "",
-        activeModelInfo: null,
-        tableRows: [],
-        tableSearch: "",
-        tableSearchColumn: "ALL",
-        loadingTable: false,
 
         modals: { dbInsert: false, dbEdit: false, confirm: false, editAssignment: false, newChat: false, meetingLink: false, schedule: false, addCoach: false },
         rowFormFields: [],
@@ -1892,7 +1744,6 @@
           this.fetchAppointments();
           this.fetchClients();
           this.fetchAllCoaches();
-          this.fetchDbSchema();
           this.loadWorkoutPlans();
           this.searchClients("");
           this.fetchSentAssignments();
@@ -1908,1055 +1759,6 @@
               this.allCoaches = Array.isArray(items) ? items : [];
             })
             .catch(() => {});
-        },
-
-        // Opening "Database" with no table chosen used to show an empty page;
-        // land on the Users table (or the first one) so data is visible at once.
-        openView(key) {
-          this.currentView = key;
-          if (key === "database" && !this.activeTableName && this.dbSchema.length) {
-            const first = this.dbSchema.find((t) => t.name === "User") || this.dbSchema[0];
-            this.selectTable(first.name);
-          }
-        },
-
-        fetchDbSchema() {
-          return this.apiRequest("GET", "/api/v1/coaches/db/tables")
-            .then((tables) => {
-              this.dbSchema = (tables || []).slice().sort((a, b) => {
-                const nameA = (a.tableName || a.name).toLowerCase();
-                const nameB = (b.tableName || b.name).toLowerCase();
-                return nameA.localeCompare(nameB);
-              });
-              if (this.currentView === "database" && !this.activeTableName) this.openView("database");
-            })
-            .catch((err) => {
-              this.showToast(err.message || "Failed to load database schema", "error");
-            });
-        },
-
-        selectTable(tableName) {
-          this.activeTableName = tableName;
-          this.tableSearch = "";
-          this.tableSearchColumn = "ALL";
-          this.currentView = "database";
-          this.fetchTableRows(tableName);
-        },
-
-        fetchTableRows(tableName = this.activeTableName) {
-          if (!tableName) return;
-          this.loadingTable = true;
-          this.apiRequest("GET", `/api/v1/coaches/db/tables/${tableName}?page=1&limit=100`)
-            .then((rows) => {
-              this.loadingTable = false;
-              this.tableRows = Array.isArray(rows) ? rows : [];
-              const foundModel = this.dbSchema.find(
-                (m) => m.name.toLowerCase() === tableName.toLowerCase() || m.tableName.toLowerCase() === tableName.toLowerCase()
-              );
-              if (foundModel) this.activeModelInfo = foundModel;
-            })
-            .catch((err) => {
-              this.loadingTable = false;
-              this.tableRows = [];
-              this.showToast(err.message || "Failed to fetch table data", "error");
-            });
-        },
-
-        tableColumns() {
-          if (this.activeModelInfo?.fields) {
-            return this.activeModelInfo.fields.filter((f) => f.kind === "scalar" || f.kind === "enum").map((f) => f.name);
-          }
-          if (this.tableRows.length > 0) return Object.keys(this.tableRows[0]);
-          return [];
-        },
-
-        filteredTableRows() {
-          if (!this.tableSearch.trim()) return this.tableRows;
-          const search = this.tableSearch.toLowerCase();
-          if (this.tableSearchColumn && this.tableSearchColumn !== "ALL") {
-            const col = this.tableSearchColumn;
-            return this.tableRows.filter((row) => {
-              const val = row[col];
-              if (val === null || val === undefined) return false;
-              return String(typeof val === "object" ? JSON.stringify(val) : val).toLowerCase().includes(search);
-            });
-          }
-          return this.tableRows.filter((row) => JSON.stringify(row).toLowerCase().includes(search));
-        },
-
-        relationFor(col) {
-          return (this.activeModelInfo?.relations || []).find((r) => r.fkField === col);
-        },
-
-        // Foreign-key columns show a resolved readable label instead of the
-        // raw UUID, when the server was able to resolve one (see
-        // coachDb.service.js). The raw id is still in the cell's tooltip.
-        cellDisplay(row, col) {
-          if (this.relationFor(col)) {
-            const label = row[`${col}__label`];
-            if (label) return label;
-          }
-          const val = row[col];
-          return val === null ? 'NULL' : typeof val === 'object' ? JSON.stringify(val) : String(val);
-        },
-
-        // Build a structured fields array from a data object (edit) or the
-        // model's schema alone (insert) — same shape the Insert/Edit Row
-        // modal renders.
-        _buildFormFields(initialData) {
-          const fields = [];
-          if (this.activeModelInfo?.fields) {
-            this.activeModelInfo.fields.forEach((f) => {
-              if ((f.kind === 'scalar' || f.kind === 'enum') && !f.isId && f.name !== 'createdAt' && f.name !== 'updatedAt') {
-                let value = initialData !== null ? (initialData[f.name] ?? (f.type === 'Boolean' ? false : f.type === 'Int' || f.type === 'Float' ? '' : '')) : '';
-                let originalIso = null;
-                if (f.type === 'DateTime' && value) {
-                  // datetime-local inputs show and return LOCAL time, so convert from the stored instant
-                  // (toISOString alone showed UTC, and saving then moved the time back 5½ hours in IST).
-                  // The original is kept so a field nobody touched is saved back exactly as it was.
-                  const instant = new Date(value);
-                  if (!isNaN(instant)) {
-                    originalIso = instant.toISOString();
-                    instant.setMinutes(instant.getMinutes() - instant.getTimezoneOffset());
-                    value = instant.toISOString().slice(0, 16);
-                  }
-                }
-                const relation = this.relationFor(f.name);
-                fields.push({
-                  name: f.name,
-                  type: f.type,
-                  kind: f.kind,
-                  required: f.isRequired && !f.hasDefaultValue,
-                  enumValues: f.enumValues || [],
-                  value,
-                  initialValue: value,
-                  originalIso,
-                  isRelation: Boolean(relation),
-                  relatedModel: relation?.relatedModel || null,
-                });
-                if (relation) this.fetchRelationOptions(relation.relatedModel);
-              }
-            });
-          } else if (initialData) {
-            Object.entries(initialData).forEach(([key, val]) => {
-              if (key === 'id' || key === 'createdAt' || key === 'updatedAt') return;
-              const type = typeof val === 'boolean' ? 'Boolean' : typeof val === 'number' ? 'Int' : 'String';
-              fields.push({ name: key, type, kind: 'scalar', required: false, enumValues: [], value: val ?? '' });
-            });
-          }
-          return fields;
-        },
-
-        _collectFormData() {
-          const data = {};
-          this.rowFormFields.forEach((f) => {
-            if (f.value === '' || f.value === null || f.value === undefined) {
-              data[f.name] = null;
-            } else if (f.type === 'Boolean') {
-              data[f.name] = f.value === true || f.value === 'true';
-            } else if (f.type === 'Int') {
-              data[f.name] = parseInt(f.value, 10);
-            } else if (f.type === 'Float') {
-              data[f.name] = parseFloat(f.value);
-            } else if (f.type === 'DateTime' && f.value) {
-              data[f.name] = f.originalIso && f.value === f.initialValue ? f.originalIso : new Date(f.value).toISOString();
-            } else {
-              data[f.name] = f.value;
-            }
-          });
-          return data;
-        },
-
-        fetchRelationOptions(modelName) {
-          if (this.relationOptionsCache[modelName]) return;
-          this.relationOptionsCache[modelName] = [];
-          this.apiRequest("GET", `/api/v1/coaches/db/relation-options/${modelName}`)
-            .then((options) => {
-              this.relationOptionsCache[modelName] = options || [];
-            })
-            .catch(() => {});
-        },
-
-        openInsertRow() {
-          this.rowFormFields = this._buildFormFields(null);
-          this.modals.dbInsert = true;
-        },
-
-        submitInsertRow() {
-          const data = this._collectFormData();
-          this.apiRequest("POST", `/api/v1/coaches/db/tables/${this.activeTableName}`, data)
-            .then(() => {
-              this.modals.dbInsert = false;
-              this.fetchTableRows();
-              this.showToast(`Row created in ${this.activeTableName}`);
-            })
-            .catch((err) => this.showToast(err.message || "Failed to create row", "error"));
-        },
-
-        openEditRow(row) {
-          this.activeRowData = row;
-          this.rowFormFields = this._buildFormFields(row);
-          this.modals.dbEdit = true;
-        },
-
-        submitEditRow() {
-          const data = this._collectFormData();
-          const id = this.activeRowData.id;
-          this.apiRequest("PUT", `/api/v1/coaches/db/tables/${this.activeTableName}/${id}`, data)
-            .then(() => {
-              this.modals.dbEdit = false;
-              this.fetchTableRows();
-              this.showToast(`Row updated in ${this.activeTableName}`);
-            })
-            .catch((err) => this.showToast(err.message || "Failed to update row", "error"));
-        },
-
-        deleteDbRow(row) {
-          if (!row.id) return;
-          this.confirmAction = {
-            type: "delete-row",
-            target: row,
-            title: "Delete Row",
-            description: `Are you sure you want to delete row ${row.id} from ${this.activeTableName}? This cannot be undone.`,
-            confirmLabel: "Delete"
-          };
-          this.modals.confirm = true;
-        },
-
-        runConfirmAction() {
-          const { type, target } = this.confirmAction;
-          this.modals.confirm = false;
-          if (type === "appointment-status") {
-            this.setAppointmentStatus(target.appointment, target.status);
-            return;
-          }
-          if (type === "schedule-session") {
-            this.saveSchedule();
-            return;
-          }
-          if (type === "delete-coach") {
-            this.apiRequest("DELETE", `/api/v1/coaches/${target.id}`)
-              .then(() => {
-                if (this.managedCoachId === target.id) this.switchManaged("");
-                this.showToast(`${target.user?.fullName || "Coach"} was removed`);
-                this.fetchAllCoaches();
-                this.fetchAppointments();
-                this.fetchRooms();
-              })
-              .catch((err) => this.showToast(err.message || "Couldn't remove this coach", "error"));
-            return;
-          }
-          if (type === "delete-slot") {
-            this.apiRequest("DELETE", `/api/v1/coaches/${this.targetCoachId}/availability/${target.id}`)
-              .then(() => {
-                if (this.editingSlotId === target.id) this.cancelSlotEdit();
-                this.fetchAvailability();
-                this.showToast("Slot deleted");
-              })
-              .catch((err) => this.showToast(err.message || "Couldn't delete the slot", "error"));
-            return;
-          }
-          if (type === "delete-assignment") {
-            const path = `/api/v1/workout-assignments/${target.type === "custom" ? "custom/" : ""}${target.id}`;
-            this.apiRequest("DELETE", path)
-              .then(() => {
-                this.showToast("Workout removed");
-                this.fetchSentAssignments();
-              })
-              .catch((err) => this.showToast(err.message || "Failed to remove workout", "error"));
-            return;
-          }
-          if (type === "clear-chat") {
-            this.apiRequest("DELETE", `/api/v1/chat/rooms/${target.id}/messages`)
-              .then(() => {
-                this.chatMessages = [];
-                this.showToast("Chat cleared");
-              })
-              .catch((err) => this.showToast(err.message || "Failed to clear chat", "error"));
-            return;
-          }
-          if (type === "delete-row") {
-            this.apiRequest("DELETE", `/api/v1/coaches/db/tables/${this.activeTableName}/${target.id}`)
-              .then(() => {
-                this.fetchTableRows();
-                this.showToast(`Row deleted from ${this.activeTableName}`);
-              })
-              .catch((err) => this.showToast(err.message || "Failed to delete row", "error"));
-          }
-        },
-
-        // ================= ASSIGN WORKOUTS =================
-        blankExercise() {
-          return { name: "", muscleGroup: "", sets: "", reps: "" };
-        },
-
-        loadWorkoutPlans() {
-          this.apiRequest("GET", "/api/v1/workouts?limit=100")
-            .then((items) => { this.workoutPlans = Array.isArray(items) ? items : []; })
-            .catch(() => {});
-        },
-
-        // Only the clients an admin has assigned to this coach come back.
-        searchClients(query = "") {
-          const q = (query || "").trim();
-          this.apiRequest("GET", `/api/v1/workout-assignments/search-users${q ? `?search=${encodeURIComponent(q)}` : ""}`)
-            .then((users) => {
-              this.clientResults = Array.isArray(users) ? users : [];
-              if (!q) this.assignedClients = this.clientResults;
-            })
-            .catch((err) => this.showToast(err.message || "Failed to load clients", "error"));
-        },
-
-        resetAssignForm() {
-          this.assignForm = {
-            selectedUser: null, coachUserId: "", mode: "CATALOG", selectedPlanId: null, note: "", scheduledAt: "",
-            title: "", description: "", durationMinutes: "", difficulty: "BEGINNER", categoryKey: "GENERAL_FITNESS",
-            exercises: [this.blankExercise()]
-          };
-          this.assignFormError = "";
-        },
-
-        submitAssignWorkout() {
-          this.assignFormError = "";
-          const f = this.assignForm;
-          if (!f.selectedUser) {
-            this.assignFormError = "Pick the client you are sending this workout to.";
-            return;
-          }
-
-          let path;
-          let body;
-          if (f.mode === "CATALOG") {
-            if (!f.selectedPlanId) {
-              this.assignFormError = "Choose a workout from the library.";
-              return;
-            }
-            path = `/api/v1/workout-assignments/${f.selectedUser.id}/plan`;
-            body = {
-              planId: f.selectedPlanId,
-              note: f.note.trim() || undefined,
-              scheduledAt: f.scheduledAt ? new Date(f.scheduledAt).toISOString() : undefined,
-              asCoachUserId: f.coachUserId || undefined
-            };
-          } else {
-            if (!f.title.trim()) {
-              this.assignFormError = "Give the workout a title.";
-              return;
-            }
-            const exercises = this.cleanExercises(f.exercises);
-            if (exercises.length === 0) {
-              this.assignFormError = "Add at least one exercise.";
-              return;
-            }
-            path = `/api/v1/workout-assignments/${f.selectedUser.id}/custom`;
-            body = {
-              title: f.title.trim(),
-              description: f.description.trim() || undefined,
-              durationMinutes: f.durationMinutes ? Number(f.durationMinutes) : undefined,
-              difficulty: f.difficulty,
-              categoryKey: f.categoryKey,
-              exercises,
-              asCoachUserId: f.coachUserId || undefined
-            };
-          }
-
-          this.assignFormSaving = true;
-          this.apiRequest("POST", path, body)
-            .then(() => {
-              this.showToast(`Sent to ${f.selectedUser.fullName}.`);
-              this.resetAssignForm();
-              this.fetchSentAssignments();
-            })
-            .catch((err) => { this.assignFormError = err.message || "Unable to assign this workout. Please try again."; })
-            .finally(() => { this.assignFormSaving = false; });
-        },
-
-        cleanExercises(rows) {
-          return rows
-            .filter((row) => row.name.trim())
-            .map((row) => ({
-              name: row.name.trim(),
-              muscleGroup: row.muscleGroup?.trim() || undefined,
-              sets: row.sets ? Number(row.sets) : undefined,
-              reps: row.reps ? Number(row.reps) : undefined
-            }));
-        },
-
-        fetchSentAssignments() {
-          this.apiRequest("GET", "/api/v1/workout-assignments/mine?limit=100")
-            .then((res) => {
-              const plans = (res?.planAssignments?.items || []).map((a) => ({ ...a, type: "plan", title: a.plan?.title }));
-              const customs = (res?.customAssignments?.items || []).map((a) => ({ ...a, type: "custom" }));
-              this.sentAssignments = [...plans, ...customs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            })
-            .catch((err) => this.showToast(err.message || "Failed to load assigned workouts", "error"));
-        },
-
-        toLocalInput(iso) {
-          const d = new Date(iso);
-          d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-          return d.toISOString().slice(0, 16);
-        },
-
-        openEditAssignment(a) {
-          this.editingAssignment = a;
-          this.editError = "";
-          if (a.type === "custom") {
-            const exercises = (a.exercises || []).map((e) => ({ name: e.name, muscleGroup: e.muscleGroup || "", sets: e.sets ?? "", reps: e.reps ?? "" }));
-            this.editForm = {
-              title: a.title || "",
-              description: a.description || "",
-              durationMinutes: a.durationMinutes ?? "",
-              difficulty: a.difficulty || "BEGINNER",
-              categoryKey: a.categoryKey || "GENERAL_FITNESS",
-              exercises: exercises.length ? exercises : [this.blankExercise()]
-            };
-          } else {
-            this.editForm = { note: a.note || "", scheduledAt: a.scheduledAt ? this.toLocalInput(a.scheduledAt) : "" };
-          }
-          this.modals.editAssignment = true;
-        },
-
-        submitEditAssignment() {
-          const a = this.editingAssignment;
-          if (!a) return;
-          const f = this.editForm;
-          this.editError = "";
-
-          let path;
-          let body;
-          if (a.type === "custom") {
-            if (!f.title.trim()) {
-              this.editError = "Title can't be empty.";
-              return;
-            }
-            const exercises = this.cleanExercises(f.exercises);
-            if (exercises.length === 0) {
-              this.editError = "Keep at least one exercise.";
-              return;
-            }
-            path = `/api/v1/workout-assignments/custom/${a.id}`;
-            body = {
-              title: f.title.trim(),
-              description: f.description.trim() || null,
-              durationMinutes: f.durationMinutes ? Number(f.durationMinutes) : null,
-              difficulty: f.difficulty,
-              categoryKey: f.categoryKey,
-              exercises
-            };
-          } else {
-            path = `/api/v1/workout-assignments/${a.id}`;
-            body = {
-              note: f.note.trim() || null,
-              scheduledAt: f.scheduledAt ? new Date(f.scheduledAt).toISOString() : null
-            };
-          }
-
-          this.editSaving = true;
-          this.apiRequest("PATCH", path, body)
-            .then(() => {
-              this.modals.editAssignment = false;
-              this.showToast("Workout updated");
-              this.fetchSentAssignments();
-            })
-            .catch((err) => { this.editError = err.message || "Unable to save changes."; })
-            .finally(() => { this.editSaving = false; });
-        },
-
-        deleteAssignment(a) {
-          this.confirmAction = {
-            type: "delete-assignment",
-            target: a,
-            title: "Remove workout",
-            description: `Remove "${a.title || "this workout"}" from ${a.user?.fullName || "the client"}? They will no longer see it.`,
-            confirmLabel: "Remove"
-          };
-          this.modals.confirm = true;
-        },
-
-        // ================= REFRESH =================
-        fetchClients() {
-          return this.apiRequest("GET", "/api/v1/coaches/me/clients")
-            .then((data) => {
-              this.clientsData = data || this.clientsData;
-              this.clientsLoaded = true;
-            })
-            .catch(() => {})
-            .finally(() => { this.clientsLoading = false; });
-        },
-
-        refreshAll() {
-          if (this.refreshing) return;
-          this.refreshing = true;
-          const tasks = [
-            this.fetchProfile().catch(() => {}),
-            this.fetchClients(),
-            this.fetchAppointments(),
-            this.fetchRooms(),
-            this.fetchMeetingStatus()
-          ];
-          this.fetchAvailability();
-          this.fetchAllCoaches();
-          this.fetchDbSchema();
-          if (this.currentView === "database" && this.activeTableName) this.fetchTableRows();
-          this.loadWorkoutPlans();
-          this.searchClients("");
-          this.fetchSentAssignments();
-          if (this.activeRoom) this.loadMessages(true);
-          Promise.all(tasks.map((t) => Promise.resolve(t).catch(() => {}))).finally(() => {
-            this.refreshing = false;
-            this.showToast("Up to date");
-          });
-        },
-
-        // ================= COACH MANAGEMENT (head coach) =================
-        editCoachFromList(c) {
-          this.switchManaged(c.id === this.coach?.id ? "" : c.id);
-          this.currentView = "profile";
-        },
-
-        deleteCoachFromList(c) {
-          this.confirmAction = {
-            type: "delete-coach",
-            target: c,
-            title: "Remove coach",
-            description: `Remove ${c.user?.fullName || "this coach"}? Their coach profile, availability, sessions and chats are deleted, their clients become unassigned, and their account goes back to a regular user. This can't be undone.`,
-            confirmLabel: "Remove"
-          };
-          this.modals.confirm = true;
-        },
-
-        openAddCoach() {
-          this.addCoachForm = { fullName: "", email: "", password: "", phone: "", showPassword: false, bio: "", specialtiesText: "", experienceYears: "" };
-          this.addCoachError = "";
-          this.modals.addCoach = true;
-        },
-
-        // A random password that meets the rules (upper + lower + digit, 12 characters), shown so it can be shared.
-        generateCoachPassword() {
-          const pick = (chars) => chars[crypto.getRandomValues(new Uint32Array(1))[0] % chars.length];
-          const all = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-          const chars = [pick("ABCDEFGHJKLMNPQRSTUVWXYZ"), pick("abcdefghijkmnopqrstuvwxyz"), pick("23456789")];
-          while (chars.length < 12) chars.push(pick(all));
-          for (let i = chars.length - 1; i > 0; i--) {
-            const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
-            [chars[i], chars[j]] = [chars[j], chars[i]];
-          }
-          this.addCoachForm.password = chars.join("");
-          this.addCoachForm.showPassword = true;
-        },
-
-        submitAddCoach() {
-          const f = this.addCoachForm;
-          this.addCoachError = "";
-          if (f.fullName.trim().length < 2) return (this.addCoachError = "Enter the coach's full name.");
-          if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return (this.addCoachError = "Enter a valid email address.");
-          if (f.password.length < 8 || !/[A-Z]/.test(f.password) || !/[a-z]/.test(f.password) || !/[0-9]/.test(f.password)) {
-            return (this.addCoachError = "The password needs 8+ characters with an uppercase letter, a lowercase letter and a number.");
-          }
-          this.addCoachSaving = true;
-          this.apiRequest("POST", "/api/v1/coaches", {
-            fullName: f.fullName.trim(),
-            email: f.email.trim(),
-            phone: f.phone.trim() || undefined,
-            password: f.password,
-            bio: f.bio.trim() || undefined,
-            specialties: f.specialtiesText.split(",").map((x) => x.trim()).filter(Boolean),
-            experienceYears: f.experienceYears === "" ? undefined : Number(f.experienceYears)
-          })
-            .then(() => {
-              this.modals.addCoach = false;
-              this.showToast(`${f.fullName.trim()} was added as a coach. Share their email and password with them.`);
-              this.fetchAllCoaches();
-            })
-            .catch((err) => { this.addCoachError = err.message || "Couldn't add the coach"; })
-            .finally(() => { this.addCoachSaving = false; });
-        },
-
-        // ================= MEETING LINKS & SESSIONS =================
-        fetchMeetingStatus() {
-          return this.apiRequest("GET", "/api/v1/appointments/meeting-status")
-            .then((status) => { this.meetingStatus = status || { googleMeetConnected: false }; })
-            .catch(() => {});
-        },
-
-        openLinkModal(appointment) {
-          this.linkTarget = appointment;
-          this.linkInput = appointment.meetingProvider === "MANUAL" ? appointment.meetingLink || "" : "";
-          this.linkError = "";
-          this.modals.meetingLink = true;
-        },
-
-        saveMeetingLink(link) {
-          if (!this.linkTarget) return;
-          const value = link === null ? null : String(link || "").trim();
-          if (value !== null && !/^https:\/\//i.test(value)) {
-            this.linkError = "Paste the full link, starting with https://";
-            return;
-          }
-          this.linkSaving = true;
-          this.apiRequest("PATCH", `/api/v1/appointments/${this.linkTarget.id}/meeting-link`, { meetingLink: value })
-            .then(() => {
-              this.modals.meetingLink = false;
-              this.showToast(value ? "Meeting link saved. The client has been notified." : "Meeting link removed");
-              this.fetchAppointments();
-            })
-            .catch((err) => { this.linkError = err.message || "Couldn't save the link"; })
-            .finally(() => { this.linkSaving = false; });
-        },
-
-        generateMeetLink() {
-          if (!this.linkTarget) return;
-          this.linkSaving = true;
-          this.linkError = "";
-          this.apiRequest("POST", `/api/v1/appointments/${this.linkTarget.id}/meeting-link/generate`)
-            .then(() => {
-              this.modals.meetingLink = false;
-              this.showToast("Google Meet link created. The client has been notified.");
-              this.fetchAppointments();
-            })
-            .catch((err) => { this.linkError = err.message || "Couldn't create a Meet link"; })
-            .finally(() => { this.linkSaving = false; });
-        },
-
-        copyLink(link) {
-          navigator.clipboard?.writeText(link).then(
-            () => this.showToast("Link copied"),
-            () => this.showToast("Couldn't copy — select the link instead", "error")
-          );
-        },
-
-        // "Name · @username (note)" so clients with the same name can be told apart.
-        clientLabel(c) {
-          return [c.fullName, c.username ? "@" + c.username : ""].filter(Boolean).join(" · ") + (c.note || "");
-        },
-
-        openSchedule(client = null) {
-          const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
-          start.setMinutes(0, 0, 0);
-          this.scheduleForm = {
-            userId: client?.id || "",
-            // Working "as" a coach on the Appointments page pre-selects them as the session's coach.
-            coachId: this.coach?.isHeadCoach && this.appointmentsCoachId !== this.coach?.id ? this.appointmentsCoachId : "",
-            title: "1:1 coaching session",
-            scheduledAt: this.toLocalInput(start.toISOString()),
-            durationMinutes: 45,
-            repeatWeeks: "0",
-            meetingLink: "",
-            notes: ""
-          };
-          this.scheduleError = "";
-          // Shown until the server's list arrives: the same clients as the Clients view.
-          this.scheduleClients = this.clients.map((c) => ({ ...c, note: c.assigned ? "" : " (booked before)" }));
-          this.modals.schedule = true;
-
-          // Only clients this coach can actually schedule with (the rule the server enforces):
-          // a client moved to another coach drops out.
-          this.apiRequest("GET", "/api/v1/appointments/sessions/clients")
-            .then((data) => {
-              const list = (data?.clients || []).map((c) => ({ ...c, note: c.assigned ? "" : " (booked with you)" }));
-              const add = (u) => { if (u && !list.some((c) => c.id === u.id)) list.push({ ...u, note: "" }); };
-              // The head coach can schedule with anyone, so the wider client list stays.
-              if (data?.canScheduleAnyone) { this.assignedClients.forEach(add); add(client); }
-              this.scheduleClients = list.sort((a, b) => a.fullName.localeCompare(b.fullName));
-              if (client && !list.some((c) => c.id === client.id)) {
-                this.scheduleForm.userId = "";
-                this.scheduleError = `${client.fullName} isn't one of your current clients any more, so you can't schedule a session with them.`;
-              }
-            })
-            .catch(() => {});
-        },
-
-        submitSchedule() {
-          const f = this.scheduleForm;
-          this.scheduleError = "";
-          if (!f.userId) return (this.scheduleError = "Pick a client.");
-          if (!f.title.trim()) return (this.scheduleError = "Give the session a title.");
-          if (!f.scheduledAt) return (this.scheduleError = "Pick a start time.");
-          if (f.meetingLink.trim() && !/^https:\/\//i.test(f.meetingLink.trim())) {
-            return (this.scheduleError = "Meeting links must start with https://");
-          }
-
-          const client = this.scheduleClients.find((c) => c.id === f.userId);
-          const weeks = Number(f.repeatWeeks) || 0;
-          this.confirmAction = {
-            type: "schedule-session",
-            target: null,
-            title: "Schedule this session?",
-            description: `Are you sure you want to schedule "${f.title.trim()}" with ${client?.fullName || "this client"} on ${this.formatDate(new Date(f.scheduledAt).toISOString())}${weeks ? ` and ${weeks} more week${weeks === 1 ? "" : "s"}` : ""}? It is confirmed straight away and the client is notified.`,
-            confirmLabel: "Yes, schedule",
-            positive: true
-          };
-          this.modals.confirm = true;
-        },
-
-        saveSchedule() {
-          const f = this.scheduleForm;
-          this.scheduleSaving = true;
-          this.apiRequest("POST", "/api/v1/appointments/sessions", {
-            userId: f.userId,
-            coachId: f.coachId || undefined,
-            title: f.title.trim(),
-            scheduledAt: new Date(f.scheduledAt).toISOString(),
-            durationMinutes: Number(f.durationMinutes) || 45,
-            repeatWeeks: Number(f.repeatWeeks) || 0,
-            meetingLink: f.meetingLink.trim() || undefined,
-            notes: f.notes.trim() || undefined
-          })
-            .then((result) => {
-              const made = result?.created?.length || 0;
-              const skipped = result?.skipped || [];
-              this.fetchAppointments();
-              this.fetchClients();
-              if (skipped.length) {
-                this.scheduleError = `${made} scheduled. Skipped:\n` + skipped.map((x) => `• ${this.formatDate(x.scheduledAt)} — ${x.reason}`).join("\n");
-                if (!made) return;
-                this.showToast(`${made} session(s) scheduled, ${skipped.length} skipped`);
-              } else {
-                this.modals.schedule = false;
-                this.showToast(made > 1 ? `${made} sessions scheduled` : "Session scheduled");
-              }
-            })
-            .catch((err) => { this.scheduleError = err.message || "Couldn't schedule the session"; })
-            .finally(() => { this.scheduleSaving = false; });
-        },
-
-        // ================= MESSAGES =================
-        initChat() {
-          this.fetchRooms();
-          this.connectSocket();
-          // Safety net for when the socket is down: keep the conversation list fresh.
-          if (!this.chatPoll) {
-            this.chatPoll = setInterval(() => {
-              if (!this.isAuthenticated) return;
-              this.fetchRooms();
-              if (!this.chatConnected && this.activeRoom && this.currentView === "chat") this.loadMessages(true);
-            }, 20000);
-          }
-        },
-
-        teardownChat() {
-          if (this.chatPoll) clearInterval(this.chatPoll);
-          this.chatPoll = null;
-          if (_chatSocket) {
-            _chatSocket.disconnect();
-            _chatSocket = null;
-          }
-          this.chatRooms = [];
-          this.activeRoom = null;
-          this.chatMessages = [];
-          this.chatConnected = false;
-          this.onlineUsers = {};
-        },
-
-        connectSocket() {
-          if (_chatSocket || typeof io === "undefined") return;
-          const self = this;
-          _chatSocket = io("/chat", { auth: (cb) => cb({ token: self.accessToken }) });
-
-          _chatSocket.on("connect", () => {
-            self.chatConnected = true;
-            if (self.activeRoom) _chatSocket.emit("room:join", { roomId: self.activeRoom.id });
-            self.fetchRooms();
-          });
-          _chatSocket.on("disconnect", () => { self.chatConnected = false; });
-          _chatSocket.on("connect_error", () => {
-            self.chatConnected = false;
-            // Most likely an expired access token — refresh it and let socket.io retry.
-            self.refreshAccess().then((ok) => { if (ok && _chatSocket && !_chatSocket.connected) _chatSocket.connect(); });
-          });
-          _chatSocket.on("message:new", (m) => self.onSocketMessage(m));
-          _chatSocket.on("message:status", ({ roomId, status, by }) => {
-            if (status === "SEEN" && by && by !== self.myUserId && self.activeRoom?.id === roomId) {
-              self.chatMessages = self.chatMessages.map((m) => (m.senderId === self.myUserId ? { ...m, status: "SEEN" } : m));
-            }
-          });
-          _chatSocket.on("presence:update", ({ userId, online }) => {
-            self.onlineUsers = { ...self.onlineUsers, [userId]: online };
-          });
-          _chatSocket.on("typing", ({ roomId, userId, isTyping }) => {
-            if (self.activeRoom?.id !== roomId || userId === self.myUserId) return;
-            self.typingInRoom = isTyping;
-            clearTimeout(self._typingTimer);
-            if (isTyping) self._typingTimer = setTimeout(() => { self.typingInRoom = false; }, 4000);
-          });
-        },
-
-        onSocketMessage(m) {
-          if (m.senderId === this.myUserId) return;
-          const viewing = this.currentView === "chat" && this.activeRoom?.id === m.roomId;
-
-          if (viewing) {
-            if (!this.chatMessages.some((x) => x.id === m.id)) this.chatMessages.push(m);
-            this.markRoomSeen(this.activeRoom);
-            this.scrollChatToEnd();
-          } else if (_chatSocket) {
-            _chatSocket.emit("message:delivered", { roomId: m.roomId });
-          }
-
-          const room = this.chatRooms.find((r) => r.id === m.roomId);
-          if (!room) {
-            this.fetchRooms();
-            return;
-          }
-          room.lastMessage = m;
-          room.lastMessageAt = m.createdAt;
-          if (!viewing) room.unreadCount = (room.unreadCount || 0) + 1;
-          this.chatRooms = [...this.chatRooms].sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
-        },
-
-        setChatScope(scope) {
-          this.chatScope = scope;
-          this.chatCoachFilter = "all";
-          if (this.activeRoom) this.closeRoom();
-          this.fetchRooms();
-        },
-
-        fetchRooms() {
-          const scope = this.coach?.isHeadCoach && this.chatScope === "all" ? "?scope=all" : "";
-          return this.apiRequest("GET", `/api/v1/chat/rooms${scope}`)
-            .then((rooms) => {
-              // A slower request for a view you've since left (e.g. "My chats" after switching to "All coaches")
-              // must not overwrite the list you're looking at now.
-              const wanted = this.coach?.isHeadCoach && this.chatScope === "all" ? "?scope=all" : "";
-              if (wanted !== scope) return;
-              this.chatRooms = (rooms || []).map((r) =>
-                this.currentView === "chat" && this.activeRoom?.id === r.id ? { ...r, unreadCount: 0 } : r
-              );
-            })
-            .catch(() => {});
-        },
-
-        openNewChat() {
-          this.newChatCoachId = "";
-          this.clientSearch = "";
-          this.searchClients("");
-          this.modals.newChat = true;
-        },
-
-        startChatWith(user) {
-          const forCoachId = this.coach?.isHeadCoach && this.newChatCoachId ? this.newChatCoachId : undefined;
-          // A chat for another coach only shows up under "All coaches".
-          if (forCoachId && this.chatScope !== "all") this.chatScope = "all";
-          this.apiRequest("POST", "/api/v1/chat/rooms", { participantId: user.id, coachId: forCoachId })
-            .then((room) => this.fetchRooms().then(() => room))
-            .then((created) => {
-              this.modals.newChat = false;
-              const room = this.chatRooms.find((r) => r.id === created?.id) || this.chatRooms.find((r) => r.participant.id === user.id);
-              if (room) this.openRoom(room);
-            })
-            .catch((err) => this.showToast(err.message || "Unable to start this chat", "error"));
-        },
-
-        openRoom(room) {
-          if (this.activeRoom && _chatSocket) _chatSocket.emit("room:leave", { roomId: this.activeRoom.id });
-          this.activeRoom = room;
-          this.chatMessages = [];
-          this.chatInput = "";
-          this.typingInRoom = false;
-          if (_chatSocket) _chatSocket.emit("room:join", { roomId: room.id });
-          this.loadMessages().then(() => this.markRoomSeen(room));
-        },
-
-        closeRoom() {
-          if (this.activeRoom && _chatSocket) _chatSocket.emit("room:leave", { roomId: this.activeRoom.id });
-          this.activeRoom = null;
-        },
-
-        loadMessages(silent = false) {
-          const room = this.activeRoom;
-          if (!room) return Promise.resolve();
-          if (!silent) this.chatLoading = true;
-          return this.apiRequest("GET", `/api/v1/chat/rooms/${room.id}/messages?limit=100`)
-            .then((items) => {
-              if (this.activeRoom?.id !== room.id) return;
-              this.chatMessages = items || [];
-              this.scrollChatToEnd();
-            })
-            .catch((err) => this.showToast(err.message || "Failed to load messages", "error"))
-            .finally(() => { this.chatLoading = false; });
-        },
-
-        markRoomSeen(room) {
-          if (!room) return;
-          room.unreadCount = 0;
-          if (_chatSocket && _chatSocket.connected) {
-            _chatSocket.emit("message:seen", { roomId: room.id });
-          } else {
-            this.apiRequest("PATCH", `/api/v1/chat/rooms/${room.id}/seen`).catch(() => {});
-          }
-        },
-
-        sendChat() {
-          const text = this.chatInput.trim();
-          if (!text || !this.activeRoom || this.chatSending) return;
-          this.chatSending = true;
-          this.apiRequest("POST", `/api/v1/chat/rooms/${this.activeRoom.id}/messages`, { type: "TEXT", body: text })
-            .then((msg) => {
-              this.chatInput = "";
-              this.afterSent(msg);
-            })
-            .catch((err) => this.showToast(err.message || "Message failed to send", "error"))
-            .finally(() => { this.chatSending = false; });
-        },
-
-        sendChatImage(event) {
-          const file = event.target.files?.[0];
-          event.target.value = "";
-          if (!file || !this.activeRoom) return;
-          if (file.size > 5 * 1024 * 1024) {
-            this.showToast("Photos must be 5 MB or smaller", "error");
-            return;
-          }
-          const form = new FormData();
-          form.append("type", "IMAGE");
-          form.append("file", file);
-          this.chatSending = true;
-          this.apiRequest("POST", `/api/v1/chat/rooms/${this.activeRoom.id}/messages`, form)
-            .then((msg) => this.afterSent(msg))
-            .catch((err) => this.showToast(err.message || "Photo failed to send", "error"))
-            .finally(() => { this.chatSending = false; });
-        },
-
-        afterSent(msg) {
-          if (!msg) return;
-          if (!this.chatMessages.some((x) => x.id === msg.id)) this.chatMessages.push(msg);
-          const room = this.chatRooms.find((r) => r.id === msg.roomId);
-          if (room) {
-            room.lastMessage = msg;
-            room.lastMessageAt = msg.createdAt;
-            this.chatRooms = [...this.chatRooms].sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
-          }
-          this.scrollChatToEnd();
-        },
-
-        notifyTyping() {
-          if (!_chatSocket || !this.activeRoom || this._typingSent) return;
-          const roomId = this.activeRoom.id;
-          _chatSocket.emit("typing", { roomId, isTyping: true });
-          this._typingSent = true;
-          setTimeout(() => {
-            if (_chatSocket) _chatSocket.emit("typing", { roomId, isTyping: false });
-            this._typingSent = false;
-          }, 2500);
-        },
-
-        clearChat() {
-          if (!this.activeRoom) return;
-          this.confirmAction = {
-            type: "clear-chat",
-            target: this.activeRoom,
-            title: "Clear chat",
-            description: "This hides the conversation history on your side only. The client keeps their copy.",
-            confirmLabel: "Clear"
-          };
-          this.modals.confirm = true;
-        },
-
-        scrollChatToEnd() {
-          this.$nextTick(() => {
-            const el = document.getElementById("chatScroll");
-            if (el) el.scrollTop = el.scrollHeight;
-          });
-        },
-
-        shortTime(iso) {
-          const d = new Date(iso);
-          if (isNaN(d)) return "";
-          return d.toDateString() === new Date().toDateString()
-            ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-            : d.toLocaleDateString([], { month: "short", day: "numeric" });
-        },
-
-        // Swaps an expired access token for a new one. One refresh at a time:
-        // concurrent requests that all hit 401 share the same promise.
-        refreshAccess() {
-          if (!this.refreshToken) return Promise.resolve(false);
-          if (!_refreshPromise) {
-            _refreshPromise = fetch("/api/v1/auth/refresh", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ refreshToken: this.refreshToken })
-            })
-              .then(async (res) => {
-                const payload = await res.json().catch(() => null);
-                if (!res.ok || !payload?.data?.accessToken) return false;
-                this.accessToken = payload.data.accessToken;
-                this.refreshToken = payload.data.refreshToken || this.refreshToken;
-                localStorage.setItem(
-                  "fitnerveCoachAuth",
-                  JSON.stringify({ coach: this.coach, accessToken: this.accessToken, refreshToken: this.refreshToken })
-                );
-                return true;
-              })
-              .catch(() => false)
-              .finally(() => { _refreshPromise = null; });
-          }
-          return _refreshPromise;
-        },
-
-        toggleTheme() {
-          this.themeMode = this.themeMode === "dark" ? "light" : "dark";
-          try { localStorage.setItem("fitnerve-coach-theme", this.themeMode); } catch {}
-        },
-
-        login() {
-          if (!this.loginForm.email || !this.loginForm.password) return;
-          this.loginLoading = true;
-          this.loginError = "";
-          this.apiRequest("POST", "/api/v1/auth/login", {
-            email: this.loginForm.email,
-            password: this.loginForm.password
-          })
-            .then((result) => {
-              if (result.user?.role !== "COACH") {
-                this.loginError = "This account is not a coach account.";
-                this.loginLoading = false;
-                return;
-              }
-              this.accessToken = result.accessToken;
-              this.refreshToken = result.refreshToken;
-              this.isAuthenticated = true;
-              this.loginLoading = false;
-              this.fetchProfile().then(() => {
-                localStorage.setItem(
-                  "fitnerveCoachAuth",
-                  JSON.stringify({ coach: this.coach, accessToken: this.accessToken, refreshToken: this.refreshToken })
-                );
-              });
-              this.fetchAvailability();
-              this.fetchAppointments();
-              this.fetchClients();
-              this.fetchAllCoaches();
-              this.fetchDbSchema();
-              this.loadWorkoutPlans();
-              this.searchClients("");
-              this.fetchSentAssignments();
-              this.fetchMeetingStatus();
-              this.initChat();
-              this.showToast(`Welcome back, ${result.user.fullName.split(" ")[0]}`);
-            })
-            .catch((err) => {
-              this.loginError = err.message || "Login failed. Please check your credentials.";
-              this.loginLoading = false;
-            });
-        },
-
-        logout() {
-          this.managedCoachId = "";
-          this.teardownChat();
-          this.isAuthenticated = false;
-          this.coach = null;
-          this.accessToken = null;
-          this.refreshToken = null;
-          localStorage.removeItem("fitnerveCoachAuth");
-          this.currentView = "dashboard";
-          // The next person to sign in on this browser must not see this coach's clients.
-          this.clientsData = { clients: [], summary: { total: 0, mine: 0, booked: 0, other: 0, unassigned: 0 } };
-          this.clientsLoaded = false;
-          this.clientsLoading = true;
-          this.clientsFilter = "all";
-          this.clientsSearch = "";
         },
 
         fetchProfile() {

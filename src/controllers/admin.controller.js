@@ -44,7 +44,15 @@ const activateUser = asyncHandler(async (req, res) => {
 });
 
 const changeUserRole = asyncHandler(async (req, res) => {
+  const previous = await userRepository.findById(req.params.id);
   const user = await adminService.changeUserRole(req.user.id, req.params.id, req.body.role);
+  if (previous?.assignedCoachId && req.body.role !== "USER") {
+    try {
+      await appointmentService.releaseUpcomingSessions(req.params.id, previous.assignedCoachId, "the account role changed");
+    } catch (err) {
+      logger.warn(`[appointments] releasing sessions after role change failed: ${err.message}`);
+    }
+  }
   return ApiResponse.success(res, httpStatus.OK, "User role updated", user);
 });
 

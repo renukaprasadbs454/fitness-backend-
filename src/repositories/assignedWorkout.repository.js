@@ -2,7 +2,7 @@ const prisma = require("../database/prismaClient");
 
 const planInclude = {
   plan: true,
-  user: { select: { id: true, fullName: true, email: true } },
+  user: { select: { id: true, fullName: true, email: true, assignedCoachId: true, isActive: true, role: true } },
   assignedByUser: { select: { id: true, fullName: true, email: true } }
 };
 
@@ -37,18 +37,18 @@ const assignedWorkoutRepository = {
   // "Sent by" a user means they actually created it (createdByUserId), which
   // falls back to assignedByUserId for rows predating that column so
   // pre-existing history still shows up.
-  listPlanAssignmentsForAssigner: (userId, { skip, take }) =>
+  listPlanAssignmentsForAssigner: (userId, { skip, take, assignedCoachId }) =>
     prisma.assignedWorkoutPlan.findMany({
-      where: { OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] },
+      where: { AND: [{ OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] }, ...(assignedCoachId ? [{ user: { assignedCoachId, isActive: true } }] : [])] },
       include: planInclude,
       orderBy: { createdAt: "desc" },
       skip,
       take
     }),
 
-  countPlanAssignmentsForAssigner: (userId) =>
+  countPlanAssignmentsForAssigner: (userId, assignedCoachId) =>
     prisma.assignedWorkoutPlan.count({
-      where: { OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] }
+      where: { AND: [{ OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] }, ...(assignedCoachId ? [{ user: { assignedCoachId, isActive: true } }] : [])] }
     }),
 
   listPlanAssignmentsForUser: (userId) =>
@@ -67,13 +67,13 @@ const assignedWorkoutRepository = {
       where: { id, OR: [{ createdByUserId: assignerUserId }, { assignedByUserId: assignerUserId }] },
       include: {
         exercises: { orderBy: { sortOrder: "asc" } },
-        user: { select: { id: true, fullName: true, email: true } }
+        user: { select: { id: true, fullName: true, email: true, assignedCoachId: true, isActive: true, role: true } }
       }
     }),
 
-  listCustomAssignedByUser: (userId, { skip, take }) =>
+  listCustomAssignedByUser: (userId, { skip, take, assignedCoachId }) =>
     prisma.customWorkout.findMany({
-      where: { OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] },
+      where: { AND: [{ OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] }, ...(assignedCoachId ? [{ user: { assignedCoachId, isActive: true } }] : [])] },
       include: {
         exercises: { orderBy: { sortOrder: "asc" } },
         user: { select: { id: true, fullName: true, email: true } }
@@ -83,9 +83,9 @@ const assignedWorkoutRepository = {
       take
     }),
 
-  countCustomAssignedByUser: (userId) =>
+  countCustomAssignedByUser: (userId, assignedCoachId) =>
     prisma.customWorkout.count({
-      where: { OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] }
+      where: { AND: [{ OR: [{ createdByUserId: userId }, { createdByUserId: null, assignedByUserId: userId }] }, ...(assignedCoachId ? [{ user: { assignedCoachId, isActive: true } }] : [])] }
     })
 };
 

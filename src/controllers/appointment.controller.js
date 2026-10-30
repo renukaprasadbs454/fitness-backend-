@@ -17,7 +17,7 @@ const list = asyncHandler(async (req, res) => {
 });
 
 const getById = asyncHandler(async (req, res) => {
-  const appointment = await appointmentService.getById(req.user.id, req.params.id);
+  const appointment = await appointmentService.getById(req.user.id, req.params.id, req.user.role);
   return ApiResponse.success(res, httpStatus.OK, "Appointment retrieved", appointment);
 });
 

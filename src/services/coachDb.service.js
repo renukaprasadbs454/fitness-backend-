@@ -60,10 +60,6 @@ const PROTECTED_UPDATE_FIELDS = ["id", "userId", "coachId"];
 async function getCoachContext(coachUserId) {
   const coach = await coachRepository.findByUserId(coachUserId);
   if (!coach) throw ApiError.forbidden("Coach profile not found for this account");
-  // The head coach oversees every coach, so nothing is filtered out for them.
-  if (coach.isHeadCoach) {
-    return { coachId: coach.id, coachUserId, isHeadCoach: true, clientIds: [], ownerIds: [], appointmentIds: [] };
-  }
   const assignedIds = await userRepository.listClientIdsOfCoach(coach.id);
   const appointments = assignedIds.length
     ? await prisma.appointment.findMany({ where: { coachId: coach.id, userId: { in: assignedIds } }, select: { id: true, userId: true } })
@@ -84,7 +80,6 @@ function hasField(modelInfo, name) {
 
 /** Prisma `where` limiting a model to this coach's rows, or null for shared reference data. */
 function scopeFor(modelInfo, ctx) {
-  if (ctx.isHeadCoach) return null;
   const relational = RELATIONAL_SCOPES[modelInfo.name];
   if (relational) return relational(ctx);
   if (hasField(modelInfo, "userId")) return { userId: { in: ctx.ownerIds } };
@@ -110,8 +105,7 @@ function scopeNote(modelInfo, isHeadCoach) {
   else if (modelInfo.name === "Coach") note = "Your coach profile";
   else if (modelInfo.name === "Payment") note = "Payments for your sessions";
   else if (RELATIONAL_SCOPES[modelInfo.name] || hasField(modelInfo, "userId")) note = "Your clients and you";
-  // The head coach is not filtered, so scoped tables show every coach's and client's rows.
-  return isHeadCoach && note !== "Shared across the platform" ? "All coaches and clients" : note;
+  return note;
 }
 
 function idFieldOf(modelInfo) {
@@ -274,8 +268,6 @@ async function deleteModelRow(coachUserId, modelName, id) {
 // their own rooms. Only ever returns an id + short label, never the full row.
 async function getRelationOptions(coachUserId, modelName) {
   const ctx = await getCoachContext(coachUserId);
-  if (ctx.isHeadCoach) return getRelationOptionsFor(prisma, modelName);
-
   const where = {
     User: { id: { in: ctx.clientIds } },
     Coach: { id: ctx.coachId },

@@ -65,7 +65,7 @@ router.get("/meeting-status", authenticate, appointmentController.meetingStatus)
  * /appointments/sessions/clients:
  *   get:
  *     summary: "Coach: the clients you can schedule sessions with"
- *     description: Clients assigned to you, plus anyone with a booked or completed session with you since any coach swap. canScheduleAnyone is true for the head coach, who can also schedule with any other client.
+ *     description: Only active clients currently assigned to the signed-in coach.
  *     tags: [Appointments]
  *     responses:
  *       200: { description: "{ clients: [{ id, fullName, email, username, assigned }], canScheduleAnyone: boolean }" }
@@ -88,7 +88,7 @@ router.get("/sessions/clients", authenticate, requireRole(ROLES.COACH), appointm
  *             required: [userId, title, scheduledAt]
  *             properties:
  *               userId: { type: string, format: uuid }
- *               coachId: { type: string, format: uuid, description: "Head coach only: the coach this session is with (defaults to you)" }
+ *               coachId: { type: string, format: uuid, description: "Must be the signed-in coach's own coach id, if supplied" }
  *               title: { type: string, example: "1:1 coaching session" }
  *               scheduledAt: { type: string, format: date-time }
  *               durationMinutes: { type: integer, example: 45 }

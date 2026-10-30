@@ -91,8 +91,13 @@ function registerChatGateway(io) {
       socket.leave(`room:${roomId}`);
     });
 
-    socket.on("typing", ({ roomId, isTyping }) => {
-      socket.to(`room:${roomId}`).emit("typing", { roomId, userId, isTyping: !!isTyping });
+    socket.on("typing", async ({ roomId, isTyping }) => {
+      try {
+        const access = await chatService.assertParticipant(roomId, socket.user);
+        if (access.canSend) socket.to(`room:${roomId}`).emit("typing", { roomId, userId, isTyping: !!isTyping });
+      } catch (err) {
+        logger.warn(`[chat] typing event rejected: ${err.message}`);
+      }
     });
 
     socket.on("message:send", async (payload, ack) => {

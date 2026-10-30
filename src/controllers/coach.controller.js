@@ -1,5 +1,4 @@
 const coachService = require("../services/coach.service");
-const coachDbService = require("../services/coachDb.service");
 const asyncHandler = require("../utils/asyncHandler");
 const ApiResponse = require("../utils/ApiResponse");
 const httpStatus = require("../constants/httpStatus");
@@ -74,40 +73,6 @@ const listMyAppointments = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Appointments retrieved", items, meta);
 });
 
-// ── Database explorer (subset of the admin one — account, payment and
-// credential tables are excluded and rows are scoped to the coach's own
-// assigned users; see coachDb.service.js) ───────────────────────────
-
-const listDbTables = asyncHandler(async (req, res) => {
-  const tables = await coachDbService.listTables(req.user.id);
-  return ApiResponse.success(res, httpStatus.OK, "Database schema retrieved", tables);
-});
-
-const getDbTableData = asyncHandler(async (req, res) => {
-  const result = await coachDbService.getTableData(req.user.id, req.params.tableName, req.query);
-  return ApiResponse.success(res, httpStatus.OK, "Table data retrieved", result.items, result.meta);
-});
-
-const createDbRow = asyncHandler(async (req, res) => {
-  const item = await coachDbService.createModelRow(req.user.id, req.params.tableName, req.body);
-  return ApiResponse.success(res, httpStatus.CREATED, "Row created", item);
-});
-
-const updateDbRow = asyncHandler(async (req, res) => {
-  const item = await coachDbService.updateModelRow(req.user.id, req.params.tableName, req.params.id, req.body);
-  return ApiResponse.success(res, httpStatus.OK, "Row updated", item);
-});
-
-const deleteDbRow = asyncHandler(async (req, res) => {
-  await coachDbService.deleteModelRow(req.user.id, req.params.tableName, req.params.id);
-  return ApiResponse.success(res, httpStatus.OK, "Row deleted", null);
-});
-
-const getDbRelationOptions = asyncHandler(async (req, res) => {
-  const options = await coachDbService.getRelationOptions(req.user.id, req.params.modelName);
-  return ApiResponse.success(res, httpStatus.OK, "Relation options retrieved", options);
-});
-
 module.exports = {
   getMyCoachProfile,
   updateMyCoachProfile,
@@ -123,10 +88,4 @@ module.exports = {
   listAvailability,
   listMyClients,
   listMyAppointments,
-  listDbTables,
-  getDbTableData,
-  createDbRow,
-  updateDbRow,
-  deleteDbRow,
-  getDbRelationOptions
 };

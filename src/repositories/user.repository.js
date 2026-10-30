@@ -115,7 +115,7 @@ const userRepository = {
 
   // Ids of a coach's assigned users — used to scope what a coach may see/touch.
   listClientIdsOfCoach: async (coachId) => {
-    const rows = await prisma.user.findMany({ where: { assignedCoachId: coachId }, select: { id: true } });
+    const rows = await prisma.user.findMany({ where: { assignedCoachId: coachId, isActive: true, role: "USER" }, select: { id: true } });
     return rows.map((r) => r.id);
   },
 

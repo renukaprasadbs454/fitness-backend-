@@ -27,27 +27,27 @@ const assignCustomWorkout = asyncHandler(async (req, res) => {
 });
 
 const listMyAssignedWorkouts = asyncHandler(async (req, res) => {
-  const result = await assignedWorkoutService.listMyAssignments(req.user.id, req.query);
+  const result = await assignedWorkoutService.listMyAssignments(req.user.id, req.query, req.user.role);
   return ApiResponse.success(res, httpStatus.OK, "Assigned workouts retrieved", result);
 });
 
 const unassignWorkoutPlan = asyncHandler(async (req, res) => {
-  await assignedWorkoutService.unassignPlan(req.user.id, req.params.id);
+  await assignedWorkoutService.unassignPlan(req.user.id, req.params.id, req.user.role);
   return ApiResponse.success(res, httpStatus.OK, "Assigned workout removed", null);
 });
 
 const updateAssignedWorkoutPlan = asyncHandler(async (req, res) => {
-  const assignment = await assignedWorkoutService.updateAssignedPlan(req.user.id, req.params.id, req.body);
+  const assignment = await assignedWorkoutService.updateAssignedPlan(req.user.id, req.params.id, req.body, req.user.role);
   return ApiResponse.success(res, httpStatus.OK, "Assigned workout updated", assignment);
 });
 
 const updateCustomAssignment = asyncHandler(async (req, res) => {
-  const workout = await assignedWorkoutService.updateCustomAssignment(req.user.id, req.params.id, req.body);
+  const workout = await assignedWorkoutService.updateCustomAssignment(req.user.id, req.params.id, req.body, req.user.role);
   return ApiResponse.success(res, httpStatus.OK, "Assigned workout updated", workout);
 });
 
 const removeCustomAssignment = asyncHandler(async (req, res) => {
-  await assignedWorkoutService.removeCustomAssignment(req.user.id, req.params.id);
+  await assignedWorkoutService.removeCustomAssignment(req.user.id, req.params.id, req.user.role);
   return ApiResponse.success(res, httpStatus.OK, "Assigned workout removed", null);
 });
 
