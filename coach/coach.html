@@ -1681,6 +1681,830 @@
             .catch(() => {});
         },
 
+        runConfirmAction() {
+          const { type, target } = this.confirmAction;
+          this.modals.confirm = false;
+          if (type === "appointment-status") {
+            this.setAppointmentStatus(target.appointment, target.status);
+            return;
+          }
+          if (type === "schedule-session") {
+            this.saveSchedule();
+            return;
+          }
+          if (type === "delete-coach") {
+            this.apiRequest("DELETE", `/api/v1/coaches/${target.id}`)
+              .then(() => {
+                if (this.managedCoachId === target.id) this.switchManaged("");
+                this.showToast(`${target.user?.fullName || "Coach"} was removed`);
+                this.fetchAllCoaches();
+                this.fetchAppointments();
+                this.fetchRooms();
+              })
+              .catch((err) => this.showToast(err.message || "Couldn't remove this coach", "error"));
+            return;
+          }
+          if (type === "delete-slot") {
+            this.apiRequest("DELETE", `/api/v1/coaches/${this.targetCoachId}/availability/${target.id}`)
+              .then(() => {
+                if (this.editingSlotId === target.id) this.cancelSlotEdit();
+                this.fetchAvailability();
+                this.showToast("Slot deleted");
+              })
+              .catch((err) => this.showToast(err.message || "Couldn't delete the slot", "error"));
+            return;
+          }
+          if (type === "delete-assignment") {
+            const path = `/api/v1/workout-assignments/${target.type === "custom" ? "custom/" : ""}${target.id}`;
+            this.apiRequest("DELETE", path)
+              .then(() => {
+                this.showToast("Workout removed");
+                this.fetchSentAssignments();
+              })
+              .catch((err) => this.showToast(err.message || "Failed to remove workout", "error"));
+            return;
+          }
+          if (type === "clear-chat") {
+            this.apiRequest("DELETE", `/api/v1/chat/rooms/${target.id}/messages`)
+              .then(() => {
+                this.chatMessages = [];
+                this.showToast("Chat cleared");
+              })
+              .catch((err) => this.showToast(err.message || "Failed to clear chat", "error"));
+            return;
+          }
+
+        },
+
+        // ================= ASSIGN WORKOUTS =================
+        blankExercise() {
+          return { name: "", muscleGroup: "", sets: "", reps: "" };
+        },
+
+        loadWorkoutPlans() {
+          this.apiRequest("GET", "/api/v1/workouts?limit=100")
+            .then((items) => { this.workoutPlans = Array.isArray(items) ? items : []; })
+            .catch(() => {});
+        },
+
+        // Only the clients an admin has assigned to this coach come back.
+        searchClients(query = "") {
+          const q = (query || "").trim();
+          this.apiRequest("GET", `/api/v1/workout-assignments/search-users${q ? `?search=${encodeURIComponent(q)}` : ""}`)
+            .then((users) => {
+              this.clientResults = Array.isArray(users) ? users : [];
+              if (!q) this.assignedClients = this.clientResults;
+            })
+            .catch((err) => this.showToast(err.message || "Failed to load clients", "error"));
+        },
+
+        resetAssignForm() {
+          this.assignForm = {
+            selectedUser: null, coachUserId: "", mode: "CATALOG", selectedPlanId: null, note: "", scheduledAt: "",
+            title: "", description: "", durationMinutes: "", difficulty: "BEGINNER", categoryKey: "GENERAL_FITNESS",
+            exercises: [this.blankExercise()]
+          };
+          this.assignFormError = "";
+        },
+
+        submitAssignWorkout() {
+          this.assignFormError = "";
+          const f = this.assignForm;
+          if (!f.selectedUser) {
+            this.assignFormError = "Pick the client you are sending this workout to.";
+            return;
+          }
+
+          let path;
+          let body;
+          if (f.mode === "CATALOG") {
+            if (!f.selectedPlanId) {
+              this.assignFormError = "Choose a workout from the library.";
+              return;
+            }
+            path = `/api/v1/workout-assignments/${f.selectedUser.id}/plan`;
+            body = {
+              planId: f.selectedPlanId,
+              note: f.note.trim() || undefined,
+              scheduledAt: f.scheduledAt ? new Date(f.scheduledAt).toISOString() : undefined,
+              asCoachUserId: f.coachUserId || undefined
+            };
+          } else {
+            if (!f.title.trim()) {
+              this.assignFormError = "Give the workout a title.";
+              return;
+            }
+            const exercises = this.cleanExercises(f.exercises);
+            if (exercises.length === 0) {
+              this.assignFormError = "Add at least one exercise.";
+              return;
+            }
+            path = `/api/v1/workout-assignments/${f.selectedUser.id}/custom`;
+            body = {
+              title: f.title.trim(),
+              description: f.description.trim() || undefined,
+              durationMinutes: f.durationMinutes ? Number(f.durationMinutes) : undefined,
+              difficulty: f.difficulty,
+              categoryKey: f.categoryKey,
+              exercises,
+              asCoachUserId: f.coachUserId || undefined
+            };
+          }
+
+          this.assignFormSaving = true;
+          this.apiRequest("POST", path, body)
+            .then(() => {
+              this.showToast(`Sent to ${f.selectedUser.fullName}.`);
+              this.resetAssignForm();
+              this.fetchSentAssignments();
+            })
+            .catch((err) => { this.assignFormError = err.message || "Unable to assign this workout. Please try again."; })
+            .finally(() => { this.assignFormSaving = false; });
+        },
+
+        cleanExercises(rows) {
+          return rows
+            .filter((row) => row.name.trim())
+            .map((row) => ({
+              name: row.name.trim(),
+              muscleGroup: row.muscleGroup?.trim() || undefined,
+              sets: row.sets ? Number(row.sets) : undefined,
+              reps: row.reps ? Number(row.reps) : undefined
+            }));
+        },
+
+        fetchSentAssignments() {
+          this.apiRequest("GET", "/api/v1/workout-assignments/mine?limit=100")
+            .then((res) => {
+              const plans = (res?.planAssignments?.items || []).map((a) => ({ ...a, type: "plan", title: a.plan?.title }));
+              const customs = (res?.customAssignments?.items || []).map((a) => ({ ...a, type: "custom" }));
+              this.sentAssignments = [...plans, ...customs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            })
+            .catch((err) => this.showToast(err.message || "Failed to load assigned workouts", "error"));
+        },
+
+        toLocalInput(iso) {
+          const d = new Date(iso);
+          d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+          return d.toISOString().slice(0, 16);
+        },
+
+        openEditAssignment(a) {
+          this.editingAssignment = a;
+          this.editError = "";
+          if (a.type === "custom") {
+            const exercises = (a.exercises || []).map((e) => ({ name: e.name, muscleGroup: e.muscleGroup || "", sets: e.sets ?? "", reps: e.reps ?? "" }));
+            this.editForm = {
+              title: a.title || "",
+              description: a.description || "",
+              durationMinutes: a.durationMinutes ?? "",
+              difficulty: a.difficulty || "BEGINNER",
+              categoryKey: a.categoryKey || "GENERAL_FITNESS",
+              exercises: exercises.length ? exercises : [this.blankExercise()]
+            };
+          } else {
+            this.editForm = { note: a.note || "", scheduledAt: a.scheduledAt ? this.toLocalInput(a.scheduledAt) : "" };
+          }
+          this.modals.editAssignment = true;
+        },
+
+        submitEditAssignment() {
+          const a = this.editingAssignment;
+          if (!a) return;
+          const f = this.editForm;
+          this.editError = "";
+
+          let path;
+          let body;
+          if (a.type === "custom") {
+            if (!f.title.trim()) {
+              this.editError = "Title can't be empty.";
+              return;
+            }
+            const exercises = this.cleanExercises(f.exercises);
+            if (exercises.length === 0) {
+              this.editError = "Keep at least one exercise.";
+              return;
+            }
+            path = `/api/v1/workout-assignments/custom/${a.id}`;
+            body = {
+              title: f.title.trim(),
+              description: f.description.trim() || null,
+              durationMinutes: f.durationMinutes ? Number(f.durationMinutes) : null,
+              difficulty: f.difficulty,
+              categoryKey: f.categoryKey,
+              exercises
+            };
+          } else {
+            path = `/api/v1/workout-assignments/${a.id}`;
+            body = {
+              note: f.note.trim() || null,
+              scheduledAt: f.scheduledAt ? new Date(f.scheduledAt).toISOString() : null
+            };
+          }
+
+          this.editSaving = true;
+          this.apiRequest("PATCH", path, body)
+            .then(() => {
+              this.modals.editAssignment = false;
+              this.showToast("Workout updated");
+              this.fetchSentAssignments();
+            })
+            .catch((err) => { this.editError = err.message || "Unable to save changes."; })
+            .finally(() => { this.editSaving = false; });
+        },
+
+        deleteAssignment(a) {
+          this.confirmAction = {
+            type: "delete-assignment",
+            target: a,
+            title: "Remove workout",
+            description: `Remove "${a.title || "this workout"}" from ${a.user?.fullName || "the client"}? They will no longer see it.`,
+            confirmLabel: "Remove"
+          };
+          this.modals.confirm = true;
+        },
+
+        // ================= REFRESH =================
+        fetchClients() {
+          return this.apiRequest("GET", "/api/v1/coaches/me/clients")
+            .then((data) => {
+              this.clientsData = data || this.clientsData;
+              this.clientsLoaded = true;
+            })
+            .catch(() => {})
+            .finally(() => { this.clientsLoading = false; });
+        },
+
+        refreshAll() {
+          if (this.refreshing) return;
+          this.refreshing = true;
+          const tasks = [
+            this.fetchProfile().catch(() => {}),
+            this.fetchClients(),
+            this.fetchAppointments(),
+            this.fetchRooms(),
+            this.fetchMeetingStatus()
+          ];
+          this.fetchAvailability();
+          this.fetchAllCoaches();          this.loadWorkoutPlans();
+          this.searchClients("");
+          this.fetchSentAssignments();
+          if (this.activeRoom) this.loadMessages(true);
+          Promise.all(tasks.map((t) => Promise.resolve(t).catch(() => {}))).finally(() => {
+            this.refreshing = false;
+            this.showToast("Up to date");
+          });
+        },
+
+        // ================= COACH MANAGEMENT (head coach) =================
+        editCoachFromList(c) {
+          this.switchManaged(c.id === this.coach?.id ? "" : c.id);
+          this.currentView = "profile";
+        },
+
+        deleteCoachFromList(c) {
+          this.confirmAction = {
+            type: "delete-coach",
+            target: c,
+            title: "Remove coach",
+            description: `Remove ${c.user?.fullName || "this coach"}? Their coach profile, availability, sessions and chats are deleted, their clients become unassigned, and their account goes back to a regular user. This can't be undone.`,
+            confirmLabel: "Remove"
+          };
+          this.modals.confirm = true;
+        },
+
+        openAddCoach() {
+          this.addCoachForm = { fullName: "", email: "", password: "", phone: "", showPassword: false, bio: "", specialtiesText: "", experienceYears: "" };
+          this.addCoachError = "";
+          this.modals.addCoach = true;
+        },
+
+        // A random password that meets the rules (upper + lower + digit, 12 characters), shown so it can be shared.
+        generateCoachPassword() {
+          const pick = (chars) => chars[crypto.getRandomValues(new Uint32Array(1))[0] % chars.length];
+          const all = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+          const chars = [pick("ABCDEFGHJKLMNPQRSTUVWXYZ"), pick("abcdefghijkmnopqrstuvwxyz"), pick("23456789")];
+          while (chars.length < 12) chars.push(pick(all));
+          for (let i = chars.length - 1; i > 0; i--) {
+            const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+            [chars[i], chars[j]] = [chars[j], chars[i]];
+          }
+          this.addCoachForm.password = chars.join("");
+          this.addCoachForm.showPassword = true;
+        },
+
+        submitAddCoach() {
+          const f = this.addCoachForm;
+          this.addCoachError = "";
+          if (f.fullName.trim().length < 2) return (this.addCoachError = "Enter the coach's full name.");
+          if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return (this.addCoachError = "Enter a valid email address.");
+          if (f.password.length < 8 || !/[A-Z]/.test(f.password) || !/[a-z]/.test(f.password) || !/[0-9]/.test(f.password)) {
+            return (this.addCoachError = "The password needs 8+ characters with an uppercase letter, a lowercase letter and a number.");
+          }
+          this.addCoachSaving = true;
+          this.apiRequest("POST", "/api/v1/coaches", {
+            fullName: f.fullName.trim(),
+            email: f.email.trim(),
+            phone: f.phone.trim() || undefined,
+            password: f.password,
+            bio: f.bio.trim() || undefined,
+            specialties: f.specialtiesText.split(",").map((x) => x.trim()).filter(Boolean),
+            experienceYears: f.experienceYears === "" ? undefined : Number(f.experienceYears)
+          })
+            .then(() => {
+              this.modals.addCoach = false;
+              this.showToast(`${f.fullName.trim()} was added as a coach. Share their email and password with them.`);
+              this.fetchAllCoaches();
+            })
+            .catch((err) => { this.addCoachError = err.message || "Couldn't add the coach"; })
+            .finally(() => { this.addCoachSaving = false; });
+        },
+
+        // ================= MEETING LINKS & SESSIONS =================
+        fetchMeetingStatus() {
+          return this.apiRequest("GET", "/api/v1/appointments/meeting-status")
+            .then((status) => { this.meetingStatus = status || { googleMeetConnected: false }; })
+            .catch(() => {});
+        },
+
+        openLinkModal(appointment) {
+          this.linkTarget = appointment;
+          this.linkInput = appointment.meetingProvider === "MANUAL" ? appointment.meetingLink || "" : "";
+          this.linkError = "";
+          this.modals.meetingLink = true;
+        },
+
+        saveMeetingLink(link) {
+          if (!this.linkTarget) return;
+          const value = link === null ? null : String(link || "").trim();
+          if (value !== null && !/^https:\/\//i.test(value)) {
+            this.linkError = "Paste the full link, starting with https://";
+            return;
+          }
+          this.linkSaving = true;
+          this.apiRequest("PATCH", `/api/v1/appointments/${this.linkTarget.id}/meeting-link`, { meetingLink: value })
+            .then(() => {
+              this.modals.meetingLink = false;
+              this.showToast(value ? "Meeting link saved. The client has been notified." : "Meeting link removed");
+              this.fetchAppointments();
+            })
+            .catch((err) => { this.linkError = err.message || "Couldn't save the link"; })
+            .finally(() => { this.linkSaving = false; });
+        },
+
+        generateMeetLink() {
+          if (!this.linkTarget) return;
+          this.linkSaving = true;
+          this.linkError = "";
+          this.apiRequest("POST", `/api/v1/appointments/${this.linkTarget.id}/meeting-link/generate`)
+            .then(() => {
+              this.modals.meetingLink = false;
+              this.showToast("Google Meet link created. The client has been notified.");
+              this.fetchAppointments();
+            })
+            .catch((err) => { this.linkError = err.message || "Couldn't create a Meet link"; })
+            .finally(() => { this.linkSaving = false; });
+        },
+
+        copyLink(link) {
+          navigator.clipboard?.writeText(link).then(
+            () => this.showToast("Link copied"),
+            () => this.showToast("Couldn't copy — select the link instead", "error")
+          );
+        },
+
+        // "Name · @username (note)" so clients with the same name can be told apart.
+        clientLabel(c) {
+          return [c.fullName, c.username ? "@" + c.username : ""].filter(Boolean).join(" · ") + (c.note || "");
+        },
+
+        openSchedule(client = null) {
+          const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          start.setMinutes(0, 0, 0);
+          this.scheduleForm = {
+            userId: client?.id || "",
+            // Working "as" a coach on the Appointments page pre-selects them as the session's coach.
+            coachId: this.coach?.isHeadCoach && this.appointmentsCoachId !== this.coach?.id ? this.appointmentsCoachId : "",
+            title: "1:1 coaching session",
+            scheduledAt: this.toLocalInput(start.toISOString()),
+            durationMinutes: 45,
+            repeatWeeks: "0",
+            meetingLink: "",
+            notes: ""
+          };
+          this.scheduleError = "";
+          // Shown until the server's list arrives: the same clients as the Clients view.
+          this.scheduleClients = this.clients.map((c) => ({ ...c, note: c.assigned ? "" : " (booked before)" }));
+          this.modals.schedule = true;
+
+          // Only clients this coach can actually schedule with (the rule the server enforces):
+          // a client moved to another coach drops out.
+          this.apiRequest("GET", "/api/v1/appointments/sessions/clients")
+            .then((data) => {
+              const list = (data?.clients || []).map((c) => ({ ...c, note: c.assigned ? "" : " (booked with you)" }));
+              const add = (u) => { if (u && !list.some((c) => c.id === u.id)) list.push({ ...u, note: "" }); };
+              // The head coach can schedule with anyone, so the wider client list stays.
+              if (data?.canScheduleAnyone) { this.assignedClients.forEach(add); add(client); }
+              this.scheduleClients = list.sort((a, b) => a.fullName.localeCompare(b.fullName));
+              if (client && !list.some((c) => c.id === client.id)) {
+                this.scheduleForm.userId = "";
+                this.scheduleError = `${client.fullName} isn't one of your current clients any more, so you can't schedule a session with them.`;
+              }
+            })
+            .catch(() => {});
+        },
+
+        submitSchedule() {
+          const f = this.scheduleForm;
+          this.scheduleError = "";
+          if (!f.userId) return (this.scheduleError = "Pick a client.");
+          if (!f.title.trim()) return (this.scheduleError = "Give the session a title.");
+          if (!f.scheduledAt) return (this.scheduleError = "Pick a start time.");
+          if (f.meetingLink.trim() && !/^https:\/\//i.test(f.meetingLink.trim())) {
+            return (this.scheduleError = "Meeting links must start with https://");
+          }
+
+          const client = this.scheduleClients.find((c) => c.id === f.userId);
+          const weeks = Number(f.repeatWeeks) || 0;
+          this.confirmAction = {
+            type: "schedule-session",
+            target: null,
+            title: "Schedule this session?",
+            description: `Are you sure you want to schedule "${f.title.trim()}" with ${client?.fullName || "this client"} on ${this.formatDate(new Date(f.scheduledAt).toISOString())}${weeks ? ` and ${weeks} more week${weeks === 1 ? "" : "s"}` : ""}? It is confirmed straight away and the client is notified.`,
+            confirmLabel: "Yes, schedule",
+            positive: true
+          };
+          this.modals.confirm = true;
+        },
+
+        saveSchedule() {
+          const f = this.scheduleForm;
+          this.scheduleSaving = true;
+          this.apiRequest("POST", "/api/v1/appointments/sessions", {
+            userId: f.userId,
+            coachId: f.coachId || undefined,
+            title: f.title.trim(),
+            scheduledAt: new Date(f.scheduledAt).toISOString(),
+            durationMinutes: Number(f.durationMinutes) || 45,
+            repeatWeeks: Number(f.repeatWeeks) || 0,
+            meetingLink: f.meetingLink.trim() || undefined,
+            notes: f.notes.trim() || undefined
+          })
+            .then((result) => {
+              const made = result?.created?.length || 0;
+              const skipped = result?.skipped || [];
+              this.fetchAppointments();
+              this.fetchClients();
+              if (skipped.length) {
+                this.scheduleError = `${made} scheduled. Skipped:\n` + skipped.map((x) => `• ${this.formatDate(x.scheduledAt)} — ${x.reason}`).join("\n");
+                if (!made) return;
+                this.showToast(`${made} session(s) scheduled, ${skipped.length} skipped`);
+              } else {
+                this.modals.schedule = false;
+                this.showToast(made > 1 ? `${made} sessions scheduled` : "Session scheduled");
+              }
+            })
+            .catch((err) => { this.scheduleError = err.message || "Couldn't schedule the session"; })
+            .finally(() => { this.scheduleSaving = false; });
+        },
+
+        // ================= MESSAGES =================
+        initChat() {
+          this.fetchRooms();
+          this.connectSocket();
+          // Safety net for when the socket is down: keep the conversation list fresh.
+          if (!this.chatPoll) {
+            this.chatPoll = setInterval(() => {
+              if (!this.isAuthenticated) return;
+              this.fetchRooms();
+              if (!this.chatConnected && this.activeRoom && this.currentView === "chat") this.loadMessages(true);
+            }, 20000);
+          }
+        },
+
+        teardownChat() {
+          if (this.chatPoll) clearInterval(this.chatPoll);
+          this.chatPoll = null;
+          if (_chatSocket) {
+            _chatSocket.disconnect();
+            _chatSocket = null;
+          }
+          this.chatRooms = [];
+          this.activeRoom = null;
+          this.chatMessages = [];
+          this.chatConnected = false;
+          this.onlineUsers = {};
+        },
+
+        connectSocket() {
+          if (_chatSocket || typeof io === "undefined") return;
+          const self = this;
+          _chatSocket = io("/chat", { auth: (cb) => cb({ token: self.accessToken }) });
+
+          _chatSocket.on("connect", () => {
+            self.chatConnected = true;
+            if (self.activeRoom) _chatSocket.emit("room:join", { roomId: self.activeRoom.id });
+            self.fetchRooms();
+          });
+          _chatSocket.on("disconnect", () => { self.chatConnected = false; });
+          _chatSocket.on("connect_error", () => {
+            self.chatConnected = false;
+            // Most likely an expired access token — refresh it and let socket.io retry.
+            self.refreshAccess().then((ok) => { if (ok && _chatSocket && !_chatSocket.connected) _chatSocket.connect(); });
+          });
+          _chatSocket.on("message:new", (m) => self.onSocketMessage(m));
+          _chatSocket.on("message:status", ({ roomId, status, by }) => {
+            if (status === "SEEN" && by && by !== self.myUserId && self.activeRoom?.id === roomId) {
+              self.chatMessages = self.chatMessages.map((m) => (m.senderId === self.myUserId ? { ...m, status: "SEEN" } : m));
+            }
+          });
+          _chatSocket.on("presence:update", ({ userId, online }) => {
+            self.onlineUsers = { ...self.onlineUsers, [userId]: online };
+          });
+          _chatSocket.on("typing", ({ roomId, userId, isTyping }) => {
+            if (self.activeRoom?.id !== roomId || userId === self.myUserId) return;
+            self.typingInRoom = isTyping;
+            clearTimeout(self._typingTimer);
+            if (isTyping) self._typingTimer = setTimeout(() => { self.typingInRoom = false; }, 4000);
+          });
+        },
+
+        onSocketMessage(m) {
+          if (m.senderId === this.myUserId) return;
+          const viewing = this.currentView === "chat" && this.activeRoom?.id === m.roomId;
+
+          if (viewing) {
+            if (!this.chatMessages.some((x) => x.id === m.id)) this.chatMessages.push(m);
+            this.markRoomSeen(this.activeRoom);
+            this.scrollChatToEnd();
+          } else if (_chatSocket) {
+            _chatSocket.emit("message:delivered", { roomId: m.roomId });
+          }
+
+          const room = this.chatRooms.find((r) => r.id === m.roomId);
+          if (!room) {
+            this.fetchRooms();
+            return;
+          }
+          room.lastMessage = m;
+          room.lastMessageAt = m.createdAt;
+          if (!viewing) room.unreadCount = (room.unreadCount || 0) + 1;
+          this.chatRooms = [...this.chatRooms].sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
+        },
+
+        setChatScope(scope) {
+          this.chatScope = scope;
+          this.chatCoachFilter = "all";
+          if (this.activeRoom) this.closeRoom();
+          this.fetchRooms();
+        },
+
+        fetchRooms() {
+          const scope = this.coach?.isHeadCoach && this.chatScope === "all" ? "?scope=all" : "";
+          return this.apiRequest("GET", `/api/v1/chat/rooms${scope}`)
+            .then((rooms) => {
+              // A slower request for a view you've since left (e.g. "My chats" after switching to "All coaches")
+              // must not overwrite the list you're looking at now.
+              const wanted = this.coach?.isHeadCoach && this.chatScope === "all" ? "?scope=all" : "";
+              if (wanted !== scope) return;
+              this.chatRooms = (rooms || []).map((r) =>
+                this.currentView === "chat" && this.activeRoom?.id === r.id ? { ...r, unreadCount: 0 } : r
+              );
+            })
+            .catch(() => {});
+        },
+
+        openNewChat() {
+          this.newChatCoachId = "";
+          this.clientSearch = "";
+          this.searchClients("");
+          this.modals.newChat = true;
+        },
+
+        startChatWith(user) {
+          const forCoachId = this.coach?.isHeadCoach && this.newChatCoachId ? this.newChatCoachId : undefined;
+          // A chat for another coach only shows up under "All coaches".
+          if (forCoachId && this.chatScope !== "all") this.chatScope = "all";
+          this.apiRequest("POST", "/api/v1/chat/rooms", { participantId: user.id, coachId: forCoachId })
+            .then((room) => this.fetchRooms().then(() => room))
+            .then((created) => {
+              this.modals.newChat = false;
+              const room = this.chatRooms.find((r) => r.id === created?.id) || this.chatRooms.find((r) => r.participant.id === user.id);
+              if (room) this.openRoom(room);
+            })
+            .catch((err) => this.showToast(err.message || "Unable to start this chat", "error"));
+        },
+
+        openRoom(room) {
+          if (this.activeRoom && _chatSocket) _chatSocket.emit("room:leave", { roomId: this.activeRoom.id });
+          this.activeRoom = room;
+          this.chatMessages = [];
+          this.chatInput = "";
+          this.typingInRoom = false;
+          if (_chatSocket) _chatSocket.emit("room:join", { roomId: room.id });
+          this.loadMessages().then(() => this.markRoomSeen(room));
+        },
+
+        closeRoom() {
+          if (this.activeRoom && _chatSocket) _chatSocket.emit("room:leave", { roomId: this.activeRoom.id });
+          this.activeRoom = null;
+        },
+
+        loadMessages(silent = false) {
+          const room = this.activeRoom;
+          if (!room) return Promise.resolve();
+          if (!silent) this.chatLoading = true;
+          return this.apiRequest("GET", `/api/v1/chat/rooms/${room.id}/messages?limit=100`)
+            .then((items) => {
+              if (this.activeRoom?.id !== room.id) return;
+              this.chatMessages = items || [];
+              this.scrollChatToEnd();
+            })
+            .catch((err) => this.showToast(err.message || "Failed to load messages", "error"))
+            .finally(() => { this.chatLoading = false; });
+        },
+
+        markRoomSeen(room) {
+          if (!room) return;
+          room.unreadCount = 0;
+          if (_chatSocket && _chatSocket.connected) {
+            _chatSocket.emit("message:seen", { roomId: room.id });
+          } else {
+            this.apiRequest("PATCH", `/api/v1/chat/rooms/${room.id}/seen`).catch(() => {});
+          }
+        },
+
+        sendChat() {
+          const text = this.chatInput.trim();
+          if (!text || !this.activeRoom || this.chatSending) return;
+          this.chatSending = true;
+          this.apiRequest("POST", `/api/v1/chat/rooms/${this.activeRoom.id}/messages`, { type: "TEXT", body: text })
+            .then((msg) => {
+              this.chatInput = "";
+              this.afterSent(msg);
+            })
+            .catch((err) => this.showToast(err.message || "Message failed to send", "error"))
+            .finally(() => { this.chatSending = false; });
+        },
+
+        sendChatImage(event) {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file || !this.activeRoom) return;
+          if (file.size > 5 * 1024 * 1024) {
+            this.showToast("Photos must be 5 MB or smaller", "error");
+            return;
+          }
+          const form = new FormData();
+          form.append("type", "IMAGE");
+          form.append("file", file);
+          this.chatSending = true;
+          this.apiRequest("POST", `/api/v1/chat/rooms/${this.activeRoom.id}/messages`, form)
+            .then((msg) => this.afterSent(msg))
+            .catch((err) => this.showToast(err.message || "Photo failed to send", "error"))
+            .finally(() => { this.chatSending = false; });
+        },
+
+        afterSent(msg) {
+          if (!msg) return;
+          if (!this.chatMessages.some((x) => x.id === msg.id)) this.chatMessages.push(msg);
+          const room = this.chatRooms.find((r) => r.id === msg.roomId);
+          if (room) {
+            room.lastMessage = msg;
+            room.lastMessageAt = msg.createdAt;
+            this.chatRooms = [...this.chatRooms].sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
+          }
+          this.scrollChatToEnd();
+        },
+
+        notifyTyping() {
+          if (!_chatSocket || !this.activeRoom || this._typingSent) return;
+          const roomId = this.activeRoom.id;
+          _chatSocket.emit("typing", { roomId, isTyping: true });
+          this._typingSent = true;
+          setTimeout(() => {
+            if (_chatSocket) _chatSocket.emit("typing", { roomId, isTyping: false });
+            this._typingSent = false;
+          }, 2500);
+        },
+
+        clearChat() {
+          if (!this.activeRoom) return;
+          this.confirmAction = {
+            type: "clear-chat",
+            target: this.activeRoom,
+            title: "Clear chat",
+            description: "This hides the conversation history on your side only. The client keeps their copy.",
+            confirmLabel: "Clear"
+          };
+          this.modals.confirm = true;
+        },
+
+        scrollChatToEnd() {
+          this.$nextTick(() => {
+            const el = document.getElementById("chatScroll");
+            if (el) el.scrollTop = el.scrollHeight;
+          });
+        },
+
+        shortTime(iso) {
+          const d = new Date(iso);
+          if (isNaN(d)) return "";
+          return d.toDateString() === new Date().toDateString()
+            ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+            : d.toLocaleDateString([], { month: "short", day: "numeric" });
+        },
+
+        // Swaps an expired access token for a new one. One refresh at a time:
+        // concurrent requests that all hit 401 share the same promise.
+        refreshAccess() {
+          if (!this.refreshToken) return Promise.resolve(false);
+          if (!_refreshPromise) {
+            _refreshPromise = fetch("/api/v1/auth/refresh", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ refreshToken: this.refreshToken })
+            })
+              .then(async (res) => {
+                const payload = await res.json().catch(() => null);
+                if (!res.ok || !payload?.data?.accessToken) return false;
+                this.accessToken = payload.data.accessToken;
+                this.refreshToken = payload.data.refreshToken || this.refreshToken;
+                localStorage.setItem(
+                  "fitnerveCoachAuth",
+                  JSON.stringify({ coach: this.coach, accessToken: this.accessToken, refreshToken: this.refreshToken })
+                );
+                return true;
+              })
+              .catch(() => false)
+              .finally(() => { _refreshPromise = null; });
+          }
+          return _refreshPromise;
+        },
+
+        toggleTheme() {
+          this.themeMode = this.themeMode === "dark" ? "light" : "dark";
+          try { localStorage.setItem("fitnerve-coach-theme", this.themeMode); } catch {}
+        },
+
+        login() {
+          if (!this.loginForm.email || !this.loginForm.password) return;
+          this.loginLoading = true;
+          this.loginError = "";
+          this.apiRequest("POST", "/api/v1/auth/login", {
+            email: this.loginForm.email,
+            password: this.loginForm.password
+          })
+            .then((result) => {
+              if (result.user?.role !== "COACH") {
+                this.loginError = "This account is not a coach account.";
+                this.loginLoading = false;
+                return;
+              }
+              this.accessToken = result.accessToken;
+              this.refreshToken = result.refreshToken;
+              this.isAuthenticated = true;
+              this.loginLoading = false;
+              this.fetchProfile().then(() => {
+                localStorage.setItem(
+                  "fitnerveCoachAuth",
+                  JSON.stringify({ coach: this.coach, accessToken: this.accessToken, refreshToken: this.refreshToken })
+                );
+              });
+              this.fetchAvailability();
+              this.fetchAppointments();
+              this.fetchClients();
+              this.fetchAllCoaches();              this.loadWorkoutPlans();
+              this.searchClients("");
+              this.fetchSentAssignments();
+              this.fetchMeetingStatus();
+              this.initChat();
+              this.showToast(`Welcome back, ${result.user.fullName.split(" ")[0]}`);
+            })
+            .catch((err) => {
+              this.loginError = err.message || "Login failed. Please check your credentials.";
+              this.loginLoading = false;
+            });
+        },
+
+        logout() {
+          this.managedCoachId = "";
+          this.teardownChat();
+          this.isAuthenticated = false;
+          this.coach = null;
+          this.accessToken = null;
+          this.refreshToken = null;
+          localStorage.removeItem("fitnerveCoachAuth");
+          this.currentView = "dashboard";
+          // The next person to sign in on this browser must not see this coach's clients.
+          this.clientsData = { clients: [], summary: { total: 0, mine: 0, booked: 0, other: 0, unassigned: 0 } };
+          this.clientsLoaded = false;
+          this.clientsLoading = true;
+          this.clientsFilter = "all";
+          this.clientsSearch = "";
+        },
+
         fetchProfile() {
           return this.apiRequest("GET", "/api/v1/coaches/me").then((coach) => {
             this.coach = coach;
