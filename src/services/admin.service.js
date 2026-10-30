@@ -196,6 +196,12 @@ async function listCoaches(query) {
   return { items, meta: buildMeta(page, limit, total) };
 }
 
+async function getCoachDetails(id) {
+  const coach = await coachRepository.adminDetails(id);
+  if (!coach) throw ApiError.notFound("Coach not found");
+  return coach;
+}
+
 /** Creates a new coach (with user account & credentials) OR promotes an existing user to COACH. */
 async function createCoach(adminId, data) {
   const { userId, fullName, email, password, phone, bio, specialties = [], experienceYears, isAcceptingClients = true } = data;
@@ -538,6 +544,7 @@ module.exports = {
   createUser,
   deleteUser,
   listCoaches,
+  getCoachDetails,
   createCoach,
   updateCoach,
   updateCoachCredentials,

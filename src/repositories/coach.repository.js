@@ -103,6 +103,36 @@ const coachRepository = {
             ]
           }
         : undefined
+    }),
+
+  adminDetails: (id) =>
+    prisma.coach.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+            email: true,
+            phone: true,
+            role: true,
+            isActive: true,
+            isEmailVerified: true,
+            createdAt: true
+          }
+        },
+        availability: { orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }] },
+        clients: {
+          where: { role: "USER" },
+          select: { id: true, fullName: true, username: true, email: true, isActive: true },
+          orderBy: { fullName: "asc" }
+        },
+        appointments: {
+          include: { user: { select: { id: true, fullName: true, username: true, email: true } } },
+          orderBy: { scheduledAt: "desc" }
+        }
+      }
     })
 };
 

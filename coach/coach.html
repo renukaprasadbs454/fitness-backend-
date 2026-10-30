@@ -457,10 +457,6 @@
                     <span class="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0 text-primary-light font-bold text-lg leading-none">+</span>
                     <span class="text-sm font-semibold">Schedule Session</span>
                   </button>
-                  <button x-show="coach?.isHeadCoach" @click="currentView = 'coaches'; openAddCoach()" class="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-left transition-colors">
-                    <span class="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0 text-amber-400 font-bold text-lg leading-none">+</span>
-                    <span class="text-sm font-semibold">Add Coach</span>
-                  </button>
                 </div>
               </div>
 
@@ -1098,79 +1094,7 @@
             </div>
           </template>
 
-          <!-- Coaches (read-only — public directory, same data every client booking screen sees) -->
-          <template x-if="currentView === 'coaches'">
-            <div>
-              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-6">
-                <div>
-                  <div class="flex items-center gap-2 mb-1">
-                    <h2 class="text-2xl font-bold">Coaches</h2>
-                    <span x-show="!coach?.isHeadCoach" class="badge badge-blue">Read-only</span>
-                    <span x-show="coach?.isHeadCoach" class="badge badge-orange">Head coach · full control</span>
-                  </div>
-                  <p class="text-slate-400 text-sm" x-text="coach?.isHeadCoach ? 'Add, edit or remove coaches. Changes show up everywhere (the app, the admin panel and every portal) straight away.' : 'Every coach profile visible to clients on the platform.'"></p>
-                </div>
-                <button x-show="coach?.isHeadCoach" @click="openAddCoach()" class="btn-primary px-4 py-2.5 rounded-xl text-sm flex-shrink-0">+ Add Coach</button>
-              </div>
 
-              <div class="relative max-w-xs mb-4">
-                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
-                <input type="search" x-model="coachesSearch" placeholder="Search coaches…"
-                  class="w-full pl-9 pr-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary transition-colors">
-              </div>
-
-              <div class="card overflow-hidden">
-                <div class="overflow-x-auto">
-                <table class="w-full text-sm min-w-[640px] responsive-cards">
-                  <thead>
-                    <tr class="border-b border-dark-border">
-                      <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Coach</th>
-                      <th class="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Specialties</th>
-                      <th class="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Experience</th>
-                      <th class="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Accepting</th>
-                      <th x-show="coach?.isHeadCoach" class="text-right px-4 py-3 text-xs font-semibold text-slate-400 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-dark-border/50">
-                    <template x-for="c in filteredCoaches" :key="c.id">
-                      <tr class="hover:bg-white/[0.02]">
-                        <td class="px-4 py-3">
-                          <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-accent/15 flex items-center justify-center text-xs font-bold text-accent flex-shrink-0" x-text="initials(c.user?.fullName)"></div>
-                            <div class="min-w-0">
-                              <p class="font-medium truncate" x-text="c.user?.fullName"></p>
-                              <p class="text-xs text-slate-500 truncate" x-text="c.user?.email"></p>
-                              <p class="sm:hidden text-xs text-slate-500 mt-0.5" x-text="(c.experienceYears ?? 0) + ' yrs experience'"></p>
-                            </div>
-                          </div>
-                        </td>
-                        <td data-label="Specialties" class="hidden md:table-cell px-4 py-3 text-slate-400">
-                          <div class="flex flex-wrap gap-1">
-                            <template x-for="s in c.specialties" :key="s">
-                              <span class="px-2 py-0.5 rounded text-xs bg-dark-muted" x-text="s"></span>
-                            </template>
-                          </div>
-                        </td>
-                        <td data-label="Experience" class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="(c.experienceYears ?? 0) + ' yrs'"></td>
-                        <td data-label="Accepting" class="px-4 py-3">
-                          <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="c.isAcceptingClients ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'" x-text="c.isAcceptingClients ? 'Yes' : 'No'"></span>
-                        </td>
-                        <td data-label="Actions" x-show="coach?.isHeadCoach" class="px-4 py-3 text-right whitespace-nowrap">
-                          <span x-show="c.isHeadCoach" class="badge badge-orange mr-1">Head</span>
-                          <button @click="editCoachFromList(c)" class="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-slate-300 rounded-md text-xs font-semibold mr-1">Edit</button>
-                          <button x-show="!c.isHeadCoach && c.id !== coach?.id" @click="deleteCoachFromList(c)" class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-md text-xs font-semibold">Delete</button>
-                        </td>
-                      </tr>
-                    </template>
-                    <tr x-show="filteredCoaches.length === 0">
-                      <td colspan="5" class="px-4 py-12 text-center text-slate-500">No coaches found</td>
-                    </tr>
-                  </tbody>
-                </table>
-                </div>
-              </div>
-            </div>
-          </template>
 
 
 
@@ -1308,46 +1232,6 @@
     </div>
   </div>
 
-  <!-- Add Coach Modal -->
-  <div x-show="modals.addCoach" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/70" @click="modals.addCoach = false"></div>
-    <div class="relative bg-dark-card border border-dark-border rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-      <h3 class="text-lg font-bold mb-1">Add a new coach</h3>
-      <p class="text-xs text-slate-500 mb-4">Creates a brand-new coach account. Share the email and password with them so they can sign in to the app and this portal.</p>
-
-      <label class="block text-xs text-slate-500 mb-1.5">Full name *</label>
-      <input x-model="addCoachForm.fullName" maxlength="100" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3" placeholder="e.g. Priya Sharma">
-      <label class="block text-xs text-slate-500 mb-1.5">Email * (their login)</label>
-      <input x-model="addCoachForm.email" type="email" autocomplete="off" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3" placeholder="coach@example.com">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-        <div>
-          <label class="block text-xs text-slate-500 mb-1.5">Password *</label>
-          <div class="flex gap-2">
-            <input x-model="addCoachForm.password" :type="addCoachForm.showPassword ? 'text' : 'password'" autocomplete="new-password" class="min-w-0 flex-1 px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white" placeholder="Min 8 chars">
-            <button type="button" @click="addCoachForm.showPassword = !addCoachForm.showPassword" class="px-3 rounded-xl border border-dark-border text-xs text-slate-400 hover:text-white" x-text="addCoachForm.showPassword ? 'Hide' : 'Show'"></button>
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs text-slate-500 mb-1.5">Phone (optional)</label>
-          <input x-model="addCoachForm.phone" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white" placeholder="+91 98765 43210">
-        </div>
-      </div>
-      <p class="text-[11px] text-slate-500 -mt-1 mb-3">The password needs 8+ characters with an uppercase letter, a lowercase letter and a number. <button type="button" @click="generateCoachPassword()" class="text-primary-light hover:underline">Generate one</button></p>
-
-      <label class="block text-xs text-slate-500 mb-1.5">Bio</label>
-      <textarea x-model="addCoachForm.bio" rows="3" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3"></textarea>
-      <label class="block text-xs text-slate-500 mb-1.5">Specialties (comma separated)</label>
-      <input x-model="addCoachForm.specialtiesText" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3" placeholder="Strength, Yoga">
-      <label class="block text-xs text-slate-500 mb-1.5">Years of experience</label>
-      <input type="number" min="0" x-model="addCoachForm.experienceYears" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white mb-3">
-      <p x-show="addCoachError" class="text-xs text-orange-400 mb-2" x-text="addCoachError"></p>
-      <div class="flex justify-end gap-2 mt-2">
-        <button @click="modals.addCoach = false" class="px-4 py-2 border border-dark-border text-slate-300 hover:bg-white/5 rounded-xl text-xs font-semibold">Cancel</button>
-        <button @click="submitAddCoach()" :disabled="addCoachSaving" class="btn-primary px-4 py-2 rounded-xl text-xs disabled:opacity-50" x-text="addCoachSaving ? 'Adding…' : 'Add Coach'"></button>
-      </div>
-    </div>
-  </div>
-
   <!-- Meeting Link Modal -->
   <div x-show="modals.meetingLink" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/70" @click="modals.meetingLink = false"></div>
@@ -1480,7 +1364,6 @@
           { key: "clients", label: "Clients", icon: "M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-4-4" },
           { key: "workouts", label: "Assign Workouts", icon: "M4 10v4M20 10v4M7 8v8M17 8v8M7 12h10" },
           { key: "chat", label: "Messages", icon: "M8 10h8M8 14h5m-9 6l3.5-3.5H18a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14z" },
-          { key: "coaches", label: "Coaches", icon: "M20.24 12.24a6 6 0 00-8.49-8.49L5 10.5V19h8.5l6.74-6.76z" },
         ],
 
         appointments: [],
@@ -1499,9 +1382,8 @@
         savingProfile: false,
 
         allCoaches: [],
-        coachesSearch: "",
 
-        modals: { confirm: false, editAssignment: false, newChat: false, meetingLink: false, schedule: false, addCoach: false },
+        modals: { confirm: false, editAssignment: false, newChat: false, meetingLink: false, schedule: false },
         confirmAction: { type: null, target: null, title: "", description: "", confirmLabel: "Confirm" },
 
         toasts: [],
@@ -1543,9 +1425,6 @@
         newChatCoachId: "",
 
         refreshing: false,
-        addCoachForm: { fullName: "", email: "", password: "", phone: "", showPassword: false, bio: "", specialtiesText: "", experienceYears: "" },
-        addCoachError: "",
-        addCoachSaving: false,
         managedCoachId: "",
         assignedClients: [],
         // The Clients page: every client with the coach they belong to (see GET /coaches/me/clients).
@@ -1715,15 +1594,6 @@
           return Array.from(byId.values()).sort((a, b) => a.fullName.localeCompare(b.fullName));
         },
 
-        get filteredCoaches() {
-          if (!this.coachesSearch.trim()) return this.allCoaches;
-          const search = this.coachesSearch.toLowerCase();
-          return this.allCoaches.filter((c) => {
-            const text = `${c.user?.fullName || ""} ${c.user?.email || ""} ${(c.specialties || []).join(" ")}`.toLowerCase();
-            return text.includes(search);
-          });
-        },
-
         init() {
           const saved = localStorage.getItem("fitnerveCoachAuth");
           if (saved) {
@@ -1777,18 +1647,6 @@
           }
           if (type === "schedule-session") {
             this.saveSchedule();
-            return;
-          }
-          if (type === "delete-coach") {
-            this.apiRequest("DELETE", `/api/v1/coaches/${target.id}`)
-              .then(() => {
-                if (this.managedCoachId === target.id) this.switchManaged("");
-                this.showToast(`${target.user?.fullName || "Coach"} was removed`);
-                this.fetchAllCoaches();
-                this.fetchAppointments();
-                this.fetchRooms();
-              })
-              .catch((err) => this.showToast(err.message || "Couldn't remove this coach", "error"));
             return;
           }
           if (type === "delete-slot") {
@@ -2042,70 +1900,6 @@
             this.refreshing = false;
             this.showToast("Up to date");
           });
-        },
-
-        // ================= COACH MANAGEMENT (head coach) =================
-        editCoachFromList(c) {
-          this.switchManaged(c.id === this.coach?.id ? "" : c.id);
-          this.currentView = "profile";
-        },
-
-        deleteCoachFromList(c) {
-          this.confirmAction = {
-            type: "delete-coach",
-            target: c,
-            title: "Remove coach",
-            description: `Remove ${c.user?.fullName || "this coach"}? Their coach profile, availability, sessions and chats are deleted, their clients become unassigned, and their account goes back to a regular user. This can't be undone.`,
-            confirmLabel: "Remove"
-          };
-          this.modals.confirm = true;
-        },
-
-        openAddCoach() {
-          this.addCoachForm = { fullName: "", email: "", password: "", phone: "", showPassword: false, bio: "", specialtiesText: "", experienceYears: "" };
-          this.addCoachError = "";
-          this.modals.addCoach = true;
-        },
-
-        // A random password that meets the rules (upper + lower + digit, 12 characters), shown so it can be shared.
-        generateCoachPassword() {
-          const pick = (chars) => chars[crypto.getRandomValues(new Uint32Array(1))[0] % chars.length];
-          const all = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-          const chars = [pick("ABCDEFGHJKLMNPQRSTUVWXYZ"), pick("abcdefghijkmnopqrstuvwxyz"), pick("23456789")];
-          while (chars.length < 12) chars.push(pick(all));
-          for (let i = chars.length - 1; i > 0; i--) {
-            const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
-            [chars[i], chars[j]] = [chars[j], chars[i]];
-          }
-          this.addCoachForm.password = chars.join("");
-          this.addCoachForm.showPassword = true;
-        },
-
-        submitAddCoach() {
-          const f = this.addCoachForm;
-          this.addCoachError = "";
-          if (f.fullName.trim().length < 2) return (this.addCoachError = "Enter the coach's full name.");
-          if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return (this.addCoachError = "Enter a valid email address.");
-          if (f.password.length < 8 || !/[A-Z]/.test(f.password) || !/[a-z]/.test(f.password) || !/[0-9]/.test(f.password)) {
-            return (this.addCoachError = "The password needs 8+ characters with an uppercase letter, a lowercase letter and a number.");
-          }
-          this.addCoachSaving = true;
-          this.apiRequest("POST", "/api/v1/coaches", {
-            fullName: f.fullName.trim(),
-            email: f.email.trim(),
-            phone: f.phone.trim() || undefined,
-            password: f.password,
-            bio: f.bio.trim() || undefined,
-            specialties: f.specialtiesText.split(",").map((x) => x.trim()).filter(Boolean),
-            experienceYears: f.experienceYears === "" ? undefined : Number(f.experienceYears)
-          })
-            .then(() => {
-              this.modals.addCoach = false;
-              this.showToast(`${f.fullName.trim()} was added as a coach. Share their email and password with them.`);
-              this.fetchAllCoaches();
-            })
-            .catch((err) => { this.addCoachError = err.message || "Couldn't add the coach"; })
-            .finally(() => { this.addCoachSaving = false; });
         },
 
         // ================= MEETING LINKS & SESSIONS =================

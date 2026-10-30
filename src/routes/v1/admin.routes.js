@@ -195,6 +195,7 @@ router.delete("/users/:id", validate(schemas.idParam), adminController.deleteUse
  *       200: { description: Coaches retrieved }
  */
 router.get("/coaches", validate(schemas.listCoachesAdmin), adminController.listCoaches);
+router.get("/coaches/:id/details", validate(schemas.idParam), adminController.getCoachDetails);
 
 /**
  * @swagger

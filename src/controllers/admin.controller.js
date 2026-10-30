@@ -120,6 +120,11 @@ const listCoaches = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Coaches retrieved", items, meta);
 });
 
+const getCoachDetails = asyncHandler(async (req, res) => {
+  const coach = await adminService.getCoachDetails(req.params.id);
+  return ApiResponse.success(res, httpStatus.OK, "Coach details retrieved", coach);
+});
+
 const createCoach = asyncHandler(async (req, res) => {
   const coach = await adminService.createCoach(req.user.id, req.body);
   return ApiResponse.success(res, httpStatus.CREATED, "Coach created", coach);
@@ -261,6 +266,7 @@ module.exports = {
   createUser,
   deleteUser,
   listCoaches,
+  getCoachDetails,
   createCoach,
   updateCoach,
   updateCoachCredentials,

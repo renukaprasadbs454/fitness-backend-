@@ -1004,7 +1004,7 @@
               </thead>
               <tbody class="divide-y divide-dark-border/50">
                 <template x-for="c in pagedCoaches.data" :key="c.id">
-                  <tr class="hover:bg-white/[0.02]">
+                  <tr class="hover:bg-white/[0.04] cursor-pointer transition-colors" tabindex="0" role="button" @click="openCoachDetails(c)" @keydown.enter="openCoachDetails(c)" @keydown.space.prevent="openCoachDetails(c)" :aria-label="'View details for ' + c.user.fullName">
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-accent/15 flex items-center justify-center text-xs font-bold text-accent flex-shrink-0" x-text="initials(c.user.fullName)"></div>
@@ -1039,7 +1039,7 @@
                       <span class="px-2 py-0.5 rounded text-xs whitespace-nowrap" :class="c.isAcceptingClients ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'" x-text="c.isAcceptingClients ? 'Yes' : 'No'"></span>
                     </td>
                     <td data-label="Clients" class="hidden sm:table-cell px-4 py-3 text-slate-300 whitespace-nowrap" x-text="c._count?.clients ?? 0"></td>
-                    <td class="row-actions px-4 py-3">
+                    <td class="row-actions px-4 py-3" @click.stop>
                       <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                         <button @click="open = !open" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
@@ -1841,6 +1841,65 @@
     </div>
   </div>
 
+  <!-- Coach details -->
+  <div x-show="modals.coachDetails" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" @keydown.escape.window="modals.coachDetails = false">
+    <div class="absolute inset-0 modal-backdrop" @click="modals.coachDetails = false"></div>
+    <section class="relative bg-dark-card border border-dark-border rounded-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col" role="dialog" aria-modal="true" aria-labelledby="coach-details-title">
+      <header class="flex items-start justify-between gap-4 px-5 sm:px-7 py-5 border-b border-dark-border">
+        <div class="min-w-0">
+          <p class="text-xs uppercase tracking-wider text-primary font-semibold mb-1">Coach overview</p>
+          <h2 id="coach-details-title" class="text-xl sm:text-2xl font-bold truncate" x-text="selectedCoachDetails?.user?.fullName || 'Coach details'"></h2>
+          <p class="text-sm text-slate-400 mt-1" x-text="selectedCoachDetails?.user?.email || ''"></p>
+        </div>
+        <button @click="modals.coachDetails = false" aria-label="Close coach details" class="text-slate-400 hover:text-white rounded-lg p-2 hover:bg-white/5">✕</button>
+      </header>
+      <div class="overflow-y-auto p-5 sm:p-7 space-y-6">
+        <div x-show="coachDetailsLoading" class="py-12 text-center text-slate-400"><span class="loader inline-block mr-2"></span>Loading coach details…</div>
+        <div x-show="coachDetailsError" x-text="coachDetailsError" class="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300"></div>
+        <template x-if="selectedCoachDetails && !coachDetailsLoading">
+          <div class="space-y-6">
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="rounded-xl bg-dark border border-dark-border p-4"><p class="text-xs text-slate-500 uppercase">Assigned clients</p><p class="text-2xl font-bold mt-1" x-text="selectedCoachDetails.clients?.length ?? 0"></p></div>
+              <div class="rounded-xl bg-dark border border-dark-border p-4"><p class="text-xs text-slate-500 uppercase">Appointments</p><p class="text-2xl font-bold mt-1" x-text="selectedCoachDetails.appointments?.length ?? 0"></p></div>
+              <div class="rounded-xl bg-dark border border-dark-border p-4"><p class="text-xs text-slate-500 uppercase">Weekly slots</p><p class="text-2xl font-bold mt-1" x-text="selectedCoachDetails.availability?.filter(s => s.isActive).length ?? 0"></p></div>
+              <div class="rounded-xl bg-dark border border-dark-border p-4"><p class="text-xs text-slate-500 uppercase">Account</p><p class="text-lg font-semibold mt-1" :class="selectedCoachDetails.user?.isActive ? 'text-emerald-400' : 'text-red-400'" x-text="selectedCoachDetails.user?.isActive ? 'Active' : 'Inactive'"></p></div>
+            </div>
+            <div class="grid lg:grid-cols-2 gap-4">
+              <article class="rounded-xl border border-dark-border p-4 sm:p-5">
+                <h3 class="font-semibold mb-3">Profile</h3>
+                <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                  <div><dt class="text-slate-500">Username</dt><dd class="mt-0.5" x-text="selectedCoachDetails.user?.username ? '@' + selectedCoachDetails.user.username : '—'"></dd></div>
+                  <div><dt class="text-slate-500">Phone</dt><dd class="mt-0.5" x-text="selectedCoachDetails.user?.phone || '—'"></dd></div>
+                  <div><dt class="text-slate-500">Experience</dt><dd class="mt-0.5" x-text="selectedCoachDetails.experienceYears == null ? '—' : selectedCoachDetails.experienceYears + ' years'"></dd></div>
+                  <div><dt class="text-slate-500">Accepting clients</dt><dd class="mt-0.5" x-text="selectedCoachDetails.isAcceptingClients ? 'Yes' : 'No'"></dd></div>
+                </dl>
+                <div class="mt-4"><p class="text-xs text-slate-500 mb-2">Specialties</p><div class="flex flex-wrap gap-2"><template x-for="specialty in (selectedCoachDetails.specialties || [])" :key="specialty"><span class="px-2.5 py-1 rounded-full bg-primary/10 text-primary-light text-xs" x-text="specialty"></span></template><span x-show="!selectedCoachDetails.specialties?.length" class="text-sm text-slate-500">Not listed</span></div></div>
+                <div class="mt-4"><p class="text-xs text-slate-500 mb-1">Bio</p><p class="text-sm text-slate-300 whitespace-pre-wrap" x-text="selectedCoachDetails.bio || 'No bio provided.'"></p></div>
+              </article>
+              <article class="rounded-xl border border-dark-border p-4 sm:p-5">
+                <h3 class="font-semibold mb-3">Assigned clients</h3>
+                <div class="space-y-2 max-h-64 overflow-y-auto" x-show="selectedCoachDetails.clients?.length">
+                  <template x-for="client in selectedCoachDetails.clients" :key="client.id"><div class="flex items-center justify-between gap-3 rounded-lg bg-dark px-3 py-2.5"><div class="min-w-0"><p class="text-sm font-medium truncate" x-text="client.fullName"></p><p class="text-xs text-slate-500 truncate" x-text="client.email"></p></div><span class="text-xs" :class="client.isActive ? 'text-emerald-400' : 'text-slate-500'" x-text="client.isActive ? 'Active' : 'Inactive'"></span></div></template>
+                </div>
+                <p x-show="!selectedCoachDetails.clients?.length" class="text-sm text-slate-500 py-4">No clients currently assigned.</p>
+              </article>
+            </div>
+            <article class="rounded-xl border border-dark-border p-4 sm:p-5">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3"><h3 class="font-semibold">Booked sessions</h3><span class="text-xs text-slate-500">Most recent first</span></div>
+              <div class="overflow-x-auto" x-show="selectedCoachDetails.appointments?.length"><table class="w-full min-w-[650px] text-sm"><thead><tr class="text-left text-xs uppercase text-slate-500 border-b border-dark-border"><th class="py-2 pr-3">Date &amp; time</th><th class="py-2 pr-3">Client</th><th class="py-2 pr-3">Session</th><th class="py-2 pr-3">Status</th><th class="py-2">Meeting link</th></tr></thead><tbody class="divide-y divide-dark-border/60"><template x-for="appointment in selectedCoachDetails.appointments" :key="appointment.id"><tr><td class="py-3 pr-3 whitespace-nowrap" x-text="formatDateTime(appointment.scheduledAt)"></td><td class="py-3 pr-3"><span x-text="appointment.user?.fullName || 'Client'"></span><span class="block text-xs text-slate-500" x-text="appointment.user?.email || ''"></span></td><td class="py-3 pr-3"><span x-text="appointment.title"></span><span class="block text-xs text-slate-500" x-text="appointment.durationMinutes + ' minutes'"></span></td><td class="py-3 pr-3"><span class="px-2 py-1 rounded-full text-xs bg-dark-muted" x-text="appointment.status"></span></td><td class="py-3"><a x-show="appointment.meetingLink" :href="appointment.meetingLink" target="_blank" rel="noopener" class="text-primary-light hover:underline">Open link</a><span x-show="!appointment.meetingLink" class="text-slate-500">Not set</span></td></tr></template></tbody></table></div>
+              <p x-show="!selectedCoachDetails.appointments?.length" class="text-sm text-slate-500 py-4">No booked sessions found.</p>
+            </article>
+            <article class="rounded-xl border border-dark-border p-4 sm:p-5">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3"><h3 class="font-semibold">Weekly availability</h3><span class="text-xs text-slate-500">Published recurring free slots</span></div>
+              <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2" x-show="selectedCoachDetails.availability?.length"><template x-for="slot in selectedCoachDetails.availability" :key="slot.id"><div class="flex items-center justify-between gap-2 rounded-lg bg-dark px-3 py-3"><div><p class="text-sm font-medium capitalize" x-text="slot.dayOfWeek.toLowerCase()"></p><p class="text-xs text-slate-400" x-text="slot.startTime + ' – ' + slot.endTime"></p></div><span class="px-2 py-1 rounded-full text-xs" :class="slot.isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'" x-text="slot.isActive ? 'Available' : 'Paused'"></span></div></template></div>
+              <p x-show="!selectedCoachDetails.availability?.length" class="text-sm text-slate-500 py-4">No availability slots configured.</p>
+            </article>
+          </div>
+        </template>
+      </div>
+    </section>
+  </div>
+
   <!-- Support Ticket -->
   <div x-show="modals.supportTicket" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60" @click="modals.supportTicket = false"></div>
@@ -2126,6 +2185,9 @@
 
         // ---- Coaches view state ----
         coachesFilters: { search: "", page: 1 },
+        selectedCoachDetails: null,
+        coachDetailsLoading: false,
+        coachDetailsError: "",
 
         // ---- Audit log view state ----
         auditPage: 1,
@@ -2151,7 +2213,7 @@
         storageTesting: false,
 
         // ---- Modals ----
-        modals: { addUser: false, editUser: false, changeRole: false, assignCoach: false, resetPassword: false, createCoach: false, editCoach: false, coachCredentials: false, confirm: false, dbInsert: false, dbEdit: false, supportTicket: false, coachReport: false },
+        modals: { addUser: false, editUser: false, changeRole: false, assignCoach: false, resetPassword: false, createCoach: false, editCoach: false, coachCredentials: false, coachDetails: false, confirm: false, dbInsert: false, dbEdit: false, supportTicket: false, coachReport: false },
         addUserForm: { fullName: "", email: "", phone: "", role: "USER" },
         editingUser: null,
         editForm: { fullName: "", username: "", email: "", phone: "" },
@@ -3424,6 +3486,17 @@
         },
 
         // ================= EDIT COACH =================
+        openCoachDetails(coach) {
+          this.selectedCoachDetails = coach ? { ...coach, availability: [], clients: [], appointments: [] } : null;
+          this.coachDetailsError = "";
+          this.coachDetailsLoading = true;
+          this.modals.coachDetails = true;
+          this.apiRequest("GET", `/api/v1/admin/coaches/${encodeURIComponent(coach.id)}/details`)
+            .then((details) => { this.selectedCoachDetails = details; })
+            .catch((err) => { this.coachDetailsError = err.message || "Could not load coach details"; })
+            .finally(() => { this.coachDetailsLoading = false; });
+        },
+
         openEditCoach(c) {
           this.editingCoach = c;
           this.editCoachForm = {
