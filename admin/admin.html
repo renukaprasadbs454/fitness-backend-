@@ -340,13 +340,13 @@
         </div>
         <div x-show="sidebarCollapsed" class="my-2 mx-2 border-t border-dark-border/50"></div>
         <template x-for="item in [
-          { name: 'ChatRoom', label: 'Chat Rooms', icon: 'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h5' },
-          { name: 'ChatMessage', label: 'Chat Messages', icon: 'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h6' },
-          { name: 'WorkoutPlan', label: 'Workout Plans', icon: 'M4 7h16M4 12h16M4 17h16M7 4v16m10-16v16' },
-          { name: 'WorkoutPlanExercise', label: 'Plan Exercises', icon: 'M5 5h14v14H5zM8 9h8m-8 3h8m-8 3h5' }
+          { name: 'ChatRoom', view: 'chat-rooms', label: 'Chat Rooms', icon: 'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h5' },
+          { name: 'ChatMessage', view: 'chat-messages', label: 'Chat Messages', icon: 'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h6' },
+          { name: 'WorkoutPlan', view: 'workout-plans', label: 'Workout Plans', icon: 'M4 7h16M4 12h16M4 17h16M7 4v16m10-16v16' },
+          { name: 'WorkoutPlanExercise', view: 'plan-exercises', label: 'Plan Exercises', icon: 'M5 5h14v14H5zM8 9h8m-8 3h8m-8 3h5' }
         ]" :key="item.name">
-          <button @click="selectTable(item.name)"
-            :class="currentView === 'db-explorer' && activeTableName.toLowerCase() === item.name.toLowerCase() ? 'nav-item-active' : 'nav-item text-slate-400'"
+          <button @click="openAdminFeature(item.view)"
+            :class="currentView === item.view ? 'nav-item-active' : 'nav-item text-slate-400'"
             class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium"
             :title="sidebarCollapsed ? item.label : ''">
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon"/></svg>
@@ -399,10 +399,10 @@
           <div class="px-3 pt-4 pb-1.5">
             <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Coaching &amp; Workouts</span>
           </div>
-          <button @click="selectTable('ChatRoom'); mobileNavOpen = false" :class="currentView === 'db-explorer' && activeTableName.toLowerCase() === 'chatroom' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Chat Rooms</button>
-          <button @click="selectTable('ChatMessage'); mobileNavOpen = false" :class="currentView === 'db-explorer' && activeTableName.toLowerCase() === 'chatmessage' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Chat Messages</button>
-          <button @click="selectTable('WorkoutPlan'); mobileNavOpen = false" :class="currentView === 'db-explorer' && activeTableName.toLowerCase() === 'workoutplan' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Workout Plans</button>
-          <button @click="selectTable('WorkoutPlanExercise'); mobileNavOpen = false" :class="currentView === 'db-explorer' && activeTableName.toLowerCase() === 'workoutplanexercise' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Plan Exercises</button>
+          <button @click="openAdminFeature('chat-rooms'); mobileNavOpen = false" :class="currentView === 'chat-rooms' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Chat Rooms</button>
+          <button @click="openAdminFeature('chat-messages'); mobileNavOpen = false" :class="currentView === 'chat-messages' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Chat Messages</button>
+          <button @click="openAdminFeature('workout-plans'); mobileNavOpen = false" :class="currentView === 'workout-plans' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Workout Plans</button>
+          <button @click="openAdminFeature('plan-exercises'); mobileNavOpen = false" :class="currentView === 'plan-exercises' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Plan Exercises</button>
 
           <div class="px-3 pt-4 pb-1.5">
             <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Database Tables</span>
@@ -488,6 +488,164 @@
 
       <!-- Page content -->
       <main class="flex-1 overflow-y-auto bg-dark p-4 sm:p-6">
+
+        <!-- ===== COACHING & WORKOUT ADMIN PAGES ===== -->
+        <div x-show="currentView === 'chat-rooms'">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div>
+              <p class="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-2">Coaching workspace</p>
+              <h1 class="text-2xl sm:text-3xl font-bold">Chat Rooms</h1>
+              <p class="text-slate-400 text-sm mt-1">Review client and coach conversations in one place. Messages are read-only here.</p>
+            </div>
+            <div class="flex gap-2">
+              <button @click="loadAdminFeatures()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl text-sm text-slate-200">Refresh</button>
+              <button @click="selectTable('ChatRoom')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Open table</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">All conversations</p><p class="text-2xl font-bold mt-1" x-text="adminChatRooms.length"></p></div>
+            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">Active conversations</p><p class="text-2xl font-bold mt-1 text-emerald-400" x-text="adminChatRooms.filter(r => !r.closedForUserAt).length"></p></div>
+            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">Messages loaded</p><p class="text-2xl font-bold mt-1 text-sky-400" x-text="adminChatMessages.length"></p></div>
+          </div>
+
+          <div class="bg-dark-card border border-dark-border rounded-2xl overflow-hidden shadow-xl min-h-[560px] grid lg:grid-cols-[340px_minmax(0,1fr)]">
+            <section class="border-b lg:border-b-0 lg:border-r border-dark-border flex flex-col min-h-[260px]">
+              <div class="p-4 border-b border-dark-border">
+                <div class="flex items-center justify-between mb-3"><h2 class="font-semibold">Conversations</h2><span class="text-xs text-slate-500" x-text="filteredAdminChatRooms().length + ' shown'"></span></div>
+                <input x-model="adminChatSearch" type="search" placeholder="Find a client or coach…" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary">
+                <div class="flex gap-2 mt-3">
+                  <button @click="adminChatFilter = 'ALL'" :class="adminChatFilter === 'ALL' ? 'bg-primary text-dark' : 'bg-dark text-slate-400 border border-dark-border'" class="px-3 py-1.5 rounded-full text-xs font-semibold">All</button>
+                  <button @click="adminChatFilter = 'ACTIVE'" :class="adminChatFilter === 'ACTIVE' ? 'bg-primary text-dark' : 'bg-dark text-slate-400 border border-dark-border'" class="px-3 py-1.5 rounded-full text-xs font-semibold">Active</button>
+                  <button @click="adminChatFilter = 'HISTORY'" :class="adminChatFilter === 'HISTORY' ? 'bg-primary text-dark' : 'bg-dark text-slate-400 border border-dark-border'" class="px-3 py-1.5 rounded-full text-xs font-semibold">History</button>
+                </div>
+              </div>
+              <div class="flex-1 overflow-y-auto max-h-[560px]">
+                <template x-for="room in filteredAdminChatRooms()" :key="room.id">
+                  <button @click="selectedAdminRoomId = room.id" class="w-full text-left p-4 border-b border-dark-border/70 hover:bg-white/[0.035] transition-colors" :class="selectedAdminRoomId === room.id ? 'bg-primary/10 border-l-2 border-l-primary' : ''">
+                    <div class="flex items-start gap-3">
+                      <span class="w-10 h-10 flex-shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold" x-text="adminInitials(room.userId__label || 'Client')"></span>
+                      <span class="min-w-0 flex-1">
+                        <span class="flex items-center justify-between gap-2"><span class="text-sm font-semibold truncate" x-text="adminRelationName(room.userId__label, 'Client')"></span><span class="text-[10px] text-slate-500 flex-shrink-0" x-text="adminDate(room.lastMessageAt, true)"></span></span>
+                        <span class="block text-xs text-slate-400 truncate mt-1" x-text="'Coach · ' + adminRelationName(room.coachId__label, 'Coach')"></span>
+                        <span class="inline-flex mt-2 px-2 py-0.5 rounded-full text-[10px] font-semibold" :class="room.closedForUserAt ? 'bg-amber-500/10 text-amber-300' : 'bg-emerald-500/10 text-emerald-300'" x-text="room.closedForUserAt ? 'History' : 'Active'"></span>
+                      </span>
+                    </div>
+                  </button>
+                </template>
+                <div x-show="adminFeatureLoading" class="p-8 text-center text-sm text-slate-500">Loading conversations…</div>
+                <div x-show="!adminFeatureLoading && filteredAdminChatRooms().length === 0" class="p-8 text-center text-sm text-slate-500">No conversations match this search.</div>
+              </div>
+            </section>
+
+            <section class="min-w-0 flex flex-col min-h-[460px]">
+              <template x-if="selectedAdminRoom()">
+                <div class="flex flex-col h-full">
+                  <div class="px-5 py-4 border-b border-dark-border flex items-center justify-between gap-3">
+                    <div class="min-w-0"><h2 class="font-semibold truncate" x-text="adminRelationName(selectedAdminRoom().userId__label, 'Client')"></h2><p class="text-xs text-slate-400 mt-1 truncate" x-text="'Coach · ' + adminRelationName(selectedAdminRoom().coachId__label, 'Coach')"></p></div>
+                    <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold" :class="selectedAdminRoom().closedForUserAt ? 'bg-amber-500/10 text-amber-300' : 'bg-emerald-500/10 text-emerald-300'" x-text="selectedAdminRoom().closedForUserAt ? 'Read-only history' : 'Active room'"></span>
+                  </div>
+                  <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 bg-[radial-gradient(ellipse_at_top,rgba(34,197,94,.035),transparent_60%)]">
+                    <template x-for="message in selectedAdminRoomMessages()" :key="message.id">
+                      <div class="flex" :class="message.senderId === selectedAdminRoom().userId ? 'justify-start' : 'justify-end'">
+                        <div class="max-w-[85%] sm:max-w-[72%] rounded-2xl px-4 py-3 border" :class="message.senderId === selectedAdminRoom().userId ? 'bg-dark-muted border-dark-border rounded-bl-md' : 'bg-primary/15 border-primary/20 rounded-br-md'">
+                          <p class="text-[10px] uppercase tracking-wide font-semibold text-slate-400 mb-1" x-text="adminRelationName(message.senderId__label, 'Participant')"></p>
+                          <a x-show="message.type === 'IMAGE' && message.imageUrl" :href="message.imageUrl" target="_blank" rel="noopener noreferrer"><img :src="message.imageUrl" alt="Chat attachment" class="max-h-56 rounded-lg mb-2"></a>
+                          <p x-show="message.body" class="text-sm whitespace-pre-wrap break-words text-slate-100" x-text="message.body"></p>
+                          <div class="text-[10px] text-slate-500 mt-2 flex gap-2"><span x-text="adminDate(message.createdAt)"></span><span x-show="message.status" x-text="message.status"></span></div>
+                        </div>
+                      </div>
+                    </template>
+                    <div x-show="!adminFeatureLoading && selectedAdminRoomMessages().length === 0" class="h-full min-h-48 flex items-center justify-center text-sm text-slate-500">No messages in this conversation yet.</div>
+                  </div>
+                  <div class="border-t border-dark-border px-5 py-3 text-xs text-slate-500">Read-only admin view · Message sending and deletion are not available here.</div>
+                </div>
+              </template>
+              <div x-show="!selectedAdminRoom()" class="flex-1 flex flex-col items-center justify-center text-center p-8"><span class="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h5"/></svg></span><h2 class="font-semibold">Select a conversation</h2><p class="text-sm text-slate-500 mt-1">Choose a chat room to read its message history.</p></div>
+            </section>
+          </div>
+        </div>
+
+        <div x-show="currentView === 'chat-messages'">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div><p class="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-2">Coaching workspace</p><h1 class="text-2xl sm:text-3xl font-bold">Chat Messages</h1><p class="text-slate-400 text-sm mt-1">Search recent message activity and jump to its conversation.</p></div>
+            <div class="flex gap-2"><button @click="loadAdminFeatures()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl text-sm text-slate-200">Refresh</button><button @click="selectTable('ChatMessage')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Open table</button></div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">Messages loaded</p><p class="text-2xl font-bold mt-1" x-text="adminChatMessages.length"></p></div>
+            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">Text messages</p><p class="text-2xl font-bold mt-1 text-sky-400" x-text="adminChatMessages.filter(m => m.type === 'TEXT').length"></p></div>
+            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">Photo messages</p><p class="text-2xl font-bold mt-1 text-violet-400" x-text="adminChatMessages.filter(m => m.type === 'IMAGE').length"></p></div>
+          </div>
+          <div class="bg-dark-card border border-dark-border rounded-2xl p-4 sm:p-5 mb-4 flex flex-col sm:flex-row gap-3">
+            <input x-model="adminMessageSearch" type="search" placeholder="Search message, client, coach…" class="flex-1 px-4 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary">
+            <select x-model="adminMessageType" class="sm:w-48 px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white"><option value="ALL">All message types</option><option value="TEXT">Text</option><option value="IMAGE">Images</option></select>
+          </div>
+          <div class="space-y-3">
+            <template x-for="message in filteredAdminMessages()" :key="message.id">
+              <article class="bg-dark-card border border-dark-border hover:border-primary/30 rounded-2xl p-4 sm:p-5 transition-colors">
+                <div class="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2"><span class="text-sm font-semibold" x-text="adminRelationName(message.senderId__label, 'Participant')"></span><span class="text-slate-600">·</span><span class="text-xs text-slate-400" x-text="adminRelationName(message.roomId__label, 'Conversation')"></span></div>
+                    <p x-show="message.body" class="text-sm text-slate-300 mt-3 whitespace-pre-wrap break-words" x-text="message.body"></p>
+                    <a x-show="message.type === 'IMAGE' && message.imageUrl" :href="message.imageUrl" target="_blank" rel="noopener noreferrer" class="inline-flex mt-3 text-xs text-primary hover:underline">Open attached image ↗</a>
+                    <p x-show="message.type === 'IMAGE' && !message.imageUrl" class="text-xs text-slate-500 mt-3">Image attachment</p>
+                    <div class="flex flex-wrap gap-2 mt-4"><span class="px-2.5 py-1 rounded-full bg-sky-500/10 text-sky-300 text-[10px] font-semibold" x-text="message.type || 'MESSAGE'"></span><span class="px-2.5 py-1 rounded-full bg-dark border border-dark-border text-slate-400 text-[10px]" x-text="message.status || 'SENT'"></span><span class="px-2.5 py-1 rounded-full bg-dark border border-dark-border text-slate-500 text-[10px]" x-text="adminDate(message.createdAt)"></span></div>
+                  </div>
+                  <button @click="openAdminRoomFromMessage(message)" class="shrink-0 px-3 py-2 bg-primary/10 hover:bg-primary/15 border border-primary/20 rounded-xl text-xs text-primary font-semibold">View conversation</button>
+                </div>
+              </article>
+            </template>
+            <div x-show="adminFeatureLoading" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center text-sm text-slate-500">Loading messages…</div>
+            <div x-show="!adminFeatureLoading && filteredAdminMessages().length === 0" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center text-sm text-slate-500">No messages match your search.</div>
+            <div x-show="adminFeatureLoading" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center text-sm text-slate-500">Loading messages…</div>
+          </div>
+        </div>
+
+        <div x-show="currentView === 'workout-plans'">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div><p class="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-2">Training library</p><h1 class="text-2xl sm:text-3xl font-bold">Workout Plans</h1><p class="text-slate-400 text-sm mt-1">Browse the plans available for assignment and review their exercise counts.</p></div>
+            <div class="flex gap-2"><button @click="loadAdminFeatures()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl text-sm text-slate-200">Refresh</button><button @click="selectTable('WorkoutPlan')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Open table</button></div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">All plans</p><p class="text-2xl font-bold mt-1" x-text="adminWorkoutPlans.length"></p></div>
+            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">Active</p><p class="text-2xl font-bold mt-1 text-emerald-400" x-text="adminWorkoutPlans.filter(p => p.isActive).length"></p></div>
+            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">Exercise links</p><p class="text-2xl font-bold mt-1 text-sky-400" x-text="adminPlanExercises.length"></p></div>
+          </div>
+          <div class="bg-dark-card border border-dark-border rounded-2xl p-4 mb-5"><input x-model="adminPlanSearch" type="search" placeholder="Search plan title, category, or difficulty…" class="w-full px-4 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary"></div>
+          <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <template x-for="plan in filteredAdminPlans()" :key="plan.id">
+              <article class="bg-dark-card border border-dark-border rounded-2xl overflow-hidden hover:border-primary/35 transition-colors">
+                <div class="h-1.5" :style="'background:' + (plan.accentColor || '#22c55e')"></div>
+                <div class="p-5">
+                  <div class="flex items-start justify-between gap-3"><div><span class="text-[10px] uppercase tracking-wider font-bold text-primary" x-text="String(plan.categoryKey || 'FITNESS').replaceAll('_', ' ')"></span><h2 class="text-lg font-bold mt-1" x-text="plan.title"></h2></div><span class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7h16M4 12h16M4 17h16"/></svg></span></div>
+                  <p class="text-sm text-slate-400 mt-3 min-h-10" x-text="plan.description || 'No description added yet.'"></p>
+                  <div class="flex flex-wrap gap-2 mt-4"><span class="px-2.5 py-1 rounded-full bg-dark border border-dark-border text-xs text-slate-300" x-text="(plan.durationMinutes || '—') + ' min'"></span><span class="px-2.5 py-1 rounded-full bg-dark border border-dark-border text-xs text-slate-300" x-text="plan.difficulty || 'Difficulty not set'"></span><span class="px-2.5 py-1 rounded-full text-xs font-semibold" :class="plan.isActive ? 'bg-emerald-500/10 text-emerald-300' : 'bg-slate-500/10 text-slate-400'" x-text="plan.isActive ? 'Active' : 'Inactive'"></span></div>
+                  <div class="mt-5 pt-4 border-t border-dark-border flex items-center justify-between"><span class="text-xs text-slate-500" x-text="adminPlanExercises.filter(e => e.planId === plan.id).length + ' exercises'"></span><button @click="openAdminFeature('plan-exercises', plan.id)" class="px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/15 text-primary text-xs font-semibold">View exercises</button></div>
+                </div>
+              </article>
+            </template>
+          </div>
+          <div x-show="!adminFeatureLoading && filteredAdminPlans().length === 0" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center text-sm text-slate-500">No workout plans match your search.</div>
+        </div>
+
+        <div x-show="currentView === 'plan-exercises'">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div><p class="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-2">Training library</p><h1 class="text-2xl sm:text-3xl font-bold">Plan Exercises</h1><p class="text-slate-400 text-sm mt-1">Review exercise order, sets, and repetitions for each workout plan.</p></div>
+            <div class="flex gap-2"><button @click="loadAdminFeatures()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl text-sm text-slate-200">Refresh</button><button @click="selectTable('WorkoutPlanExercise')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Open table</button></div>
+          </div>
+          <div class="bg-dark-card border border-dark-border rounded-2xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center gap-4"><div class="flex-1"><p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Selected plan</p><select x-model="selectedWorkoutPlanId" class="mt-2 w-full px-4 py-3 bg-dark border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-primary"><option value="">All workout plans</option><template x-for="plan in adminWorkoutPlans" :key="plan.id"><option :value="plan.id" x-text="plan.title"></option></template></select></div><div class="sm:text-right"><p class="text-xs text-slate-500">Exercise entries</p><p class="text-2xl font-bold mt-1" x-text="filteredAdminPlanExercises().length"></p></div></div>
+          <div class="space-y-3">
+            <template x-for="(entry, index) in filteredAdminPlanExercises()" :key="entry.id">
+              <article class="bg-dark-card border border-dark-border rounded-2xl p-4 sm:p-5 flex items-center gap-4 hover:border-primary/30 transition-colors">
+                <span class="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold" x-text="String(entry.sortOrder + 1).padStart(2, '0')"></span>
+                <div class="flex-1 min-w-0"><p class="text-xs text-slate-500 truncate" x-text="entry.planId__label || adminPlanTitle(entry.planId)"></p><h2 class="font-semibold truncate mt-1" x-text="entry.exerciseId__label || 'Exercise' + (index + 1)"></h2><p class="text-xs text-slate-500 mt-1" x-text="'Order ' + (entry.sortOrder + 1)"></p></div>
+                <div class="flex gap-2 sm:gap-3"><div class="min-w-16 text-center px-3 py-2 rounded-xl bg-dark border border-dark-border"><p class="text-[10px] uppercase text-slate-500">Sets</p><p class="font-bold mt-0.5" x-text="entry.sets ?? '—'"></p></div><div class="min-w-16 text-center px-3 py-2 rounded-xl bg-dark border border-dark-border"><p class="text-[10px] uppercase text-slate-500">Reps</p><p class="font-bold mt-0.5" x-text="entry.reps ?? '—'"></p></div></div>
+              </article>
+            </template>
+            <div x-show="!adminFeatureLoading && filteredAdminPlanExercises().length === 0" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center text-sm text-slate-500">There are no exercise entries for this selection.</div>
+            <div x-show="adminFeatureLoading" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center text-sm text-slate-500">Loading exercises…</div>
+          </div>
+        </div>
 
         <!-- ===== DB EXPLORER VIEW (Prisma Studio Table Grid) ===== -->
         <div x-show="currentView === 'db-explorer'">
@@ -2206,6 +2364,20 @@
         rowFormFields: [],
         relationOptionsCache: {},
 
+        // ---- Admin chat and workout workspaces ----
+        adminChatRooms: [],
+        adminChatMessages: [],
+        adminWorkoutPlans: [],
+        adminPlanExercises: [],
+        adminFeatureLoading: false,
+        adminChatSearch: "",
+        adminChatFilter: "ALL",
+        adminMessageSearch: "",
+        adminMessageType: "ALL",
+        adminPlanSearch: "",
+        selectedAdminRoomId: "",
+        selectedWorkoutPlanId: "",
+
         // ---- Users view state ----
         usersFilters: { search: "", status: "ALL", page: 1, sortBy: "createdAt", sortOrder: "desc" },
         selectedUser: null,
@@ -2323,6 +2495,109 @@
           this.tableSearchColumn = "ALL";
           this.currentView = "db-explorer";
           this.fetchTableRows(tableName);
+        },
+
+        openAdminFeature(view, selectedId = "") {
+          this.currentView = view;
+          if (view === "plan-exercises" && selectedId) this.selectedWorkoutPlanId = selectedId;
+          if (view === "chat-rooms" && selectedId) this.selectedAdminRoomId = selectedId;
+          this.loadAdminFeatures();
+        },
+
+        loadAdminFeatures() {
+          if (!this.isAuthenticated) return Promise.resolve();
+          this.adminFeatureLoading = true;
+          const models = ["ChatRoom", "ChatMessage", "WorkoutPlan", "WorkoutPlanExercise"];
+          return Promise.all(models.map((model) =>
+            this.apiRequest("GET", `/api/v1/admin/db/tables/${model}?page=1&limit=200`)
+              .then((result) => Array.isArray(result) ? result : (result?.items || []))
+          ))
+            .then(([rooms, messages, plans, exercises]) => {
+              this.adminChatRooms = rooms.slice().sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
+              this.adminChatMessages = messages.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+              this.adminWorkoutPlans = plans.slice().sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
+              this.adminPlanExercises = exercises;
+              if (!this.adminChatRooms.some((room) => room.id === this.selectedAdminRoomId)) {
+                this.selectedAdminRoomId = this.adminChatRooms[0]?.id || "";
+              }
+              if (!this.adminWorkoutPlans.some((plan) => plan.id === this.selectedWorkoutPlanId)) {
+                this.selectedWorkoutPlanId = "";
+              }
+            })
+            .catch((error) => this.showToast(error.message || "Could not load coaching data", "error"))
+            .finally(() => { this.adminFeatureLoading = false; });
+        },
+
+        selectedAdminRoom() {
+          return this.adminChatRooms.find((room) => room.id === this.selectedAdminRoomId) || null;
+        },
+
+        selectedAdminRoomMessages() {
+          const room = this.selectedAdminRoom();
+          if (!room) return [];
+          return this.adminChatMessages
+            .filter((message) => message.roomId === room.id)
+            .slice()
+            .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+        },
+
+        filteredAdminChatRooms() {
+          const search = this.adminChatSearch.trim().toLowerCase();
+          return this.adminChatRooms.filter((room) => {
+            const isHistory = Boolean(room.closedForUserAt);
+            if (this.adminChatFilter === "ACTIVE" && isHistory) return false;
+            if (this.adminChatFilter === "HISTORY" && !isHistory) return false;
+            if (!search) return true;
+            return `${room.userId__label || ""} ${room.coachId__label || ""}`.toLowerCase().includes(search);
+          });
+        },
+
+        filteredAdminMessages() {
+          const search = this.adminMessageSearch.trim().toLowerCase();
+          return this.adminChatMessages.filter((message) => {
+            if (this.adminMessageType !== "ALL" && message.type !== this.adminMessageType) return false;
+            return !search || `${message.body || ""} ${message.senderId__label || ""} ${message.roomId__label || ""} ${message.type || ""}`.toLowerCase().includes(search);
+          });
+        },
+
+        filteredAdminPlans() {
+          const search = this.adminPlanSearch.trim().toLowerCase();
+          return this.adminWorkoutPlans.filter((plan) =>
+            !search || `${plan.title || ""} ${plan.categoryKey || ""} ${plan.difficulty || ""} ${plan.description || ""}`.toLowerCase().includes(search)
+          );
+        },
+
+        filteredAdminPlanExercises() {
+          return this.adminPlanExercises
+            .filter((entry) => !this.selectedWorkoutPlanId || entry.planId === this.selectedWorkoutPlanId)
+            .slice()
+            .sort((a, b) => String(a.planId__label || "").localeCompare(String(b.planId__label || "")) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        },
+
+        openAdminRoomFromMessage(message) {
+          this.openAdminFeature("chat-rooms", message.roomId);
+        },
+
+        adminPlanTitle(planId) {
+          return this.adminWorkoutPlans.find((plan) => plan.id === planId)?.title || "Workout plan";
+        },
+
+        adminRelationName(label, fallback = "") {
+          if (!label) return fallback;
+          return String(label).replace(/\s*\([^)]*\)$/, "");
+        },
+
+        adminInitials(name) {
+          return String(name || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+        },
+
+        adminDate(value, compact = false) {
+          if (!value) return compact ? "" : "Date unavailable";
+          const date = new Date(value);
+          if (Number.isNaN(date.getTime())) return "Date unavailable";
+          return date.toLocaleString(undefined, compact
+            ? { month: "short", day: "numeric" }
+            : { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
         },
 
         fetchTableRows(tableName = this.activeTableName) {
@@ -2850,6 +3125,13 @@
         },
 
         breadcrumbLabel() {
+          const adminFeatureLabels = {
+            "chat-rooms": "Chat Rooms",
+            "chat-messages": "Chat Messages",
+            "workout-plans": "Workout Plans",
+            "plan-exercises": "Plan Exercises",
+          };
+          if (adminFeatureLabels[this.currentView]) return adminFeatureLabels[this.currentView];
           if (this.currentView === "db-explorer") {
             const featurePages = {
               chatroom: "Chat Rooms",
