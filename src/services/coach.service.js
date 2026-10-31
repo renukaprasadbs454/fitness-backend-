@@ -210,6 +210,26 @@ async function listMyClients(userId) {
   };
 }
 
+async function listClientProgressPhotos(userId, clientId) {
+  const coach = await coachRepository.findByUserId(userId);
+  if (!coach) throw ApiError.notFound("Coach profile not found for this account");
+  const client = await userRepository.findById(clientId);
+  if (!client || client.role !== "USER") throw ApiError.notFound("Client not found");
+  if (!client.isActive || client.assignedCoachId !== coach.id) {
+    throw ApiError.forbidden("You can view transformation photos only for your active clients");
+  }
+  const mediaRepository = require("../repositories/media.repository");
+  const { resolveReadUrl } = require("../utils/storage");
+  const photos = await mediaRepository.listByUser(clientId, "PROGRESS_IMAGE");
+  return photos.map((photo) => ({
+    id: photo.id,
+    url: resolveReadUrl(photo.url),
+    angle: photo.angle,
+    sessionId: photo.sessionId,
+    createdAt: photo.createdAt
+  }));
+}
+
 async function listMyAppointments(userId, query) {
   const coach = await coachRepository.findByUserId(userId);
   if (!coach) throw ApiError.notFound("Coach profile not found for this account");
@@ -238,5 +258,6 @@ module.exports = {
   deleteAvailabilitySlot,
   listAvailability,
   listMyClients,
+  listClientProgressPhotos,
   listMyAppointments
 };

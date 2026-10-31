@@ -669,8 +669,8 @@
                   <p class="text-slate-400 text-sm">Your sessions with clients currently assigned to you. Each session can carry its own meeting link.</p>
                   <div class="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/5 p-4" x-show="appointmentChanges.length">
                     <div class="mb-2 flex items-center justify-between gap-2">
-                      <h3 class="text-sm font-semibold text-amber-200">Appointment changes</h3>
-                      <span class="text-xs text-slate-400">Recent updates from clients</span>
+                      <h3 class="text-sm font-semibold text-amber-200">Appointment updates</h3>
+                      <button @click="markAllAppointmentChangesRead()" class="text-xs text-slate-300 underline underline-offset-2 hover:text-white">Mark all read</button>
                     </div>
                     <template x-for="notice in appointmentChanges" :key="notice.id">
                       <div class="flex items-start justify-between gap-3 border-t border-dark-border/70 py-2 first:border-0">
@@ -799,6 +799,7 @@
                       <p x-show="c.relation === 'mine' && c.fitnessProfile" class="mt-1 text-xs text-slate-400" x-text="['Height ' + (c.fitnessProfile?.heightCm ?? '—') + ' cm', 'Weight ' + (c.fitnessProfile?.weightKg ?? '—') + ' kg', 'Age ' + (c.fitnessProfile?.age ?? '—'), 'Goals ' + (c.fitnessProfile?.fitnessGoals?.join(', ') || c.fitnessProfile?.goal || '—')].join(' · ')"></p>
                     </div>
                     <div class="flex flex-wrap gap-2 sm:justify-end">
+                  <button x-show="c.relation === 'mine'" @click="openClientPhotos(c)" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Transformation photos</button>
                   <button x-show="c.relation === 'mine'" @click="currentView = 'chat'; newChatCoachId = ''; startChatWith(c)" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Message</button>
                   <button x-show="c.relation === 'mine'" @click="currentView = 'workouts'; assignForm.selectedUser = c" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Assign workout</button>
                       <button @click="openSchedule(c)" class="px-3 py-1.5 rounded-lg bg-primary/15 text-primary-light text-xs font-semibold hover:bg-primary/25">Schedule</button>
@@ -1341,6 +1342,25 @@
   </div>
 
   <!-- DB Row Form Insert/Edit Modal -->
+  <div x-show="clientPhotosOpen" x-cloak class="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4" @click.self="clientPhotosOpen = false" @keydown.escape.window="clientPhotosOpen = false">
+    <div class="modal-panel w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-dark-border p-5 shadow-2xl">
+      <div class="mb-4 flex items-start justify-between gap-3">
+        <div><h2 class="text-xl font-bold" x-text="clientPhotosUser?.fullName || 'Transformation photos'"></h2><p class="mt-1 text-sm text-slate-400">Photos shared by your currently assigned client.</p></div>
+        <button @click="clientPhotosOpen = false" class="rounded-lg px-3 py-1.5 text-slate-400 hover:bg-white/10" aria-label="Close">✕</button>
+      </div>
+      <p x-show="clientPhotosLoading" class="py-8 text-center text-sm text-slate-400">Loading photos…</p>
+      <p x-show="!clientPhotosLoading && !clientProgressPhotos.length" class="py-8 text-center text-sm text-slate-400">This client hasn't uploaded transformation photos yet.</p>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <template x-for="photo in clientProgressPhotos" :key="photo.id">
+          <a :href="photo.url" target="_blank" rel="noopener" class="overflow-hidden rounded-xl border border-dark-border">
+            <img :src="photo.url" :alt="(photo.angle || 'Transformation') + ' photo'" class="h-44 w-full object-cover">
+            <span class="block px-2 py-1.5 text-xs text-slate-400" x-text="(photo.angle || 'Photo') + ' · ' + new Date(photo.createdAt).toLocaleDateString()"></span>
+          </a>
+        </template>
+      </div>
+    </div>
+  </div>
+
   <div class="fixed bottom-5 right-5 z-[60] space-y-2.5 w-full max-w-sm pointer-events-none">
     <template x-for="t in toasts" :key="t.id">
       <div class="toast-enter pointer-events-auto px-4 py-3.5 rounded-2xl shadow-2xl border text-xs font-medium flex items-start gap-3 modal-panel"
@@ -1453,6 +1473,10 @@
         clientsData: { clients: [], summary: { total: 0, mine: 0, booked: 0, other: 0, unassigned: 0 } },
         clientsLoaded: false,
         clientsLoading: true,
+        clientPhotosOpen: false,
+        clientPhotosLoading: false,
+        clientPhotosUser: null,
+        clientProgressPhotos: [],
         clientsFilter: "all",
         clientsSearch: "",
         meetingStatus: { googleMeetConnected: false },
@@ -1640,7 +1664,13 @@
             this.fetchAppointmentChanges();
           }
           if (key === "chat") {
-            this.apiRequest("PATCH", "/api/v1/notifications/read-type/COACH_MESSAGE").then(() => this.fetchNotificationCount()).catch(() => {});
+            this.fetchRooms().then(() => {
+              if (this.activeRoom) {
+                this.markRoomSeen(this.activeRoom);
+              } else if (!this.chatRooms.some((room) => (room.unreadCount || 0) > 0)) {
+                this.apiRequest("PATCH", "/api/v1/notifications/read-type/COACH_MESSAGE").catch(() => {});
+              }
+            });
           }
         },
 
@@ -1682,6 +1712,15 @@
               this.fetchNotificationCount();
             })
             .catch((err) => this.showToast(err.message || "Couldn't mark this update as read", "error"));
+        },
+
+        markAllAppointmentChangesRead() {
+          this.apiRequest("PATCH", "/api/v1/notifications/read-type/APPOINTMENT_CHANGED")
+            .then(() => {
+              this.appointmentChanges = [];
+              this.notificationUnread = 0;
+            })
+            .catch((err) => this.showToast(err.message || "Couldn't clear appointment updates", "error"));
         },
 
         // Public endpoint (same one client booking screens use) — every
@@ -1935,6 +1974,18 @@
             })
             .catch(() => {})
             .finally(() => { this.clientsLoading = false; });
+        },
+
+        openClientPhotos(client) {
+          if (client?.relation !== "mine") return;
+          this.clientPhotosUser = client;
+          this.clientProgressPhotos = [];
+          this.clientPhotosLoading = true;
+          this.clientPhotosOpen = true;
+          this.apiRequest("GET", `/api/v1/coaches/me/clients/${encodeURIComponent(client.id)}/progress-photos`)
+            .then((photos) => { this.clientProgressPhotos = Array.isArray(photos) ? photos : []; })
+            .catch((err) => this.showToast(err.message || "Unable to load transformation photos", "error"))
+            .finally(() => { this.clientPhotosLoading = false; });
         },
 
         refreshAll() {
@@ -2266,11 +2317,13 @@
         markRoomSeen(room) {
           if (!room) return;
           room.unreadCount = 0;
+          const otherRoomsUnread = this.chatRooms.some((item) => item.id !== room.id && (item.unreadCount || 0) > 0);
           if (_chatSocket && _chatSocket.connected) {
             _chatSocket.emit("message:seen", { roomId: room.id });
           } else {
             this.apiRequest("PATCH", `/api/v1/chat/rooms/${room.id}/seen`).catch(() => {});
           }
+          if (!otherRoomsUnread) this.apiRequest("PATCH", "/api/v1/notifications/read-type/COACH_MESSAGE").catch(() => {});
         },
 
         sendChat() {
@@ -2427,6 +2480,10 @@
         },
 
         logout() {
+          if (this.notificationPoll) clearInterval(this.notificationPoll);
+          this.notificationPoll = null;
+          this.notificationUnread = 0;
+          this.appointmentChanges = [];
           this.managedCoachId = "";
           this.teardownChat();
           this.isAuthenticated = false;

@@ -8,7 +8,9 @@ const ApiError = require("../utils/ApiError");
 async function issueTokenPair(user, ip) {
   const sessionId = crypto.randomUUID();
   const accessToken = signAccessToken({ sub: user.id, role: user.role, sid: sessionId });
-  const refreshToken = signRefreshToken({ sub: user.id });
+  // JWT timestamps have one-second precision. A random jti prevents two
+  // sessions created for the same user in that second from sharing a token.
+  const refreshToken = signRefreshToken({ sub: user.id, jti: crypto.randomUUID() });
 
   await tokenRepository.createRefreshToken({
     id: sessionId,
@@ -41,7 +43,7 @@ async function rotateRefreshToken(oldToken, ip) {
   }
 
   const sessionId = crypto.randomUUID();
-  const newRefreshToken = signRefreshToken({ sub: user.id });
+  const newRefreshToken = signRefreshToken({ sub: user.id, jti: crypto.randomUUID() });
 
   const rotated = await tokenRepository.rotateRefreshToken(oldToken, {
     id: sessionId,

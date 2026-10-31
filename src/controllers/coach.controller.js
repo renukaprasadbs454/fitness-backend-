@@ -68,6 +68,11 @@ const listMyClients = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Clients retrieved", result);
 });
 
+const listClientProgressPhotos = asyncHandler(async (req, res) => {
+  const photos = await coachService.listClientProgressPhotos(req.user.id, req.params.clientId);
+  return ApiResponse.success(res, httpStatus.OK, "Client transformation photos retrieved", photos);
+});
+
 const listMyAppointments = asyncHandler(async (req, res) => {
   const { items, meta } = await coachService.listMyAppointments(req.user.id, req.query);
   return ApiResponse.success(res, httpStatus.OK, "Appointments retrieved", items, meta);
@@ -87,5 +92,6 @@ module.exports = {
   deleteAvailabilitySlot,
   listAvailability,
   listMyClients,
+  listClientProgressPhotos,
   listMyAppointments,
 };

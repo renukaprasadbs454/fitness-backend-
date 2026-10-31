@@ -98,6 +98,18 @@ async function create(userId, { coachId, title, scheduledAt, durationMinutes = 4
     notes
   });
 
+  // Tell the coach when a client books so the Appointments badge reflects
+  // new sessions as well as later schedule changes.
+  if (coach.userId) {
+    notificationService.notify(
+      coach.userId,
+      "APPOINTMENT_CHANGED",
+      "New session booked",
+      `${user?.fullName || "A client"} booked "${title}" for ${formatIst(appointment.scheduledAt)}.`,
+      { data: { appointmentId: appointment.id } }
+    ).catch((err) => logger.warn(`[appointments] coach booking notice failed: ${err.message}`));
+  }
+
   // Generate a unique Meet link as part of the booking response when the
   // platform Google account is connected. If Google is unavailable, keep the
   // booking successful; the coach/admin can retry later, and confirmation
@@ -274,14 +286,17 @@ async function reschedule(userId, userRole, id, { scheduledAt, durationMinutes }
   const resized = updated.durationMinutes !== appointment.durationMinutes;
   const recipients = moved || resized ? [updated.userId, updated.coach?.userId].filter((recipient) => recipient && recipient !== userId) : [];
   for (const recipient of recipients) {
+    const otherParticipantName = recipient === updated.userId
+      ? updated.coach?.user?.fullName || "your coach"
+      : updated.user?.fullName || "your client";
     await notificationService
       .notify(
         recipient,
         "APPOINTMENT_CHANGED",
         moved ? "Session rescheduled" : "Session updated",
         moved
-          ? `"${updated.title}" moved from ${formatIst(appointment.scheduledAt)} to ${formatIst(updated.scheduledAt)}${resized ? ` and now runs ${updated.durationMinutes} minutes` : ""}.`
-          : `"${updated.title}" on ${formatIst(updated.scheduledAt)} changed from ${appointment.durationMinutes} to ${updated.durationMinutes} minutes.`,
+          ? `Session with ${otherParticipantName} ("${updated.title}") moved from ${formatIst(appointment.scheduledAt)} to ${formatIst(updated.scheduledAt)}${resized ? ` and now runs ${updated.durationMinutes} minutes` : ""}.`
+          : `Session with ${otherParticipantName} ("${updated.title}") on ${formatIst(updated.scheduledAt)} changed from ${appointment.durationMinutes} to ${updated.durationMinutes} minutes.`,
         { data: { appointmentId: updated.id, previousScheduledAt: appointment.scheduledAt.toISOString(), scheduledAt: updated.scheduledAt.toISOString(), previousDurationMinutes: appointment.durationMinutes, durationMinutes: updated.durationMinutes } }
       )
       .catch((err) => logger.warn(`[appointments] reschedule notice failed: ${err.message}`));

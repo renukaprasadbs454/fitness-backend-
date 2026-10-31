@@ -626,9 +626,9 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                 Add entry
               </button>
-              <button @click="fetchTableRows()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:bg-white/5 text-xs text-slate-300 font-medium rounded-xl transition-colors flex items-center gap-1.5">
+              <button @click="fetchTableRows()" :disabled="loadingTable" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:bg-white/5 text-xs text-slate-300 font-medium rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                Refresh
+                <span x-text="loadingTable ? 'Refreshing…' : 'Refresh'"></span>
               </button>
             </div>
           </div>
@@ -705,7 +705,7 @@
                 <thead class="bg-dark/90 text-slate-400 font-semibold border-b border-dark-border sticky top-0 backdrop-blur-sm z-10">
                   <tr>
                     <template x-for="col in tableColumns()" :key="col">
-                      <th class="px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-slate-300 whitespace-nowrap" x-text="col"></th>
+                      <th class="px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-slate-300 whitespace-nowrap" :class="tableSortable(col) ? 'cursor-pointer select-none hover:text-white' : ''" @click="toggleTableSort(col)" x-text="tableHeaderLabel(col)"></th>
                     </template>
                     <th class="px-4 py-3 text-right">Actions</th>
                   </tr>
@@ -1101,6 +1101,22 @@
                   <div><p class="text-xs uppercase text-slate-500">Age</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.age ?? 'Not provided'"></p></div>
                   <div><p class="text-xs uppercase text-slate-500">Gender</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.gender || 'Not provided'"></p></div>
                   <div><p class="text-xs uppercase text-slate-500">Fitness goals</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.fitnessGoals?.length ? selectedUser.profile.fitnessGoals.join(', ') : (selectedUser.profile?.goal || 'Not provided')"></p></div>
+                </div>
+              </div>
+
+              <div class="bg-dark-card border border-dark-border rounded-xl p-6">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                  <h2 class="font-semibold">Transformation Photos</h2>
+                  <span class="text-xs text-slate-500" x-text="(selectedUser.progressPhotos || []).length + ' photos'"></span>
+                </div>
+                <div x-show="!selectedUser.progressPhotos?.length" class="text-sm text-slate-500">No transformation photos uploaded.</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <template x-for="photo in (selectedUser.progressPhotos || [])" :key="photo.id">
+                    <a :href="photo.url" target="_blank" rel="noopener" class="group overflow-hidden rounded-xl border border-dark-border">
+                      <img :src="photo.url" :alt="(photo.angle || 'Transformation') + ' photo'" class="h-40 w-full object-cover group-hover:scale-105 transition-transform">
+                      <span class="block px-2 py-1.5 text-xs text-slate-400" x-text="(photo.angle || 'Photo') + ' · ' + formatDate(photo.createdAt)"></span>
+                    </a>
+                  </template>
                 </div>
               </div>
 
@@ -2324,6 +2340,8 @@
         activeModelInfo: null,
         tableRows: [],
         tablePage: 1,
+        tableSortBy: "createdAt",
+        tableSortOrder: "desc",
         tableMeta: { page: 1, limit: 100, total: 0, totalPages: 1 },
         tableLoadRequestId: 0,
         tableSearch: "",
@@ -2489,6 +2507,8 @@
         selectTable(tableName) {
           this.activeTableName = tableName;
           this.tablePage = 1;
+          this.tableSortBy = "createdAt";
+          this.tableSortOrder = "desc";
           this.tableSearchColumn = "ALL";
           this.currentView = "db-explorer";
           this.fetchTableRows(tableName);
@@ -2658,11 +2678,32 @@
             : { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
         },
 
+        tableSortable(column) {
+          return ["createdAt", "updatedAt", "date", "scheduledAt"].includes(column);
+        },
+
+        tableHeaderLabel(column) {
+          if (column !== this.tableSortBy) return column;
+          return `${column} ${this.tableSortOrder === "asc" ? "↑" : "↓"}`;
+        },
+
+        toggleTableSort(column) {
+          if (!this.tableSortable(column)) return;
+          if (this.tableSortBy === column) this.tableSortOrder = this.tableSortOrder === "asc" ? "desc" : "asc";
+          else {
+            this.tableSortBy = column;
+            this.tableSortOrder = "desc";
+          }
+          this.tablePage = 1;
+          this.fetchTableRows();
+        },
+
         fetchTableRows(tableName = this.activeTableName) {
           if (!this.isAuthenticated || !tableName) return;
           const requestId = ++this.tableLoadRequestId;
           this.loadingTable = true;
-          this.apiRequestWithMeta("GET", `/api/v1/admin/db/tables/${tableName}?page=${this.tablePage}&limit=100`)
+          const sortQuery = `sortBy=${encodeURIComponent(this.tableSortBy)}&sortOrder=${encodeURIComponent(this.tableSortOrder)}`;
+          this.apiRequestWithMeta("GET", `/api/v1/admin/db/tables/${tableName}?page=${this.tablePage}&limit=100&${sortQuery}`)
             .then((result) => {
               if (requestId !== this.tableLoadRequestId || tableName !== this.activeTableName) return;
               this.loadingTable = false;

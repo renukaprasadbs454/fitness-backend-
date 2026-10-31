@@ -62,6 +62,10 @@ SMTP_PASS=your-smtp-password-or-app-password
 EMAIL_FROM=verified-sender@your-domain.example
 SMTP_FROM_NAME=FitNerve
 CORS_ALLOWED_ORIGINS=https://api-fitnerve.kwiko.org
+GOOGLE_WEB_CLIENT_ID=
+GOOGLE_WEB_CLIENT_SECRET=
+GOOGLE_TOKEN_ENCRYPTION_KEY=
+GOOGLE_MEET_REDIRECT_URI=https://api-fitnerve.kwiko.org/api/v1/integrations/google-meet/callback
 STORAGE_DRIVER=local
 LOCAL_UPLOAD_DIR=uploads
 ENABLE_CRON=true
@@ -69,6 +73,12 @@ LOG_LEVEL=info
 EOF
 chmod 600 .env.production
 ```
+
+For Google Meet, create/use a **Web application** OAuth client and add the exact
+`GOOGLE_MEET_REDIRECT_URI` above to that client's **Authorized redirect URIs**
+in Google Cloud Console. Enable the Google Calendar API for the same project.
+The admin portal also displays the callback URL currently used by the server;
+copy that exact value if the public API hostname or API version changes.
 
 Generate distinct strong secrets with:
 

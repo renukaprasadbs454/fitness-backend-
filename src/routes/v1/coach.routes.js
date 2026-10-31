@@ -183,6 +183,7 @@ router.delete("/me", invalidate(CACHE_PREFIX), authenticate, requireRole(ROLES.C
  *       200: { description: "{ clients: [...], summary: { total, mine, booked, other, unassigned } }" }
  */
 router.get("/me/clients", authenticate, requireRole(ROLES.COACH), coachController.listMyClients);
+router.get("/me/clients/:clientId/progress-photos", authenticate, requireRole(ROLES.COACH), coachController.listClientProgressPhotos);
 
 router.get(
   "/me/appointments",

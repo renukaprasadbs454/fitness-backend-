@@ -1,6 +1,9 @@
 const prisma = require("../database/prismaClient");
 
 const activityRepository = {
+  findStepLog: (userId, date) =>
+    prisma.stepLog.findUnique({ where: { userId_date: { userId, date } } }),
+
   upsertStepLog: (userId, date, data) =>
     prisma.stepLog.upsert({
       where: { userId_date: { userId, date } },

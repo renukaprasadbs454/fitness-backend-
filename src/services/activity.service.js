@@ -11,6 +11,7 @@ const STEP_MILESTONE = 10000;
 async function logSteps(userId, input) {
   const date = input.date ? new Date(input.date) : todayDateOnly();
   const { steps, distanceKm, caloriesBurned, activeMinutes } = input;
+  const previous = await activityRepository.findStepLog(userId, date);
 
   const log = await activityRepository.upsertStepLog(userId, date, {
     steps,
@@ -19,7 +20,7 @@ async function logSteps(userId, input) {
     activeMinutes
   });
 
-  if (steps >= STEP_MILESTONE) {
+  if (steps >= STEP_MILESTONE && (previous?.steps ?? 0) < STEP_MILESTONE) {
     await activityFeed.record(
       userId,
       "STEP_MILESTONE",

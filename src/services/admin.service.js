@@ -53,7 +53,19 @@ async function getUserById(id) {
   const user = await userRepository.findByIdWithProfile(id);
   if (!user) throw ApiError.notFound("User not found");
   const { passwordHash, ...safe } = user;
-  return safe;
+  const mediaRepository = require("../repositories/media.repository");
+  const { resolveReadUrl } = require("../utils/storage");
+  const photos = await mediaRepository.listByUser(id, "PROGRESS_IMAGE");
+  return {
+    ...safe,
+    progressPhotos: photos.map((photo) => ({
+      id: photo.id,
+      url: resolveReadUrl(photo.url),
+      angle: photo.angle,
+      sessionId: photo.sessionId,
+      createdAt: photo.createdAt
+    }))
+  };
 }
 
 async function updateUser(adminId, id, data) {
@@ -417,6 +429,11 @@ async function getModelData(modelName, query = {}) {
   const skip = (page - 1) * limit;
 
   const scalarFields = modelInfo.fields.filter((f) => f.kind === "scalar" || f.kind === "enum");
+  const requestedSortBy = String(query.sortBy || "");
+  const sortBy = scalarFields.some((field) => field.name === requestedSortBy)
+    ? requestedSortBy
+    : (scalarFields.some((field) => field.name === "createdAt") ? "createdAt" : scalarFields[0]?.name);
+  const sortOrder = query.sortOrder === "asc" ? "asc" : "desc";
   const selectObj = {};
   scalarFields.forEach((f) => {
     selectObj[f.name] = true;
@@ -428,7 +445,7 @@ async function getModelData(modelName, query = {}) {
         skip,
         take: limit,
         select: selectObj,
-        orderBy: { [scalarFields[0]?.name || "createdAt"]: "desc" }
+        orderBy: { [sortBy || "createdAt"]: sortOrder }
       })
       .catch(() => delegate.findMany({ skip, take: limit, select: selectObj })),
     delegate.count().catch(() => 0)
