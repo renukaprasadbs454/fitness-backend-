@@ -73,6 +73,8 @@ router.put(
   customWorkoutController.update
 );
 
+router.post("/:id/complete", authenticate, validate(schemas.idParam), customWorkoutController.complete);
+
 /**
  * @swagger
  * /custom-workouts/{id}:

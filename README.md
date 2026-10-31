@@ -78,7 +78,7 @@ npm run lint
    A mismatch shows Google's `Error 400: redirect_uri_mismatch`.
 3. Publish the OAuth consent screen (in *Testing*, refresh tokens expire after 7 days; test users must be added).
 4. Sign in to the admin portal and press **Connect Google account** on the dashboard's *Google Meet Links* card. Until connected, sessions simply have no generated link and coaches can paste one instead.
-
+K
 ## Email delivery
 
 Email goes out through SMTP (Nodemailer). It works locally, but **many hosts, including Render's free tier, block outbound SMTP ports** (25/465/587), so sends time out there. Options: use an HTTPS-based email API (Brevo, Resend, SendGrid), a paid host plan, or a host that allows SMTP. Gmail needs an app password, not the account password.

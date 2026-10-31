@@ -275,6 +275,7 @@
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon"/></svg>
             <span x-show="!sidebarCollapsed" x-text="item.label"></span>
             <span x-show="item.key === 'chat' && chatUnreadTotal > 0 && !sidebarCollapsed" class="ml-auto badge badge-orange" x-text="chatUnreadTotal"></span>
+            <span x-show="item.key === 'appointments' && notificationUnread > 0 && !sidebarCollapsed" class="ml-auto badge badge-orange" x-text="notificationUnread"></span>
           </button>
         </template>
 
@@ -305,6 +306,7 @@
               <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon"/></svg>
               <span x-text="item.label"></span>
               <span x-show="item.key === 'chat' && chatUnreadTotal > 0" class="ml-auto badge badge-orange" x-text="chatUnreadTotal"></span>
+              <span x-show="item.key === 'appointments' && notificationUnread > 0" class="ml-auto badge badge-orange" x-text="notificationUnread"></span>
             </button>
           </template>
 
@@ -778,6 +780,7 @@
                         <span x-show="!c.isActive" class="badge badge-red">Suspended</span>
                       </p>
                       <p class="text-xs text-slate-500 mt-0.5" x-text="c.email + ' · ' + c.sessions + ' session' + (c.sessions === 1 ? '' : 's') + (c.upcomingSessions ? ' · ' + c.upcomingSessions + ' upcoming' : '')"></p>
+                      <p x-show="c.relation === 'mine' && c.fitnessProfile" class="mt-1 text-xs text-slate-400" x-text="['Height ' + (c.fitnessProfile?.heightCm ?? '—') + ' cm', 'Weight ' + (c.fitnessProfile?.weightKg ?? '—') + ' kg', 'Age ' + (c.fitnessProfile?.age ?? '—'), 'Goal ' + (c.fitnessProfile?.goal || '—')].join(' · ')"></p>
                     </div>
                     <div class="flex flex-wrap gap-2 sm:justify-end">
                   <button x-show="c.relation === 'mine'" @click="currentView = 'chat'; newChatCoachId = ''; startChatWith(c)" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Message</button>
@@ -1367,6 +1370,8 @@
         ],
 
         appointments: [],
+        notificationUnread: 0,
+        notificationPoll: null,
         appointmentsFilter: "ALL",
         appointmentsCoachId: "",
         availability: [],
@@ -1625,7 +1630,15 @@
           this.searchClients("");
           this.fetchSentAssignments();
           this.fetchMeetingStatus();
+          this.fetchNotificationCount();
+          if (!this.notificationPoll) this.notificationPoll = setInterval(() => this.fetchNotificationCount(), 30000);
           this.initChat();
+        },
+
+        fetchNotificationCount() {
+          return this.apiRequest("GET", "/api/v1/notifications/unread-count")
+            .then((result) => { this.notificationUnread = Number(result?.count || 0); })
+            .catch(() => {});
         },
 
         // Public endpoint (same one client booking screens use) — every
@@ -1885,6 +1898,7 @@
           if (this.refreshing) return;
           this.refreshing = true;
           const tasks = [
+            this.fetchNotificationCount(),
             this.fetchProfile().catch(() => {}),
             this.fetchClients(),
             this.fetchAppointments(),

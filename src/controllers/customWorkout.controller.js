@@ -28,4 +28,9 @@ const remove = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Custom workout deleted", null);
 });
 
-module.exports = { list, getById, create, update, remove };
+const complete = asyncHandler(async (req, res) => {
+  const workout = await customWorkoutService.completeAssigned(req.user.id, req.params.id);
+  return ApiResponse.success(res, httpStatus.OK, "Custom workout marked complete", workout);
+});
+
+module.exports = { list, getById, create, update, remove, complete };

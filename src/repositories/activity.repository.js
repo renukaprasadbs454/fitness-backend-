@@ -39,6 +39,10 @@ const activityRepository = {
       orderBy: { date: "asc" }
     }),
 
+  workoutCompletionsSince: (userId, sinceDate) => prisma.workoutCompletion.count({ where: { userId, completedAt: { gte: sinceDate } } }),
+
+  customWorkoutCompletionsSince: (userId, sinceDate) => prisma.customWorkout.count({ where: { userId, completedAt: { gte: sinceDate } } }),
+
   recentActivityFeed: (userId, take = 10) =>
     prisma.activityLog.findMany({
       where: { userId },

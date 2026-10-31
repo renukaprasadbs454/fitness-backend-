@@ -51,9 +51,11 @@ async function report(userId, { range = "weekly" } = {}) {
   since.setDate(since.getDate() - (days - 1));
   since.setHours(0, 0, 0, 0);
 
-  const [logs, feed] = await Promise.all([
+  const [logs, feed, planCompletions, customCompletions] = await Promise.all([
     activityRepository.stepLogsSince(userId, since),
-    activityRepository.recentActivityFeed(userId, 10)
+    activityRepository.recentActivityFeed(userId, 10),
+    activityRepository.workoutCompletionsSince(userId, since),
+    activityRepository.customWorkoutCompletionsSince(userId, since)
   ]);
 
   const totalSteps = logs.reduce((sum, l) => sum + l.steps, 0);
@@ -69,7 +71,8 @@ async function report(userId, { range = "weekly" } = {}) {
       steps: totalSteps,
       calories: totalCalories,
       activeMinutes: totalActiveMinutes,
-      distanceKm: Math.round(totalDistanceKm * 100) / 100
+      distanceKm: Math.round(totalDistanceKm * 100) / 100,
+      workoutsCompleted: planCompletions + customCompletions
     },
     averages: {
       stepsPerDay: daysLogged ? Math.round(totalSteps / daysLogged) : 0

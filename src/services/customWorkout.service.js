@@ -11,6 +11,7 @@ function toDto(workout) {
     categoryKey: workout.categoryKey,
     createdAt: workout.createdAt,
     updatedAt: workout.updatedAt,
+    completedAt: workout.completedAt ?? null,
     assignedBy: workout.assignedByUser ? { id: workout.assignedByUser.id, fullName: workout.assignedByUser.fullName } : null,
     exercises: workout.exercises.map((e) => ({
       id: e.id,
@@ -52,4 +53,14 @@ async function remove(userId, id) {
   await customWorkoutRepository.delete(id);
 }
 
-module.exports = { listMine, getMine, create, update, remove, toDto };
+async function completeAssigned(userId, id) {
+  const workout = await customWorkoutRepository.findByIdForUser(id, userId);
+  if (!workout) throw ApiError.notFound("Custom workout not found");
+  if (!workout.assignedByUserId) throw ApiError.forbidden("Only coach-assigned workouts can be marked complete here");
+  if (!workout.completedAt) {
+    return toDto(await customWorkoutRepository.update(id, { completedAt: new Date() }));
+  }
+  return toDto(workout);
+}
+
+module.exports = { listMine, getMine, create, update, remove, completeAssigned, toDto };

@@ -184,6 +184,13 @@ async function listMyClients(userId) {
       username: u.username,
       email: u.email,
       isActive: u.isActive,
+      fitnessProfile: u.profile ? {
+        heightCm: u.profile.heightCm == null ? null : Number(u.profile.heightCm),
+        weightKg: u.profile.weightKg == null ? null : Number(u.profile.weightKg),
+        age: u.profile.age,
+        gender: u.profile.gender,
+        goal: u.profile.goal
+      } : null,
       relation,
       assignedCoach: u.assignedCoach ? { id: u.assignedCoach.id, name: u.assignedCoach.user.fullName } : null,
       sessions: total,

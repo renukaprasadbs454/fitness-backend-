@@ -40,6 +40,10 @@ async function markAllRead(userId) {
   await notificationRepository.markAllRead(userId);
 }
 
+async function unreadCount(userId) {
+  return notificationRepository.countUnread(userId);
+}
+
 async function getPreferences(userId) {
   const pref = await notificationRepository.getPreference(userId);
   return (
@@ -138,6 +142,7 @@ module.exports = {
   list,
   markRead,
   markAllRead,
+  unreadCount,
   getPreferences,
   updatePreferences,
   notify,

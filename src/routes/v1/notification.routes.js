@@ -26,6 +26,7 @@ const schemas = require("../../validators/notification.validator");
  *       200: { description: Notifications retrieved }
  */
 router.get("/", authenticate, validate(schemas.listNotifications), notificationController.list);
+router.get("/unread-count", authenticate, notificationController.unreadCount);
 
 /**
  * @swagger

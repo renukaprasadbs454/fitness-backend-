@@ -551,6 +551,7 @@ model CustomWorkout {
   assignedByUser   User?               @relation("UserAssignedCustomWorkouts", fields: [assignedByUserId], references: [id], onDelete: SetNull)
   createdByUserId  String?             @map("created_by_user_id")
   createdByUser    User?               @relation("UserCreatedCustomWorkouts", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  completedAt      DateTime?            @map("completed_at")
   createdAt        DateTime            @default(now()) @map("created_at")
   updatedAt        DateTime            @updatedAt @map("updated_at")
 

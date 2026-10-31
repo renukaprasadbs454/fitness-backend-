@@ -23,6 +23,8 @@ const notificationRepository = {
   count: (userId, unreadOnly) =>
     prisma.notification.count({ where: { userId, isRead: unreadOnly ? false : undefined } }),
 
+  countUnread: (userId) => prisma.notification.count({ where: { userId, isRead: false } }),
+
   markRead: (id, userId) =>
     prisma.notification.updateMany({ where: { id, userId }, data: { isRead: true } }),
 

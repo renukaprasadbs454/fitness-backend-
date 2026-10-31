@@ -1128,11 +1128,11 @@
               <div class="bg-dark-card border border-dark-border rounded-xl p-6">
                 <h2 class="font-semibold mb-4">Fitness Profile</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div><p class="text-xs uppercase text-slate-500">Height</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile.heightCm + ' cm'"></p></div>
-                  <div><p class="text-xs uppercase text-slate-500">Weight</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile.weightKg + ' kg'"></p></div>
-                  <div><p class="text-xs uppercase text-slate-500">Age</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile.age"></p></div>
-                  <div><p class="text-xs uppercase text-slate-500">Gender</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile.gender"></p></div>
-                  <div><p class="text-xs uppercase text-slate-500">Goal</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile.goal"></p></div>
+                  <div><p class="text-xs uppercase text-slate-500">Height</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.heightCm != null ? selectedUser.profile.heightCm + ' cm' : 'Not provided'"></p></div>
+                  <div><p class="text-xs uppercase text-slate-500">Weight</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.weightKg != null ? selectedUser.profile.weightKg + ' kg' : 'Not provided'"></p></div>
+                  <div><p class="text-xs uppercase text-slate-500">Age</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.age ?? 'Not provided'"></p></div>
+                  <div><p class="text-xs uppercase text-slate-500">Gender</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.gender || 'Not provided'"></p></div>
+                  <div><p class="text-xs uppercase text-slate-500">Goal</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.goal || 'Not provided'"></p></div>
                 </div>
               </div>
 
@@ -3300,21 +3300,11 @@
         openUserDetail(id) {
           const u = this.users.find((x) => x.id === id);
           if (!u) return;
-          const coach = this.coaches.find((c) => c.userId === id) || null;
-          this.selectedUser = {
-            ...u,
-            profile: {
-              heightCm: u.phone ? "170" : "168",
-              weightKg: u.role === "COACH" ? "64" : "72",
-              age: u.role === "USER" ? 28 : 31,
-              gender: u.role === "COACH" ? "Female" : "Male",
-              goal: u.role === "COACH" ? "Coach growth" : "Fitness consistency",
-            },
-            coach: coach
-              ? { id: coach.id, bio: coach.bio, specialties: coach.specialties, experienceYears: coach.experienceYears, isAcceptingClients: coach.isAcceptingClients }
-              : null,
-          };
           this.currentView = "user-detail";
+          this.selectedUser = { ...u, profile: null };
+          this.apiRequest("GET", `/api/v1/admin/users/${id}`).then((detail) => {
+            if (this.currentView === "user-detail" && this.selectedUser?.id === id) this.selectedUser = detail;
+          }).catch((err) => this.showToast(err.message || "Unable to load the latest user profile", "error"));
         },
 
         // ================= ADD USER =================

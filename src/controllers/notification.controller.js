@@ -28,6 +28,11 @@ const markAllRead = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "All notifications marked as read", null);
 });
 
+const unreadCount = asyncHandler(async (req, res) => {
+  const count = await notificationService.unreadCount(req.user.id);
+  return ApiResponse.success(res, httpStatus.OK, "Unread notification count retrieved", { count });
+});
+
 const getPreferences = asyncHandler(async (req, res) => {
   const prefs = await notificationService.getPreferences(req.user.id);
   return ApiResponse.success(res, httpStatus.OK, "Notification preferences retrieved", prefs);
@@ -44,6 +49,7 @@ module.exports = {
   list,
   markRead,
   markAllRead,
+  unreadCount,
   getPreferences,
   updatePreferences
 };

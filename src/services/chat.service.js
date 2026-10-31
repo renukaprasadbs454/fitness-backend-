@@ -16,7 +16,9 @@ function toMessageDto(message) {
     senderId: message.senderId,
     type: message.type,
     body: message.body,
-    imageUrl: message.imageUrl,
+    // Socket events bypass Express response middleware, so sign private S3
+    // image URLs here as well as in ordinary REST responses.
+    imageUrl: message.imageUrl ? storage.resolveReadUrl(message.imageUrl) : null,
     status: message.status,
     deliveredAt: message.deliveredAt,
     seenAt: message.seenAt,
