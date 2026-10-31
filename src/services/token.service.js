@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const ms = require("../utils/ms");
 const env = require("../config/env");
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require("../utils/jwt");
@@ -5,10 +6,12 @@ const tokenRepository = require("../repositories/token.repository");
 const ApiError = require("../utils/ApiError");
 
 async function issueTokenPair(user, ip) {
-  const accessToken = signAccessToken({ sub: user.id, role: user.role });
+  const sessionId = crypto.randomUUID();
+  const accessToken = signAccessToken({ sub: user.id, role: user.role, sid: sessionId });
   const refreshToken = signRefreshToken({ sub: user.id });
 
   await tokenRepository.createRefreshToken({
+    id: sessionId,
     token: refreshToken,
     userId: user.id,
     expiresAt: new Date(Date.now() + ms(env.jwt.refreshExpiresIn)),
@@ -37,10 +40,11 @@ async function rotateRefreshToken(oldToken, ip) {
     throw ApiError.unauthorized("User no longer exists or is deactivated");
   }
 
-  const newAccessToken = signAccessToken({ sub: user.id, role: user.role });
+  const sessionId = crypto.randomUUID();
   const newRefreshToken = signRefreshToken({ sub: user.id });
 
   const rotated = await tokenRepository.rotateRefreshToken(oldToken, {
+    id: sessionId,
     token: newRefreshToken,
     userId: user.id,
     expiresAt: new Date(Date.now() + ms(env.jwt.refreshExpiresIn)),
@@ -48,6 +52,7 @@ async function rotateRefreshToken(oldToken, ip) {
   }, user.id);
   if (!rotated) throw ApiError.unauthorized("This session has already been refreshed or signed out. Please sign in again.");
 
+  const newAccessToken = signAccessToken({ sub: user.id, role: user.role, sid: sessionId });
   return { accessToken: newAccessToken, refreshToken: newRefreshToken, user };
 }
 

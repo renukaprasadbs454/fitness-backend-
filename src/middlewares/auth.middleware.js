@@ -24,7 +24,23 @@ const authenticate = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+  // New access tokens are tied to their refresh-token row. That lets logout,
+  // password resets, and admin session revocation take effect immediately.
+  // Tokens issued before this check was added remain valid until their short
+  // access-token expiry, preserving in-flight sessions during rollout.
+  let user;
+  if (payload.sid) {
+    const session = await prisma.refreshToken.findUnique({
+      where: { id: payload.sid },
+      include: { user: true }
+    });
+    if (!session || session.userId !== payload.sub || session.revoked || session.expiresAt <= new Date()) {
+      throw ApiError.unauthorized("Your session has ended. Please sign in again.");
+    }
+    user = session.user;
+  } else {
+    user = await prisma.user.findUnique({ where: { id: payload.sub } });
+  }
   if (!user || !user.isActive) {
     throw ApiError.unauthorized("User no longer exists or is deactivated");
   }
