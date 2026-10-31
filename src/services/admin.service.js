@@ -490,7 +490,11 @@ async function createModelRow(modelName, data) {
 
   const delegate = prisma[modelInfo.delegateName];
   const cleanedData = sanitizeModelData(modelInfo, data);
-  return delegate.create({ data: cleanedData });
+  try {
+    return await delegate.create({ data: cleanedData });
+  } catch (error) {
+    throw readableDatabaseError(error, "create");
+  }
 }
 
 async function updateModelRow(modelName, id, data) {
@@ -506,7 +510,26 @@ async function updateModelRow(modelName, id, data) {
   const delegate = prisma[modelInfo.delegateName];
   const idField = modelInfo.fields.find((f) => f.isId)?.name || "id";
   const cleanedData = sanitizeModelData(modelInfo, data);
-  return delegate.update({ where: { [idField]: id }, data: cleanedData });
+  try {
+    return await delegate.update({ where: { [idField]: id }, data: cleanedData });
+  } catch (error) {
+    throw readableDatabaseError(error, "update");
+  }
+}
+
+function readableDatabaseError(error, action) {
+  const actionText = action === "create" ? "add" : action === "update" ? "save changes to" : "delete";
+  const modelNames = { ChatRoom: "chat room", WorkoutPlan: "workout plan", WorkoutPlanExercise: "plan exercise" };
+  const model = modelNames[error?.meta?.modelName] || "record";
+  if (error?.code === "P2002") return ApiError.conflict("This entry already exists. Check the fields that must be unique, then try again.");
+  if (error?.code === "P2003" || error?.code === "P2014") {
+    if (action === "create") return ApiError.badRequest("One of the selected items is no longer available. Refresh the page, choose from the current options, and try again.");
+    return ApiError.badRequest(`This ${model} is still connected to other information. Remove or update the connected items before trying again.`);
+  }
+  if (error?.code === "P2025") return ApiError.notFound("This record could not be found. Refresh the page and try again.");
+  if (["P2011", "P2012", "P2013"].includes(error?.code)) return ApiError.badRequest(`A required field is missing. Complete all required fields before you ${actionText} ${model}.`);
+  if (["P2000", "P2006", "P2007", "P2009"].includes(error?.code)) return ApiError.badRequest("One of the values is not valid. Check the highlighted fields and try again.");
+  return ApiError.badRequest(`We couldn't ${actionText} this ${model}. Check the information and try again. If the problem continues, refresh the page.`);
 }
 
 async function deleteModelRow(modelName, id) {
@@ -521,7 +544,31 @@ async function deleteModelRow(modelName, id) {
 
   const delegate = prisma[modelInfo.delegateName];
   const idField = modelInfo.fields.find((f) => f.isId)?.name || "id";
-  return delegate.delete({ where: { [idField]: id } });
+  try {
+    return await delegate.delete({ where: { [idField]: id } });
+  } catch (error) {
+    throw readableDatabaseError(error, "delete");
+  }
+}
+
+async function moveWorkoutPlanExercise(id, direction) {
+  if (direction !== -1 && direction !== 1) throw ApiError.badRequest("Choose whether to move the exercise up or down.");
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const current = await tx.workoutPlanExercise.findUnique({ where: { id } });
+      if (!current) throw ApiError.notFound("This exercise entry could not be found. Refresh the page and try again.");
+      const entries = await tx.workoutPlanExercise.findMany({ where: { planId: current.planId }, orderBy: [{ sortOrder: "asc" }, { id: "asc" }] });
+      const currentIndex = entries.findIndex((entry) => entry.id === id);
+      const targetIndex = currentIndex + direction;
+      if (targetIndex < 0 || targetIndex >= entries.length) return current;
+      [entries[currentIndex], entries[targetIndex]] = [entries[targetIndex], entries[currentIndex]];
+      await Promise.all(entries.map((entry, index) => tx.workoutPlanExercise.update({ where: { id: entry.id }, data: { sortOrder: index } })));
+      return entries[targetIndex];
+    });
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw readableDatabaseError(error, "update");
+  }
 }
 
 // {id, label} options for a related model, so the Insert/Edit Row form can
@@ -556,6 +603,7 @@ module.exports = {
   createModelRow,
   updateModelRow,
   deleteModelRow,
+  moveWorkoutPlanExercise,
   getRelationOptions: getRelationOptionsFor
 };
 

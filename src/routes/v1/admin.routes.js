@@ -539,6 +539,7 @@ router.get("/db/tables/:tableName", adminController.getModelData);
 router.post("/db/tables/:tableName", adminController.createModelRow);
 router.put("/db/tables/:tableName/:id", adminController.updateModelRow);
 router.delete("/db/tables/:tableName/:id", adminController.deleteModelRow);
+router.post("/db/workout-plan-exercises/:id/move", adminController.moveWorkoutPlanExercise);
 router.get("/db/relation-options/:modelName", adminController.getRelationOptions);
 
 module.exports = router;

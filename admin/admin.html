@@ -341,7 +341,6 @@
         <div x-show="sidebarCollapsed" class="my-2 mx-2 border-t border-dark-border/50"></div>
         <template x-for="item in [
           { name: 'ChatRoom', view: 'chat-rooms', label: 'Chat Rooms', icon: 'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h5' },
-          { name: 'ChatMessage', view: 'chat-messages', label: 'Chat Messages', icon: 'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h6' },
           { name: 'WorkoutPlan', view: 'workout-plans', label: 'Workout Plans', icon: 'M4 7h16M4 12h16M4 17h16M7 4v16m10-16v16' },
           { name: 'WorkoutPlanExercise', view: 'plan-exercises', label: 'Plan Exercises', icon: 'M5 5h14v14H5zM8 9h8m-8 3h8m-8 3h5' }
         ]" :key="item.name">
@@ -359,7 +358,7 @@
         </div>
         <div x-show="sidebarCollapsed" class="my-2 mx-2 border-t border-dark-border/50"></div>
 
-        <template x-for="t in dbSchema" :key="t.name">
+        <template x-for="t in dbSchema.filter(model => model.name !== 'ChatMessage')" :key="t.name">
           <button @click="selectTable(t.name)"
             :class="[currentView === 'db-explorer' && activeTableName === t.name ? 'nav-item-active' : 'nav-item text-slate-500', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
             class="w-full flex items-center gap-2.5 py-2 rounded-lg text-xs font-medium" :title="t.tableName || t.name">
@@ -400,14 +399,13 @@
             <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Coaching &amp; Workouts</span>
           </div>
           <button @click="openAdminFeature('chat-rooms'); mobileNavOpen = false" :class="currentView === 'chat-rooms' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Chat Rooms</button>
-          <button @click="openAdminFeature('chat-messages'); mobileNavOpen = false" :class="currentView === 'chat-messages' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Chat Messages</button>
           <button @click="openAdminFeature('workout-plans'); mobileNavOpen = false" :class="currentView === 'workout-plans' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Workout Plans</button>
           <button @click="openAdminFeature('plan-exercises'); mobileNavOpen = false" :class="currentView === 'plan-exercises' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Plan Exercises</button>
 
           <div class="px-3 pt-4 pb-1.5">
             <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Database Tables</span>
           </div>
-          <template x-for="t in dbSchema" :key="t.name">
+          <template x-for="t in dbSchema.filter(model => model.name !== 'ChatMessage')" :key="t.name">
             <button @click="selectTable(t.name); mobileNavOpen = false"
               :class="currentView === 'db-explorer' && activeTableName === t.name ? 'bg-primary/15 text-primary' : 'text-slate-500 hover:text-white hover:bg-white/5'"
               class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors">
@@ -495,11 +493,12 @@
             <div>
               <p class="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-2">Coaching workspace</p>
               <h1 class="text-2xl sm:text-3xl font-bold">Chat Rooms</h1>
-              <p class="text-slate-400 text-sm mt-1">Review client and coach conversations in one place. Messages are read-only here.</p>
+              <p class="text-slate-400 text-sm mt-1">Review conversations and message history. Manage conversation records from the room table.</p>
             </div>
             <div class="flex gap-2">
               <button @click="loadAdminFeatures()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl text-sm text-slate-200">Refresh</button>
-              <button @click="selectTable('ChatRoom')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Open table</button>
+              <button @click="openAdminInsert('ChatRoom')" class="px-3.5 py-2 bg-primary hover:bg-primary-light rounded-xl text-sm text-dark font-bold">Add chat room</button>
+              <button @click="selectTable('ChatRoom')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Manage chat rooms</button>
             </div>
           </div>
 
@@ -566,45 +565,10 @@
           </div>
         </div>
 
-        <div x-show="currentView === 'chat-messages'">
-          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-            <div><p class="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-2">Coaching workspace</p><h1 class="text-2xl sm:text-3xl font-bold">Chat Messages</h1><p class="text-slate-400 text-sm mt-1">Search recent message activity and jump to its conversation.</p></div>
-            <div class="flex gap-2"><button @click="loadAdminFeatures()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl text-sm text-slate-200">Refresh</button><button @click="selectTable('ChatMessage')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Open table</button></div>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">Messages loaded</p><p class="text-2xl font-bold mt-1" x-text="adminChatMessages.length"></p></div>
-            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">Text messages</p><p class="text-2xl font-bold mt-1 text-sky-400" x-text="adminChatMessages.filter(m => m.type === 'TEXT').length"></p></div>
-            <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">Photo messages</p><p class="text-2xl font-bold mt-1 text-violet-400" x-text="adminChatMessages.filter(m => m.type === 'IMAGE').length"></p></div>
-          </div>
-          <div class="bg-dark-card border border-dark-border rounded-2xl p-4 sm:p-5 mb-4 flex flex-col sm:flex-row gap-3">
-            <input x-model="adminMessageSearch" type="search" placeholder="Search message, client, coach…" class="flex-1 px-4 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary">
-            <select x-model="adminMessageType" class="sm:w-48 px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white"><option value="ALL">All message types</option><option value="TEXT">Text</option><option value="IMAGE">Images</option></select>
-          </div>
-          <div class="space-y-3">
-            <template x-for="message in filteredAdminMessages()" :key="message.id">
-              <article class="bg-dark-card border border-dark-border hover:border-primary/30 rounded-2xl p-4 sm:p-5 transition-colors">
-                <div class="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex flex-wrap items-center gap-2"><span class="text-sm font-semibold" x-text="adminRelationName(message.senderId__label, 'Participant')"></span><span class="text-slate-600">·</span><span class="text-xs text-slate-400" x-text="adminRelationName(message.roomId__label, 'Conversation')"></span></div>
-                    <p x-show="message.body" class="text-sm text-slate-300 mt-3 whitespace-pre-wrap break-words" x-text="message.body"></p>
-                    <a x-show="message.type === 'IMAGE' && message.imageUrl" :href="message.imageUrl" target="_blank" rel="noopener noreferrer" class="inline-flex mt-3 text-xs text-primary hover:underline">Open attached image ↗</a>
-                    <p x-show="message.type === 'IMAGE' && !message.imageUrl" class="text-xs text-slate-500 mt-3">Image attachment</p>
-                    <div class="flex flex-wrap gap-2 mt-4"><span class="px-2.5 py-1 rounded-full bg-sky-500/10 text-sky-300 text-[10px] font-semibold" x-text="message.type || 'MESSAGE'"></span><span class="px-2.5 py-1 rounded-full bg-dark border border-dark-border text-slate-400 text-[10px]" x-text="message.status || 'SENT'"></span><span class="px-2.5 py-1 rounded-full bg-dark border border-dark-border text-slate-500 text-[10px]" x-text="adminDate(message.createdAt)"></span></div>
-                  </div>
-                  <button @click="openAdminRoomFromMessage(message)" class="shrink-0 px-3 py-2 bg-primary/10 hover:bg-primary/15 border border-primary/20 rounded-xl text-xs text-primary font-semibold">View conversation</button>
-                </div>
-              </article>
-            </template>
-            <div x-show="adminFeatureLoading" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center text-sm text-slate-500">Loading messages…</div>
-            <div x-show="!adminFeatureLoading && filteredAdminMessages().length === 0" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center text-sm text-slate-500">No messages match your search.</div>
-            <div x-show="adminFeatureLoading" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center text-sm text-slate-500">Loading messages…</div>
-          </div>
-        </div>
-
         <div x-show="currentView === 'workout-plans'">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div><p class="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-2">Training library</p><h1 class="text-2xl sm:text-3xl font-bold">Workout Plans</h1><p class="text-slate-400 text-sm mt-1">Browse the plans available for assignment and review their exercise counts.</p></div>
-            <div class="flex gap-2"><button @click="loadAdminFeatures()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl text-sm text-slate-200">Refresh</button><button @click="selectTable('WorkoutPlan')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Open table</button></div>
+            <div class="flex flex-wrap gap-2"><button @click="openAdminInsert('WorkoutPlan')" class="px-3.5 py-2 bg-primary hover:bg-primary-light rounded-xl text-sm text-dark font-bold">Add workout plan</button><button @click="loadAdminFeatures()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl text-sm text-slate-200">Refresh</button><button @click="selectTable('WorkoutPlan')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Manage all plans</button></div>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
             <div class="bg-dark-card border border-dark-border rounded-2xl p-4"><p class="text-xs text-slate-500">All plans</p><p class="text-2xl font-bold mt-1" x-text="adminWorkoutPlans.length"></p></div>
@@ -620,7 +584,7 @@
                   <div class="flex items-start justify-between gap-3"><div><span class="text-[10px] uppercase tracking-wider font-bold text-primary" x-text="String(plan.categoryKey || 'FITNESS').replaceAll('_', ' ')"></span><h2 class="text-lg font-bold mt-1" x-text="plan.title"></h2></div><span class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7h16M4 12h16M4 17h16"/></svg></span></div>
                   <p class="text-sm text-slate-400 mt-3 min-h-10" x-text="plan.description || 'No description added yet.'"></p>
                   <div class="flex flex-wrap gap-2 mt-4"><span class="px-2.5 py-1 rounded-full bg-dark border border-dark-border text-xs text-slate-300" x-text="(plan.durationMinutes || '—') + ' min'"></span><span class="px-2.5 py-1 rounded-full bg-dark border border-dark-border text-xs text-slate-300" x-text="plan.difficulty || 'Difficulty not set'"></span><span class="px-2.5 py-1 rounded-full text-xs font-semibold" :class="plan.isActive ? 'bg-emerald-500/10 text-emerald-300' : 'bg-slate-500/10 text-slate-400'" x-text="plan.isActive ? 'Active' : 'Inactive'"></span></div>
-                  <div class="mt-5 pt-4 border-t border-dark-border flex items-center justify-between"><span class="text-xs text-slate-500" x-text="adminPlanExercises.filter(e => e.planId === plan.id).length + ' exercises'"></span><button @click="openAdminFeature('plan-exercises', plan.id)" class="px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/15 text-primary text-xs font-semibold">View exercises</button></div>
+                  <div class="mt-5 pt-4 border-t border-dark-border flex flex-wrap items-center justify-between gap-2"><span class="text-xs text-slate-500" x-text="adminPlanExercises.filter(e => e.planId === plan.id).length + ' exercises'"></span><div class="flex gap-2"><button @click="openAdminEdit('WorkoutPlan', plan)" class="px-3 py-2 rounded-xl bg-dark border border-dark-border hover:border-primary/40 text-slate-200 text-xs font-semibold">Edit</button><button @click="deleteAdminFeatureRow('WorkoutPlan', plan)" class="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs font-semibold">Delete</button><button @click="openAdminFeature('plan-exercises', plan.id)" class="px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/15 text-primary text-xs font-semibold">Manage exercises</button></div></div>
                 </div>
               </article>
             </template>
@@ -631,15 +595,15 @@
         <div x-show="currentView === 'plan-exercises'">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div><p class="text-xs uppercase tracking-[0.18em] text-primary font-bold mb-2">Training library</p><h1 class="text-2xl sm:text-3xl font-bold">Plan Exercises</h1><p class="text-slate-400 text-sm mt-1">Review exercise order, sets, and repetitions for each workout plan.</p></div>
-            <div class="flex gap-2"><button @click="loadAdminFeatures()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl text-sm text-slate-200">Refresh</button><button @click="selectTable('WorkoutPlanExercise')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Open table</button></div>
+            <div class="flex flex-wrap gap-2"><button @click="openAdminInsert('WorkoutPlanExercise')" class="px-3.5 py-2 bg-primary hover:bg-primary-light rounded-xl text-sm text-dark font-bold">Add exercise</button><button @click="loadAdminFeatures()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:border-primary/40 rounded-xl text-sm text-slate-200">Refresh</button><button @click="selectTable('WorkoutPlanExercise')" class="px-3.5 py-2 bg-primary/10 border border-primary/20 hover:bg-primary/15 rounded-xl text-sm text-primary font-semibold">Manage all entries</button></div>
           </div>
-          <div class="bg-dark-card border border-dark-border rounded-2xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center gap-4"><div class="flex-1"><p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Selected plan</p><select x-model="selectedWorkoutPlanId" class="mt-2 w-full px-4 py-3 bg-dark border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-primary"><option value="">All workout plans</option><template x-for="plan in adminWorkoutPlans" :key="plan.id"><option :value="plan.id" x-text="plan.title"></option></template></select></div><div class="sm:text-right"><p class="text-xs text-slate-500">Exercise entries</p><p class="text-2xl font-bold mt-1" x-text="filteredAdminPlanExercises().length"></p></div></div>
+          <div class="bg-dark-card border border-dark-border rounded-2xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center gap-4"><div class="flex-1"><p class="text-xs uppercase tracking-wider text-slate-500 font-bold">Selected plan</p><select x-model="selectedWorkoutPlanId" class="mt-2 w-full px-4 py-3 bg-dark border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-primary"><option value="">All workout plans</option><template x-for="plan in adminWorkoutPlans" :key="plan.id"><option :value="plan.id" x-text="plan.title"></option></template></select><p class="text-xs text-slate-500 mt-2">Use the arrows to change exercise order. Changes are saved right away.</p></div><div class="sm:text-right"><p class="text-xs text-slate-500">Exercise entries</p><p class="text-2xl font-bold mt-1" x-text="filteredAdminPlanExercises().length"></p></div></div>
           <div class="space-y-3">
             <template x-for="(entry, index) in filteredAdminPlanExercises()" :key="entry.id">
-              <article class="bg-dark-card border border-dark-border rounded-2xl p-4 sm:p-5 flex items-center gap-4 hover:border-primary/30 transition-colors">
+              <article class="bg-dark-card border border-dark-border rounded-2xl p-4 sm:p-5 flex flex-wrap items-center gap-4 hover:border-primary/30 transition-colors">
                 <span class="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold" x-text="String(entry.sortOrder + 1).padStart(2, '0')"></span>
                 <div class="flex-1 min-w-0"><p class="text-xs text-slate-500 truncate" x-text="entry.planId__label || adminPlanTitle(entry.planId)"></p><h2 class="font-semibold truncate mt-1" x-text="entry.exerciseId__label || 'Exercise' + (index + 1)"></h2><p class="text-xs text-slate-500 mt-1" x-text="'Order ' + (entry.sortOrder + 1)"></p></div>
-                <div class="flex gap-2 sm:gap-3"><div class="min-w-16 text-center px-3 py-2 rounded-xl bg-dark border border-dark-border"><p class="text-[10px] uppercase text-slate-500">Sets</p><p class="font-bold mt-0.5" x-text="entry.sets ?? '—'"></p></div><div class="min-w-16 text-center px-3 py-2 rounded-xl bg-dark border border-dark-border"><p class="text-[10px] uppercase text-slate-500">Reps</p><p class="font-bold mt-0.5" x-text="entry.reps ?? '—'"></p></div></div>
+                <div class="flex gap-2 sm:gap-3"><div class="min-w-16 text-center px-3 py-2 rounded-xl bg-dark border border-dark-border"><p class="text-[10px] uppercase text-slate-500">Sets</p><p class="font-bold mt-0.5" x-text="entry.sets ?? '—'"></p></div><div class="min-w-16 text-center px-3 py-2 rounded-xl bg-dark border border-dark-border"><p class="text-[10px] uppercase text-slate-500">Reps</p><p class="font-bold mt-0.5" x-text="entry.reps ?? '—'"></p></div><div class="flex items-center gap-1"><template x-if="selectedWorkoutPlanId"><span class="inline-flex items-center gap-1"><button @click="movePlanExercise(entry, -1)" :disabled="index === 0 || planExerciseBusy" aria-label="Move exercise up" title="Move up" class="w-9 h-9 rounded-lg border border-dark-border text-slate-200 hover:border-primary/50 disabled:opacity-30">↑</button><button @click="movePlanExercise(entry, 1)" :disabled="index === filteredAdminPlanExercises().length - 1 || planExerciseBusy" aria-label="Move exercise down" title="Move down" class="w-9 h-9 rounded-lg border border-dark-border text-slate-200 hover:border-primary/50 disabled:opacity-30">↓</button></span></template><button @click="openAdminEdit('WorkoutPlanExercise', entry)" class="px-3 h-9 rounded-lg bg-dark border border-dark-border hover:border-primary/40 text-xs">Edit</button><button @click="deleteAdminFeatureRow('WorkoutPlanExercise', entry)" class="px-3 h-9 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs">Delete</button></div></div>
               </article>
             </template>
             <div x-show="!adminFeatureLoading && filteredAdminPlanExercises().length === 0" class="bg-dark-card border border-dark-border rounded-2xl p-12 text-center text-sm text-slate-500">There are no exercise entries for this selection.</div>
@@ -655,12 +619,12 @@
                 <h1 class="text-2xl font-bold font-mono text-primary" x-text="activeTableName"></h1>
                 <span class="px-2 py-0.5 rounded-md bg-dark-card border border-dark-border text-xs text-slate-300 font-medium" x-text="`${tableRows.length} rows`"></span>
               </div>
-              <p class="text-slate-400 text-xs mt-1">Live PostgreSQL Table via Prisma ORM</p>
+          <p class="text-slate-400 text-xs mt-1">Create, update, or remove entries for this section.</p>
             </div>
             <div class="flex items-center gap-2">
               <button @click="openInsertRow()" class="px-3.5 py-2 bg-primary hover:bg-primary-light text-dark font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-lg shadow-primary/10">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-                Insert Row
+                Add entry
               </button>
               <button @click="fetchTableRows()" class="px-3.5 py-2 bg-dark-card border border-dark-border hover:bg-white/5 text-xs text-slate-300 font-medium rounded-xl transition-colors flex items-center gap-1.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -766,6 +730,10 @@
                 </tbody>
               </table>
             </div>
+          </div>
+          <div class="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-dark-card border border-dark-border rounded-xl px-4 py-3">
+            <p class="text-xs text-slate-400" x-text="tableMeta ? `Showing ${tableRows.length} of ${tableMeta.total} entries · Page ${tableMeta.page} of ${tableMeta.totalPages}` : `${tableRows.length} entries on this page`"></p>
+            <div class="flex gap-2"><button @click="changeTablePage(-1)" :disabled="tablePage <= 1 || loadingTable" class="px-3 py-1.5 rounded-lg bg-dark border border-dark-border text-xs disabled:opacity-40">Previous</button><button @click="changeTablePage(1)" :disabled="!tableMeta || tablePage >= tableMeta.totalPages || loadingTable" class="px-3 py-1.5 rounded-lg bg-dark border border-dark-border text-xs disabled:opacity-40">Next</button></div>
           </div>
         </div>
 
@@ -2195,20 +2163,19 @@
       <!-- Header -->
       <div class="flex items-center justify-between mb-1 flex-shrink-0">
         <div>
-          <h3 class="text-lg font-bold font-mono text-primary" x-text="modals.dbInsert ? `Insert Row` : `Edit Row`"></h3>
+          <h3 class="text-lg font-bold text-primary" x-text="modals.dbInsert ? `Add entry` : `Edit entry`"></h3>
           <p class="text-slate-500 text-xs mt-0.5 font-mono" x-text="activeTableName"></p>
         </div>
         <button @click="modals.dbInsert = false; modals.dbEdit = false" class="text-slate-400 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 text-lg">✕</button>
       </div>
-      <p class="text-slate-400 text-xs mb-4 flex-shrink-0">Fill in the fields below — only required columns are shown.</p>
+      <p class="text-slate-400 text-xs mb-4 flex-shrink-0">Required fields are marked. Leave optional fields empty if they do not apply.</p>
 
       <!-- Scrollable fields -->
       <div class="overflow-y-auto flex-1 pr-1 space-y-3">
         <template x-for="field in rowFormFields" :key="field.name">
           <div>
             <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-300 mb-1">
-              <span class="font-mono" x-text="field.name"></span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-dark-muted text-slate-500 font-normal" x-text="field.type"></span>
+              <span x-text="adminFieldLabel(field.name)"></span>
               <span x-show="field.required" class="text-red-400 text-[10px]">required</span>
               <span x-show="!field.required" class="text-slate-600 text-[10px]">optional</span>
             </label>
@@ -2355,7 +2322,8 @@
         activeTableName: "users",
         activeModelInfo: null,
         tableRows: [],
-        tableMeta: { page: 1, limit: 50, total: 0, totalPages: 1 },
+        tablePage: 1,
+        tableMeta: { page: 1, limit: 100, total: 0, totalPages: 1 },
         tableSearch: "",
         tableSearchColumn: "ALL",
         loadingTable: false,
@@ -2369,6 +2337,8 @@
         adminChatMessages: [],
         adminWorkoutPlans: [],
         adminPlanExercises: [],
+        planExerciseBusy: false,
+        rowEditorReturnView: "db-explorer",
         adminFeatureLoading: false,
         adminChatSearch: "",
         adminChatFilter: "ALL",
@@ -2478,7 +2448,7 @@
             else if (paymentsRes?.items) this.payments = paymentsRes.items;
             if (Array.isArray(dbSchemaRes)) {
               // Sort tables alphabetically by their display (table) name
-              this.dbSchema = dbSchemaRes.slice().sort((a, b) => {
+              this.dbSchema = dbSchemaRes.filter((model) => model.name !== "ChatMessage").slice().sort((a, b) => {
                 const nameA = (a.tableName || a.name).toLowerCase();
                 const nameB = (b.tableName || b.name).toLowerCase();
                 return nameA.localeCompare(nameB);
@@ -2492,12 +2462,14 @@
 
         selectTable(tableName) {
           this.activeTableName = tableName;
+          this.tablePage = 1;
           this.tableSearchColumn = "ALL";
           this.currentView = "db-explorer";
           this.fetchTableRows(tableName);
         },
 
         openAdminFeature(view, selectedId = "") {
+          if (view === "chat-messages") view = "chat-rooms";
           this.currentView = view;
           if (view === "plan-exercises" && selectedId) this.selectedWorkoutPlanId = selectedId;
           if (view === "chat-rooms" && selectedId) this.selectedAdminRoomId = selectedId;
@@ -2521,7 +2493,7 @@
                 this.selectedAdminRoomId = this.adminChatRooms[0]?.id || "";
               }
               if (!this.adminWorkoutPlans.some((plan) => plan.id === this.selectedWorkoutPlanId)) {
-                this.selectedWorkoutPlanId = "";
+                this.selectedWorkoutPlanId = this.adminWorkoutPlans[0]?.id || "";
               }
             })
             .catch((error) => this.showToast(error.message || "Could not load coaching data", "error"))
@@ -2574,6 +2546,62 @@
             .sort((a, b) => String(a.planId__label || "").localeCompare(String(b.planId__label || "")) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
         },
 
+        openAdminInsert(modelName) {
+          this.rowEditorReturnView = this.currentView;
+          this.activeTableName = modelName;
+          this.activeModelInfo = this.dbSchema.find((model) => model.name === modelName) || null;
+          this.tableSearchColumn = "ALL";
+          this.tableSearch = "";
+          this.rowFormFields = this._buildFormFields(null);
+          if (modelName === "WorkoutPlanExercise" && this.selectedWorkoutPlanId) {
+            const planField = this.rowFormFields.find((field) => field.name === "planId");
+            if (planField) planField.value = this.selectedWorkoutPlanId;
+          }
+          this.modals.dbInsert = true;
+        },
+
+        openAdminEdit(modelName, row) {
+          this.rowEditorReturnView = this.currentView;
+          this.activeTableName = modelName;
+          this.activeModelInfo = this.dbSchema.find((model) => model.name === modelName) || null;
+          this.activeRowData = row;
+          this.rowFormFields = this._buildFormFields(row);
+          this.modals.dbEdit = true;
+        },
+
+        refreshAfterRowSave() {
+          const returnView = this.rowEditorReturnView;
+          if (returnView === "chat-rooms" || returnView === "workout-plans" || returnView === "plan-exercises") {
+            this.loadAdminFeatures();
+          }
+          if (this.currentView === "db-explorer") this.fetchTableRows();
+        },
+
+        deleteAdminFeatureRow(modelName, row) {
+          const label = modelName === "WorkoutPlan" ? (row.title || "this workout plan") : modelName === "WorkoutPlanExercise" ? (row.exerciseId__label || "this exercise") : "this chat room";
+          const warning = modelName === "WorkoutPlan" ? "Exercises and workout history linked to this plan may also be removed." : modelName === "ChatRoom" ? "The conversation and its message history will be permanently deleted." : "This exercise will be removed from its plan.";
+          if (!confirm(`Delete ${label}? ${warning}`)) return;
+          this.apiRequest("DELETE", `/api/v1/admin/db/tables/${modelName}/${row.id}`)
+            .then(() => { this.loadAdminFeatures(); this.showToast(`${label} was deleted.`); })
+            .catch((error) => this.showToast(error.message || "We couldn't delete this item. Refresh and try again.", "error"));
+        },
+
+        async movePlanExercise(entry, direction) {
+          const ordered = this.filteredAdminPlanExercises();
+          const currentIndex = ordered.findIndex((item) => item.id === entry.id);
+          if (currentIndex < 0 || !ordered[currentIndex + direction] || this.planExerciseBusy) return;
+          this.planExerciseBusy = true;
+          try {
+            await this.apiRequest("POST", `/api/v1/admin/db/workout-plan-exercises/${entry.id}/move`, { direction });
+            await this.loadAdminFeatures();
+            this.showToast("Exercise order updated.");
+          } catch (error) {
+            this.showToast(error.message || "We couldn't change the order. Refresh and try again.", "error");
+          } finally {
+            this.planExerciseBusy = false;
+          }
+        },
+
         openAdminRoomFromMessage(message) {
           this.openAdminFeature("chat-rooms", message.roomId);
         },
@@ -2603,9 +2631,15 @@
         fetchTableRows(tableName = this.activeTableName) {
           if (!this.isAuthenticated || !tableName) return;
           this.loadingTable = true;
-          this.apiRequest("GET", `/api/v1/admin/db/tables/${tableName}?page=1&limit=100`)
-            .then((res) => {
+          this.apiRequestWithMeta("GET", `/api/v1/admin/db/tables/${tableName}?page=${this.tablePage}&limit=100`)
+            .then((result) => {
               this.loadingTable = false;
+              const res = result?.data;
+              this.tableMeta = result?.meta || null;
+              if (this.tableMeta && this.tablePage > this.tableMeta.totalPages) {
+                this.tablePage = this.tableMeta.totalPages;
+                return this.fetchTableRows(tableName);
+              }
               if (Array.isArray(res)) {
                 this.tableRows = res;
               } else if (res?.items) {
@@ -2622,6 +2656,13 @@
               this.loadingTable = false;
               this.showToast(err.message || "Failed to fetch table data", "error");
             });
+        },
+
+        changeTablePage(direction) {
+          const nextPage = this.tablePage + direction;
+          if (nextPage < 1 || (this.tableMeta && nextPage > this.tableMeta.totalPages)) return;
+          this.tablePage = nextPage;
+          this.fetchTableRows();
         },
 
         tableColumns() {
@@ -2748,49 +2789,75 @@
         },
 
         openInsertRow() {
+          this.rowEditorReturnView = this.currentView;
           this.rowFormFields = this._buildFormFields(null);
           this.modals.dbInsert = true;
         },
 
         submitInsertRow() {
+          const validationMessage = this.validateRowForm();
+          if (validationMessage) return this.showToast(validationMessage, "error");
           const data = this._collectFormData();
           this.apiRequest("POST", `/api/v1/admin/db/tables/${this.activeTableName}`, data)
             .then(() => {
               this.modals.dbInsert = false;
-              this.fetchTableRows();
-              this.showToast(`Row created in ${this.activeTableName}`);
+              this.refreshAfterRowSave();
+              this.showToast("Your new entry was added.");
             })
-            .catch((err) => this.showToast(err.message, "error"));
+            .catch((err) => this.showToast(err.message || "We couldn't add this entry. Check the required fields and try again.", "error"));
         },
 
         openEditRow(row) {
+          this.rowEditorReturnView = this.currentView;
           this.activeRowData = row;
           this.rowFormFields = this._buildFormFields(row);
           this.modals.dbEdit = true;
         },
 
         submitEditRow() {
+          const validationMessage = this.validateRowForm();
+          if (validationMessage) return this.showToast(validationMessage, "error");
           const data = this._collectFormData();
           const id = this.activeRowData.id;
           this.apiRequest("PUT", `/api/v1/admin/db/tables/${this.activeTableName}/${id}`, data)
             .then(() => {
               this.modals.dbEdit = false;
-              this.fetchTableRows();
-              this.showToast(`Row updated in ${this.activeTableName}`);
+              this.refreshAfterRowSave();
+              this.showToast("Your changes were saved.");
             })
-            .catch((err) => this.showToast(err.message, "error"));
+            .catch((err) => this.showToast(err.message || "We couldn't save your changes. Check the fields and try again.", "error"));
+        },
+
+        validateRowForm() {
+          for (const field of this.rowFormFields) {
+            const value = field.value;
+            if (field.required && (value === "" || value === null || value === undefined)) {
+              return `${this.adminFieldLabel(field.name)} is required. Please fill it in.`;
+            }
+            if ((field.type === "Int" || field.type === "Float") && value !== "" && value !== null && !Number.isFinite(Number(value))) {
+              return `${this.adminFieldLabel(field.name)} must be a valid number.`;
+            }
+          }
+          return "";
+        },
+
+        adminFieldLabel(name) {
+          const labels = { planId: "Workout plan", exerciseId: "Exercise", categoryKey: "Category", durationMinutes: "Duration in minutes", sortOrder: "Exercise order", imageUrl: "Image link", videoUrl: "Video link", isActive: "Available for users", userId: "Client", coachId: "Coach", lastMessageAt: "Last message time", closedForUserAt: "Chat closed for user" };
+          return labels[name] || String(name).replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
         },
 
         deleteDbRow(row) {
           const id = row.id;
           if (!id) return;
-          if (!confirm(`Are you sure you want to delete row ${id} from ${this.activeTableName}?`)) return;
+          const friendlyTable = this.activeTableName === "WorkoutPlan" ? "workout plan" : this.activeTableName === "WorkoutPlanExercise" ? "exercise entry" : this.activeTableName === "ChatRoom" ? "chat room" : "entry";
+          const warning = this.activeTableName === "ChatRoom" ? " Its conversation history will also be permanently deleted." : this.activeTableName === "WorkoutPlan" ? " Exercises and workout history linked to it may also be removed." : " This cannot be undone.";
+          if (!confirm(`Delete this ${friendlyTable}?${warning}`)) return;
           this.apiRequest("DELETE", `/api/v1/admin/db/tables/${this.activeTableName}/${id}`)
             .then(() => {
               this.fetchTableRows();
-              this.showToast(`Row deleted from ${this.activeTableName}`);
+              this.showToast("The entry was deleted.");
             })
-            .catch((err) => this.showToast(err.message, "error"));
+            .catch((err) => this.showToast(err.message || "We couldn't delete this entry. Refresh and try again.", "error"));
         },
 
         loadState() {
@@ -3127,7 +3194,6 @@
         breadcrumbLabel() {
           const adminFeatureLabels = {
             "chat-rooms": "Chat Rooms",
-            "chat-messages": "Chat Messages",
             "workout-plans": "Workout Plans",
             "plan-exercises": "Plan Exercises",
           };
@@ -3135,7 +3201,6 @@
           if (this.currentView === "db-explorer") {
             const featurePages = {
               chatroom: "Chat Rooms",
-              chatmessage: "Chat Messages",
               workoutplan: "Workout Plans",
               workoutplanexercise: "Plan Exercises",
             };

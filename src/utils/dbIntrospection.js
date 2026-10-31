@@ -2,6 +2,9 @@ const { Prisma } = require("@prisma/client");
 
 function getDatabaseSchema() {
   const models = Prisma.dmmf.datamodel.models;
+  const enumValues = Object.fromEntries(
+    Prisma.dmmf.datamodel.enums.map((item) => [item.name, item.values.map((value) => value.name)])
+  );
   return models.map((m) => {
     const delegateName = m.name.charAt(0).toLowerCase() + m.name.slice(1);
 
@@ -27,7 +30,9 @@ function getDatabaseSchema() {
         isId: f.isId,
         isRequired: f.isRequired,
         isList: f.isList,
-        kind: f.kind
+        kind: f.kind,
+        hasDefaultValue: f.hasDefaultValue,
+        enumValues: f.kind === "enum" ? (enumValues[f.type] || []) : []
       }))
     };
   });

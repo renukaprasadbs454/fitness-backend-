@@ -188,6 +188,11 @@ const deleteModelRow = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Row deleted", null);
 });
 
+const moveWorkoutPlanExercise = asyncHandler(async (req, res) => {
+  const item = await adminService.moveWorkoutPlanExercise(req.params.id, Number(req.body?.direction));
+  return ApiResponse.success(res, httpStatus.OK, "Exercise order updated", item);
+});
+
 const getRelationOptions = asyncHandler(async (req, res) => {
   const options = await adminService.getRelationOptions(req.params.modelName);
   return ApiResponse.success(res, httpStatus.OK, "Relation options retrieved", options);
@@ -279,6 +284,7 @@ module.exports = {
   createModelRow,
   updateModelRow,
   deleteModelRow,
+  moveWorkoutPlanExercise,
   getRelationOptions
 };
 
