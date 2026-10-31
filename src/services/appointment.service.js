@@ -98,6 +98,12 @@ async function create(userId, { coachId, title, scheduledAt, durationMinutes = 4
     notes
   });
 
+  // Generate a unique Meet link as part of the booking response when the
+  // platform Google account is connected. If Google is unavailable, keep the
+  // booking successful; the coach/admin can retry later, and confirmation
+  // also makes another best-effort attempt.
+  const appointmentWithMeeting = await autoGenerateMeeting(appointment);
+
   await activityFeed.record(
     userId,
     "APPOINTMENT_BOOKED",
@@ -113,7 +119,7 @@ async function create(userId, { coachId, title, scheduledAt, durationMinutes = 4
     logger.warn(`[chat] booking message failed: ${err.message}`);
   }
 
-  return appointment;
+  return appointmentWithMeeting;
 }
 
 async function list(userId, query) {
@@ -146,7 +152,7 @@ async function notifyMeetingLink(appointment) {
   );
 }
 
-/** Best-effort Meet link for a newly confirmed session; never blocks the confirmation itself. */
+/** Best-effort Meet link for a newly booked or confirmed session; never blocks booking/confirmation. */
 async function autoGenerateMeeting(appointment) {
   if (appointment.meetingLink || !(await meetingService.isConnected())) return appointment;
   try {
