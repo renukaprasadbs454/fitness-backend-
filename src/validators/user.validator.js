@@ -19,7 +19,9 @@ const updateProfile = {
       gender: z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]).optional(),
       goal: z
         .enum(["WEIGHT_LOSS", "MUSCLE_GAIN", "STRENGTH", "ENDURANCE", "GENERAL_FITNESS", "REHAB"])
-        .optional()
+        .nullable()
+        .optional(),
+      fitnessGoals: z.array(z.string().trim().min(1).max(80)).max(12).optional()
     })
     .refine((data) => Object.keys(data).length > 0, "At least one field must be provided")
 };

@@ -667,6 +667,22 @@
                 <div>
                   <h2 class="text-2xl font-bold mb-1">Appointments</h2>
                   <p class="text-slate-400 text-sm">Your sessions with clients currently assigned to you. Each session can carry its own meeting link.</p>
+                  <div class="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/5 p-4" x-show="appointmentChanges.length">
+                    <div class="mb-2 flex items-center justify-between gap-2">
+                      <h3 class="text-sm font-semibold text-amber-200">Appointment changes</h3>
+                      <span class="text-xs text-slate-400">Recent updates from clients</span>
+                    </div>
+                    <template x-for="notice in appointmentChanges" :key="notice.id">
+                      <div class="flex items-start justify-between gap-3 border-t border-dark-border/70 py-2 first:border-0">
+                        <div class="min-w-0">
+                          <p class="text-sm font-medium" x-text="notice.title"></p>
+                          <p class="mt-0.5 text-xs text-slate-300" x-text="notice.body"></p>
+                          <p class="mt-1 text-[11px] text-slate-500" x-text="formatDate(notice.createdAt)"></p>
+                        </div>
+                        <button @click="markAppointmentChangeRead(notice)" class="flex-shrink-0 rounded-lg border border-dark-border px-2.5 py-1 text-xs text-slate-300 hover:bg-white/5">Mark read</button>
+                      </div>
+                    </template>
+                  </div>
                   <p class="text-xs mt-1" :class="meetingStatus.googleMeetConnected ? 'text-emerald-400' : 'text-slate-500'"
                     x-text="meetingStatus.googleMeetConnected ? 'Google Meet links are generated automatically when you confirm a session.' : 'Automatic Google Meet links are off — paste a link per session, or ask an admin to connect a Google account.'"></p>
                 </div>
@@ -780,7 +796,7 @@
                         <span x-show="!c.isActive" class="badge badge-red">Suspended</span>
                       </p>
                       <p class="text-xs text-slate-500 mt-0.5" x-text="c.email + ' · ' + c.sessions + ' session' + (c.sessions === 1 ? '' : 's') + (c.upcomingSessions ? ' · ' + c.upcomingSessions + ' upcoming' : '')"></p>
-                      <p x-show="c.relation === 'mine' && c.fitnessProfile" class="mt-1 text-xs text-slate-400" x-text="['Height ' + (c.fitnessProfile?.heightCm ?? '—') + ' cm', 'Weight ' + (c.fitnessProfile?.weightKg ?? '—') + ' kg', 'Age ' + (c.fitnessProfile?.age ?? '—'), 'Goal ' + (c.fitnessProfile?.goal || '—')].join(' · ')"></p>
+                      <p x-show="c.relation === 'mine' && c.fitnessProfile" class="mt-1 text-xs text-slate-400" x-text="['Height ' + (c.fitnessProfile?.heightCm ?? '—') + ' cm', 'Weight ' + (c.fitnessProfile?.weightKg ?? '—') + ' kg', 'Age ' + (c.fitnessProfile?.age ?? '—'), 'Goals ' + (c.fitnessProfile?.fitnessGoals?.join(', ') || c.fitnessProfile?.goal || '—')].join(' · ')"></p>
                     </div>
                     <div class="flex flex-wrap gap-2 sm:justify-end">
                   <button x-show="c.relation === 'mine'" @click="currentView = 'chat'; newChatCoachId = ''; startChatWith(c)" class="px-3 py-1.5 rounded-lg bg-dark-muted text-slate-200 text-xs font-semibold hover:bg-dark-border">Message</button>
@@ -1370,6 +1386,7 @@
         ],
 
         appointments: [],
+        appointmentChanges: [],
         notificationUnread: 0,
         notificationPoll: null,
         appointmentsFilter: "ALL",
@@ -1618,12 +1635,20 @@
           if (!this.navItems.some((item) => item.key === key)) return;
           this.currentView = key;
           this.mobileNavOpen = false;
+          if (key === "appointments") {
+            this.fetchAppointments();
+            this.fetchAppointmentChanges();
+          }
+          if (key === "chat") {
+            this.apiRequest("PATCH", "/api/v1/notifications/read-type/COACH_MESSAGE").then(() => this.fetchNotificationCount()).catch(() => {});
+          }
         },
 
         bootstrap() {
           this.fetchProfile();
           this.fetchAvailability();
           this.fetchAppointments();
+          this.fetchAppointmentChanges();
           this.fetchClients();
           this.fetchAllCoaches();
           this.loadWorkoutPlans();
@@ -1631,14 +1656,32 @@
           this.fetchSentAssignments();
           this.fetchMeetingStatus();
           this.fetchNotificationCount();
-          if (!this.notificationPoll) this.notificationPoll = setInterval(() => this.fetchNotificationCount(), 30000);
+          if (!this.notificationPoll) this.notificationPoll = setInterval(() => {
+            this.fetchNotificationCount();
+            this.fetchAppointmentChanges();
+          }, 30000);
           this.initChat();
         },
 
         fetchNotificationCount() {
-          return this.apiRequest("GET", "/api/v1/notifications/unread-count")
+          return this.apiRequest("GET", "/api/v1/notifications/unread-count?type=APPOINTMENT_CHANGED")
             .then((result) => { this.notificationUnread = Number(result?.count || 0); })
             .catch(() => {});
+        },
+
+        fetchAppointmentChanges() {
+          return this.apiRequest("GET", "/api/v1/notifications?type=APPOINTMENT_CHANGED&unreadOnly=true&limit=20")
+            .then((result) => { this.appointmentChanges = Array.isArray(result) ? result : []; })
+            .catch(() => { this.appointmentChanges = []; });
+        },
+
+        markAppointmentChangeRead(notice) {
+          this.apiRequest("PATCH", `/api/v1/notifications/${notice.id}/read`)
+            .then(() => {
+              this.appointmentChanges = this.appointmentChanges.filter((item) => item.id !== notice.id);
+              this.fetchNotificationCount();
+            })
+            .catch((err) => this.showToast(err.message || "Couldn't mark this update as read", "error"));
         },
 
         // Public endpoint (same one client booking screens use) — every

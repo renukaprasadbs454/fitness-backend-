@@ -12,24 +12,27 @@ const notificationRepository = {
 
   create: (data) => prisma.notification.create({ data }),
 
-  list: (userId, { skip, take, unreadOnly }) =>
+  list: (userId, { skip, take, unreadOnly, type }) =>
     prisma.notification.findMany({
-      where: { userId, isRead: unreadOnly ? false : undefined },
+      where: { userId, type: type || undefined, isRead: unreadOnly ? false : undefined },
       orderBy: { createdAt: "desc" },
       skip,
       take
     }),
 
-  count: (userId, unreadOnly) =>
-    prisma.notification.count({ where: { userId, isRead: unreadOnly ? false : undefined } }),
+  count: (userId, unreadOnly, type) =>
+    prisma.notification.count({ where: { userId, type: type || undefined, isRead: unreadOnly ? false : undefined } }),
 
-  countUnread: (userId) => prisma.notification.count({ where: { userId, isRead: false } }),
+  countUnread: (userId, type) => prisma.notification.count({ where: { userId, type: type || undefined, isRead: false } }),
 
   markRead: (id, userId) =>
     prisma.notification.updateMany({ where: { id, userId }, data: { isRead: true } }),
 
   markAllRead: (userId) =>
     prisma.notification.updateMany({ where: { userId, isRead: false }, data: { isRead: true } }),
+
+  markTypeRead: (userId, type) =>
+    prisma.notification.updateMany({ where: { userId, type, isRead: false }, data: { isRead: true } }),
 
   removeDeviceToken: (token) => prisma.deviceToken.deleteMany({ where: { token } }),
 

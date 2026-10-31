@@ -10,6 +10,7 @@ const TYPE_TO_PREFERENCE_FIELD = {
   WORKOUT_REMINDER: "workoutReminders",
   WORKOUT_ASSIGNED: "workoutReminders",
   APPOINTMENT_REMINDER: "appointmentReminders",
+  APPOINTMENT_CHANGED: "appointmentReminders",
   COACH_MESSAGE: "coachMessages",
   ANNOUNCEMENT: "announcements"
 };
@@ -25,9 +26,10 @@ async function unregisterDevice(token) {
 async function list(userId, query) {
   const { page, limit, skip } = parsePagination(query);
   const unreadOnly = query.unreadOnly === true;
+  const type = query.type || undefined;
   const [items, total] = await Promise.all([
-    notificationRepository.list(userId, { skip, take: limit, unreadOnly }),
-    notificationRepository.count(userId, unreadOnly)
+    notificationRepository.list(userId, { skip, take: limit, unreadOnly, type }),
+    notificationRepository.count(userId, unreadOnly, type)
   ]);
   return { items, meta: buildMeta(page, limit, total) };
 }
@@ -40,8 +42,12 @@ async function markAllRead(userId) {
   await notificationRepository.markAllRead(userId);
 }
 
-async function unreadCount(userId) {
-  return notificationRepository.countUnread(userId);
+async function markTypeRead(userId, type) {
+  await notificationRepository.markTypeRead(userId, type);
+}
+
+async function unreadCount(userId, type) {
+  return notificationRepository.countUnread(userId, type);
 }
 
 async function getPreferences(userId) {
@@ -142,6 +148,7 @@ module.exports = {
   list,
   markRead,
   markAllRead,
+  markTypeRead,
   unreadCount,
   getPreferences,
   updatePreferences,

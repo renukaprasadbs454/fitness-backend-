@@ -26,7 +26,7 @@ const schemas = require("../../validators/notification.validator");
  *       200: { description: Notifications retrieved }
  */
 router.get("/", authenticate, validate(schemas.listNotifications), notificationController.list);
-router.get("/unread-count", authenticate, notificationController.unreadCount);
+router.get("/unread-count", authenticate, validate(schemas.unreadCount), notificationController.unreadCount);
 
 /**
  * @swagger
@@ -39,6 +39,8 @@ router.get("/unread-count", authenticate, notificationController.unreadCount);
  *       200: { description: All notifications marked as read }
  */
 router.patch("/read-all", authenticate, notificationController.markAllRead);
+
+router.patch("/read-type/:type", authenticate, validate(schemas.typeParam), notificationController.markTypeRead);
 
 /**
  * @swagger

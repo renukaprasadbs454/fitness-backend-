@@ -28,8 +28,13 @@ const markAllRead = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "All notifications marked as read", null);
 });
 
+const markTypeRead = asyncHandler(async (req, res) => {
+  await notificationService.markTypeRead(req.user.id, req.params.type);
+  return ApiResponse.success(res, httpStatus.OK, "Notifications marked as read", null);
+});
+
 const unreadCount = asyncHandler(async (req, res) => {
-  const count = await notificationService.unreadCount(req.user.id);
+  const count = await notificationService.unreadCount(req.user.id, req.query.type);
   return ApiResponse.success(res, httpStatus.OK, "Unread notification count retrieved", { count });
 });
 
@@ -49,6 +54,7 @@ module.exports = {
   list,
   markRead,
   markAllRead,
+  markTypeRead,
   unreadCount,
   getPreferences,
   updatePreferences

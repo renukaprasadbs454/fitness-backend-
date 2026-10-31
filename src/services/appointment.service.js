@@ -277,12 +277,12 @@ async function reschedule(userId, userRole, id, { scheduledAt, durationMinutes }
     await notificationService
       .notify(
         recipient,
-        "APPOINTMENT_REMINDER",
+        "APPOINTMENT_CHANGED",
         moved ? "Session rescheduled" : "Session updated",
         moved
-          ? `"${updated.title}" has moved to ${formatIst(updated.scheduledAt)}.`
-          : `"${updated.title}" on ${formatIst(updated.scheduledAt)} now runs ${updated.durationMinutes} minutes.`,
-        { data: { appointmentId: updated.id } }
+          ? `"${updated.title}" moved from ${formatIst(appointment.scheduledAt)} to ${formatIst(updated.scheduledAt)}${resized ? ` and now runs ${updated.durationMinutes} minutes` : ""}.`
+          : `"${updated.title}" on ${formatIst(updated.scheduledAt)} changed from ${appointment.durationMinutes} to ${updated.durationMinutes} minutes.`,
+        { data: { appointmentId: updated.id, previousScheduledAt: appointment.scheduledAt.toISOString(), scheduledAt: updated.scheduledAt.toISOString(), previousDurationMinutes: appointment.durationMinutes, durationMinutes: updated.durationMinutes } }
       )
       .catch((err) => logger.warn(`[appointments] reschedule notice failed: ${err.message}`));
   }

@@ -130,7 +130,7 @@ const userRepository = {
         email: true,
         isActive: true,
         assignedCoachId: true,
-        profile: { select: { heightCm: true, weightKg: true, age: true, gender: true, goal: true } },
+        profile: { select: { heightCm: true, weightKg: true, age: true, gender: true, goal: true, fitnessGoals: true } },
         assignedCoach: { select: { id: true, user: { select: { fullName: true } } } }
       },
       orderBy: { fullName: "asc" },

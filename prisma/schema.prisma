@@ -115,6 +115,7 @@ enum NotificationType {
   WORKOUT_REMINDER
   WORKOUT_ASSIGNED
   APPOINTMENT_REMINDER
+  APPOINTMENT_CHANGED
   COACH_MESSAGE
   ANNOUNCEMENT
   SYSTEM
@@ -254,6 +255,7 @@ model UserProfile {
   age             Int?
   gender          Gender?
   goal            Goal?
+  fitnessGoals    String[] @default([]) @map("fitness_goals")
   profileImageUrl String?  @map("profile_image_url")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")

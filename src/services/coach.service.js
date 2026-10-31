@@ -189,7 +189,8 @@ async function listMyClients(userId) {
         weightKg: u.profile.weightKg == null ? null : Number(u.profile.weightKg),
         age: u.profile.age,
         gender: u.profile.gender,
-        goal: u.profile.goal
+        goal: u.profile.goal,
+        fitnessGoals: u.profile.fitnessGoals || []
       } : null,
       relation,
       assignedCoach: u.assignedCoach ? { id: u.assignedCoach.id, name: u.assignedCoach.user.fullName } : null,

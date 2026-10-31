@@ -1100,7 +1100,7 @@
                   <div><p class="text-xs uppercase text-slate-500">Weight</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.weightKg != null ? selectedUser.profile.weightKg + ' kg' : 'Not provided'"></p></div>
                   <div><p class="text-xs uppercase text-slate-500">Age</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.age ?? 'Not provided'"></p></div>
                   <div><p class="text-xs uppercase text-slate-500">Gender</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.gender || 'Not provided'"></p></div>
-                  <div><p class="text-xs uppercase text-slate-500">Goal</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.goal || 'Not provided'"></p></div>
+                  <div><p class="text-xs uppercase text-slate-500">Fitness goals</p><p class="text-sm font-medium mt-0.5" x-text="selectedUser.profile?.fitnessGoals?.length ? selectedUser.profile.fitnessGoals.join(', ') : (selectedUser.profile?.goal || 'Not provided')"></p></div>
                 </div>
               </div>
 
