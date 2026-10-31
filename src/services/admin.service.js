@@ -527,9 +527,13 @@ function readableDatabaseError(error, action) {
     return ApiError.badRequest(`This ${model} is still connected to other information. Remove or update the connected items before trying again.`);
   }
   if (error?.code === "P2025") return ApiError.notFound("This record could not be found. Refresh the page and try again.");
+  if (error?.code === "P2034") return ApiError.conflict("This entry changed while you were editing it. Refresh the page and try again.");
   if (["P2011", "P2012", "P2013"].includes(error?.code)) return ApiError.badRequest(`A required field is missing. Complete all required fields before you ${actionText} ${model}.`);
   if (["P2000", "P2006", "P2007", "P2009"].includes(error?.code)) return ApiError.badRequest("One of the values is not valid. Check the highlighted fields and try again.");
-  return ApiError.badRequest(`We couldn't ${actionText} this ${model}. Check the information and try again. If the problem continues, refresh the page.`);
+  if (["P1000", "P1001", "P1002", "P1008", "P1017", "P2024"].includes(error?.code)) {
+    return ApiError.internal("We couldn't reach the database right now. Please try again in a moment.");
+  }
+  return ApiError.internal("Something went wrong while saving this change. Please try again, and contact support if it keeps happening.");
 }
 
 async function deleteModelRow(modelName, id) {

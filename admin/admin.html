@@ -2299,6 +2299,7 @@
         admin: null,
         accessToken: null,
         refreshToken: null,
+        authVersion: 0,
         loginForm: { email: "", password: "" },
         loginLoading: false,
         loginError: "",
@@ -2324,6 +2325,7 @@
         tableRows: [],
         tablePage: 1,
         tableMeta: { page: 1, limit: 100, total: 0, totalPages: 1 },
+        tableLoadRequestId: 0,
         tableSearch: "",
         tableSearchColumn: "ALL",
         loadingTable: false,
@@ -2405,15 +2407,39 @@
         init() {
           this.loadState();
           this.handleIntegrationRedirect();
-          const saved = localStorage.getItem("fitnerveAdminAuth");
+          window.addEventListener("storage", (event) => {
+            if (event.key !== "fitnerveAdminAuth") return;
+            if (!event.newValue) {
+              if (this.isAuthenticated) this.logout();
+              return;
+            }
+            try {
+              const session = JSON.parse(event.newValue);
+              if (!session?.admin || !session?.accessToken || !session?.refreshToken) throw new Error("Invalid saved session");
+              const sameAdmin = this.admin?.id && this.admin.id === session.admin.id;
+              if (!sameAdmin) this.authVersion += 1;
+              this.admin = session.admin;
+              this.accessToken = session.accessToken;
+              this.refreshToken = session.refreshToken;
+              this.isAuthenticated = true;
+              if (!sameAdmin) this.fetchLiveData();
+            } catch {
+              if (this.isAuthenticated) this.logout();
+            }
+          });
+          let saved = null;
+          try { saved = localStorage.getItem("fitnerveAdminAuth"); } catch {}
           if (saved) {
-            const { admin, accessToken, refreshToken } = JSON.parse(saved);
-            this.admin = admin;
-            this.accessToken = accessToken;
-            this.refreshToken = refreshToken;
-            this.isAuthenticated = Boolean(admin && accessToken);
-            if (this.isAuthenticated) {
-              this.fetchLiveData();
+            try {
+              const session = JSON.parse(saved);
+              this.admin = session?.admin || null;
+              this.accessToken = session?.accessToken || null;
+              this.refreshToken = session?.refreshToken || null;
+              this.isAuthenticated = Boolean(this.admin && this.accessToken && this.refreshToken);
+              if (this.isAuthenticated) this.fetchLiveData();
+              else { try { localStorage.removeItem("fitnerveAdminAuth"); } catch {} }
+            } catch {
+              try { localStorage.removeItem("fitnerveAdminAuth"); } catch {}
             }
           }
         },
@@ -2543,12 +2569,14 @@
           return this.adminPlanExercises
             .filter((entry) => !this.selectedWorkoutPlanId || entry.planId === this.selectedWorkoutPlanId)
             .slice()
-            .sort((a, b) => String(a.planId__label || "").localeCompare(String(b.planId__label || "")) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+            .sort((a, b) => String(a.planId__label || "").localeCompare(String(b.planId__label || "")) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || String(a.id).localeCompare(String(b.id)));
         },
 
         openAdminInsert(modelName) {
           this.rowEditorReturnView = this.currentView;
           this.activeTableName = modelName;
+          this.tableLoadRequestId += 1;
+          this.loadingTable = false;
           this.activeModelInfo = this.dbSchema.find((model) => model.name === modelName) || null;
           this.tableSearchColumn = "ALL";
           this.tableSearch = "";
@@ -2563,6 +2591,8 @@
         openAdminEdit(modelName, row) {
           this.rowEditorReturnView = this.currentView;
           this.activeTableName = modelName;
+          this.tableLoadRequestId += 1;
+          this.loadingTable = false;
           this.activeModelInfo = this.dbSchema.find((model) => model.name === modelName) || null;
           this.activeRowData = row;
           this.rowFormFields = this._buildFormFields(row);
@@ -2630,9 +2660,11 @@
 
         fetchTableRows(tableName = this.activeTableName) {
           if (!this.isAuthenticated || !tableName) return;
+          const requestId = ++this.tableLoadRequestId;
           this.loadingTable = true;
           this.apiRequestWithMeta("GET", `/api/v1/admin/db/tables/${tableName}?page=${this.tablePage}&limit=100`)
             .then((result) => {
+              if (requestId !== this.tableLoadRequestId || tableName !== this.activeTableName) return;
               this.loadingTable = false;
               const res = result?.data;
               this.tableMeta = result?.meta || null;
@@ -2653,6 +2685,7 @@
               if (foundModel) this.activeModelInfo = foundModel;
             })
             .catch((err) => {
+              if (requestId !== this.tableLoadRequestId || tableName !== this.activeTableName) return;
               this.loadingTable = false;
               this.showToast(err.message || "Failed to fetch table data", "error");
             });
@@ -2861,12 +2894,20 @@
         },
 
         loadState() {
-          const saved = localStorage.getItem("fitnerveAdminData");
+          let saved = null;
+          try { saved = localStorage.getItem("fitnerveAdminData"); } catch {}
           if (saved) {
-            const data = JSON.parse(saved);
-            this.users = data.users ?? [];
-            this.coaches = data.coaches ?? [];
-            this.auditLogs = data.auditLogs ?? [];
+            try {
+              const data = JSON.parse(saved);
+              this.users = Array.isArray(data?.users) ? data.users : [];
+              this.coaches = Array.isArray(data?.coaches) ? data.coaches : [];
+              this.auditLogs = Array.isArray(data?.auditLogs) ? data.auditLogs : [];
+            } catch {
+              try { localStorage.removeItem("fitnerveAdminData"); } catch {}
+              this.users = [];
+              this.coaches = [];
+              this.auditLogs = [];
+            }
           } else {
             this.users = [];
             this.coaches = [];
@@ -2876,6 +2917,12 @@
 
         persist() {
           localStorage.setItem("fitnerveAdminData", JSON.stringify({ users: this.users, coaches: this.coaches, auditLogs: this.auditLogs }));
+        },
+
+        persistAuthSession() {
+          try {
+            localStorage.setItem("fitnerveAdminAuth", JSON.stringify({ admin: this.admin, accessToken: this.accessToken, refreshToken: this.refreshToken }));
+          } catch {}
         },
 
         resetDemoData() {
@@ -2897,11 +2944,9 @@
               this.admin = result.user;
               this.accessToken = result.accessToken;
               this.refreshToken = result.refreshToken;
+              this.authVersion += 1;
               this.isAuthenticated = true;
-              localStorage.setItem(
-                "fitnerveAdminAuth",
-                JSON.stringify({ admin: this.admin, accessToken: this.accessToken, refreshToken: this.refreshToken })
-              );
+              this.persistAuthSession();
               this.loginLoading = false;
               this.showToast(`Welcome back, ${this.admin.fullName.split(" ")[0]}`);
               this.fetchLiveData();
@@ -2913,12 +2958,21 @@
         },
 
         logout() {
+          const refreshToken = this.refreshToken;
+          this.authVersion += 1;
           this.isAuthenticated = false;
           this.admin = null;
           this.accessToken = null;
           this.refreshToken = null;
-          localStorage.removeItem("fitnerveAdminAuth");
+          try { localStorage.removeItem("fitnerveAdminAuth"); } catch {}
           this.currentView = "dashboard";
+          if (refreshToken) {
+            fetch("/api/v1/auth/logout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ refreshToken })
+            }).catch(() => {});
+          }
         },
 
         apiRequest(method, path, body = null, retried = false) {
@@ -3144,26 +3198,47 @@
 
         // ================= SESSION =================
         // Access tokens last 15 minutes; swap in a fresh one once before giving up.
+        adoptLatestSession(requestedRefreshToken) {
+          try {
+            const latest = JSON.parse(localStorage.getItem("fitnerveAdminAuth") || "null");
+            if (!latest?.admin || !latest?.accessToken || !latest?.refreshToken || latest.refreshToken === requestedRefreshToken) return false;
+            this.admin = latest.admin;
+            this.accessToken = latest.accessToken;
+            this.refreshToken = latest.refreshToken;
+            this.isAuthenticated = true;
+            return true;
+          } catch {
+            return false;
+          }
+        },
+
         refreshAccess() {
           if (!this.refreshToken) return Promise.resolve(false);
           if (!_adminRefreshPromise) {
+            const sessionVersion = this.authVersion;
+            const requestedRefreshToken = this.refreshToken;
             _adminRefreshPromise = fetch("/api/v1/auth/refresh", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ refreshToken: this.refreshToken })
+              body: JSON.stringify({ refreshToken: requestedRefreshToken })
             })
               .then(async (res) => {
                 const payload = await res.json().catch(() => null);
-                if (!res.ok || !payload?.data?.accessToken) return false;
+                if (!res.ok || !payload?.data?.accessToken) return this.adoptLatestSession(requestedRefreshToken);
+                if (sessionVersion !== this.authVersion || !this.isAuthenticated) {
+                  fetch("/api/v1/auth/logout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refreshToken: payload.data.refreshToken })
+                  }).catch(() => {});
+                  return false;
+                }
                 this.accessToken = payload.data.accessToken;
                 this.refreshToken = payload.data.refreshToken || this.refreshToken;
-                localStorage.setItem(
-                  "fitnerveAdminAuth",
-                  JSON.stringify({ admin: this.admin, accessToken: this.accessToken, refreshToken: this.refreshToken })
-                );
+                this.persistAuthSession();
                 return true;
               })
-              .catch(() => false)
+              .catch(() => this.adoptLatestSession(requestedRefreshToken))
               .finally(() => { _adminRefreshPromise = null; });
           }
           return _adminRefreshPromise;

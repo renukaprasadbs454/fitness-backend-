@@ -40,13 +40,13 @@ async function rotateRefreshToken(oldToken, ip) {
   const newAccessToken = signAccessToken({ sub: user.id, role: user.role });
   const newRefreshToken = signRefreshToken({ sub: user.id });
 
-  await tokenRepository.createRefreshToken({
+  const rotated = await tokenRepository.rotateRefreshToken(oldToken, {
     token: newRefreshToken,
     userId: user.id,
     expiresAt: new Date(Date.now() + ms(env.jwt.refreshExpiresIn)),
     createdByIp: ip || null
-  });
-  await tokenRepository.revokeRefreshToken(oldToken, newRefreshToken);
+  }, user.id);
+  if (!rotated) throw ApiError.unauthorized("This session has already been refreshed or signed out. Please sign in again.");
 
   return { accessToken: newAccessToken, refreshToken: newRefreshToken, user };
 }

@@ -12,6 +12,19 @@ const tokenRepository = {
       data: { revoked: true, replacedByToken }
     }),
 
+  // Consume the old token and issue its replacement in one transaction so
+  // concurrent refresh requests cannot both rotate the same session token.
+  rotateRefreshToken: (oldToken, replacement, userId) =>
+    prisma.$transaction(async (tx) => {
+      const result = await tx.refreshToken.updateMany({
+        where: { token: oldToken, userId, revoked: false, expiresAt: { gt: new Date() } },
+        data: { revoked: true, replacedByToken: replacement.token }
+      });
+      if (result.count !== 1) return false;
+      await tx.refreshToken.create({ data: replacement });
+      return true;
+    }),
+
   revokeAllUserTokens: (userId) =>
     prisma.refreshToken.updateMany({
       where: { userId, revoked: false },
