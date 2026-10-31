@@ -74,8 +74,8 @@ npm run lint
 1. In Google Cloud Console enable the **Google Calendar API** and use a **Web application** OAuth client (`GOOGLE_WEB_CLIENT_ID` / `GOOGLE_WEB_CLIENT_SECRET`, plus `GOOGLE_TOKEN_ENCRYPTION_KEY`).
 2. Add this under the client's **Authorized redirect URIs** (one per environment, no trailing slash):
    - `http://localhost:4000/api/v1/integrations/google-meet/callback`
-   - `https://<your-backend-host>/api/v1/integrations/google-meet/callback`
-   A mismatch shows Google's `Error 400: redirect_uri_mismatch`.
+   - `https://api-fitnerve.kwiko.org/api/v1/integrations/google-meet/callback`
+   Set `GOOGLE_MEET_REDIRECT_URI` to the same exact URI in the backend environment. Keep scheme, hostname, path, and trailing slash identical to the Google Cloud entry; Google rejects a mismatch with `Error 400: redirect_uri_mismatch`.
 3. Publish the OAuth consent screen (in *Testing*, refresh tokens expire after 7 days; test users must be added).
 4. Sign in to the admin portal and press **Connect Google account** on the dashboard's *Google Meet Links* card. Until connected, sessions simply have no generated link and coaches can paste one instead.
 K
