@@ -336,6 +336,25 @@
         </button>
 
         <div class="px-3 pt-4 pb-1.5" x-show="!sidebarCollapsed">
+          <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Coaching &amp; Workouts</span>
+        </div>
+        <div x-show="sidebarCollapsed" class="my-2 mx-2 border-t border-dark-border/50"></div>
+        <template x-for="item in [
+          { name: 'ChatRoom', label: 'Chat Rooms', icon: 'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h5' },
+          { name: 'ChatMessage', label: 'Chat Messages', icon: 'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h6' },
+          { name: 'WorkoutPlan', label: 'Workout Plans', icon: 'M4 7h16M4 12h16M4 17h16M7 4v16m10-16v16' },
+          { name: 'WorkoutPlanExercise', label: 'Plan Exercises', icon: 'M5 5h14v14H5zM8 9h8m-8 3h8m-8 3h5' }
+        ]" :key="item.name">
+          <button @click="selectTable(item.name)"
+            :class="currentView === 'db-explorer' && activeTableName.toLowerCase() === item.name.toLowerCase() ? 'nav-item-active' : 'nav-item text-slate-400'"
+            class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium"
+            :title="sidebarCollapsed ? item.label : ''">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon"/></svg>
+            <span x-show="!sidebarCollapsed" x-text="item.label"></span>
+          </button>
+        </template>
+
+        <div class="px-3 pt-4 pb-1.5" x-show="!sidebarCollapsed">
           <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Database Tables</span>
         </div>
         <div x-show="sidebarCollapsed" class="my-2 mx-2 border-t border-dark-border/50"></div>
@@ -376,6 +395,14 @@
           <button @click="currentView = 'support'; fetchSupportTickets(); mobileNavOpen = false" :class="currentView === 'support' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Support Requests <span x-show="supportCounts.OPEN" class="ml-auto badge badge-orange" x-text="supportCounts.OPEN"></span></button>
           <button @click="currentView = 'coach-reports'; fetchCoachReports(); mobileNavOpen = false" :class="currentView === 'coach-reports' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Coach Reports <span x-show="reportCounts.OPEN" class="ml-auto badge badge-orange" x-text="reportCounts.OPEN"></span></button>
           <button @click="testStorage(); mobileNavOpen = false" :disabled="storageTesting" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-50" x-text="storageTesting ? 'Testing storage…' : 'Test image storage'"></button>
+
+          <div class="px-3 pt-4 pb-1.5">
+            <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Coaching &amp; Workouts</span>
+          </div>
+          <button @click="selectTable('ChatRoom'); mobileNavOpen = false" :class="currentView === 'db-explorer' && activeTableName.toLowerCase() === 'chatroom' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Chat Rooms</button>
+          <button @click="selectTable('ChatMessage'); mobileNavOpen = false" :class="currentView === 'db-explorer' && activeTableName.toLowerCase() === 'chatmessage' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Chat Messages</button>
+          <button @click="selectTable('WorkoutPlan'); mobileNavOpen = false" :class="currentView === 'db-explorer' && activeTableName.toLowerCase() === 'workoutplan' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Workout Plans</button>
+          <button @click="selectTable('WorkoutPlanExercise'); mobileNavOpen = false" :class="currentView === 'db-explorer' && activeTableName.toLowerCase() === 'workoutplanexercise' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Plan Exercises</button>
 
           <div class="px-3 pt-4 pb-1.5">
             <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Database Tables</span>
@@ -2823,7 +2850,16 @@
         },
 
         breadcrumbLabel() {
-          return { users: "Users", "user-detail": "User Detail", coaches: "Coaches", "audit-logs": "Audit Logs", payments: "Payments", support: "Support Requests", "coach-reports": "Coach Reports", "db-explorer": "Database" }[this.currentView] || "";
+          if (this.currentView === "db-explorer") {
+            const featurePages = {
+              chatroom: "Chat Rooms",
+              chatmessage: "Chat Messages",
+              workoutplan: "Workout Plans",
+              workoutplanexercise: "Plan Exercises",
+            };
+            return featurePages[String(this.activeTableName || "").toLowerCase()] || "Database";
+          }
+          return { users: "Users", "user-detail": "User Detail", coaches: "Coaches", "audit-logs": "Audit Logs", payments: "Payments", support: "Support Requests", "coach-reports": "Coach Reports" }[this.currentView] || "";
         },
 
         refreshAdminData() {
