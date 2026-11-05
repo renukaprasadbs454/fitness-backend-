@@ -2498,6 +2498,10 @@
                 return nameA.localeCompare(nameB);
               });
               if (this.activeTableName) {
+                this.activeModelInfo = this.dbSchema.find((model) =>
+                  model.name.toLowerCase() === this.activeTableName.toLowerCase() ||
+                  (model.tableName || "").toLowerCase() === this.activeTableName.toLowerCase()
+                ) || null;
                 this.fetchTableRows(this.activeTableName);
               }
             }
@@ -2507,7 +2511,12 @@
         selectTable(tableName) {
           this.activeTableName = tableName;
           this.tablePage = 1;
-          this.tableSortBy = "createdAt";
+          this.activeModelInfo = this.dbSchema.find((model) =>
+            model.name.toLowerCase() === tableName.toLowerCase() ||
+            (model.tableName || "").toLowerCase() === tableName.toLowerCase()
+          ) || null;
+          const dateFields = (this.activeModelInfo?.fields || []).filter((field) => field.kind === "scalar" && field.type === "DateTime").map((field) => field.name);
+          this.tableSortBy = dateFields.includes("createdAt") ? "createdAt" : (dateFields.includes("date") ? "date" : (dateFields[0] || "id"));
           this.tableSortOrder = "desc";
           this.tableSearchColumn = "ALL";
           this.currentView = "db-explorer";
@@ -2679,7 +2688,8 @@
         },
 
         tableSortable(column) {
-          return ["createdAt", "updatedAt", "date", "scheduledAt"].includes(column);
+          const field = this.activeModelInfo?.fields?.find((item) => item.name === column);
+          return field?.kind === "scalar" && field.type === "DateTime";
         },
 
         tableHeaderLabel(column) {
@@ -2713,17 +2723,23 @@
                 this.tablePage = this.tableMeta.totalPages;
                 return this.fetchTableRows(tableName);
               }
-              if (Array.isArray(res)) {
-                this.tableRows = res;
-              } else if (res?.items) {
-                this.tableRows = res.items;
-              } else {
-                this.tableRows = [];
-              }
+              const rows = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : []);
               const foundModel = (this.dbSchema || []).find(
                 (m) => m.name.toLowerCase() === tableName.toLowerCase() || m.tableName.toLowerCase() === tableName.toLowerCase()
               );
               if (foundModel) this.activeModelInfo = foundModel;
+              const direction = this.tableSortOrder === "asc" ? 1 : -1;
+              this.tableRows = rows.slice().sort((a, b) => {
+                const left = a?.[this.tableSortBy];
+                const right = b?.[this.tableSortBy];
+                if (left == null || right == null) return left == null ? (right == null ? 0 : 1) : -1;
+                const leftTime = new Date(left).getTime();
+                const rightTime = new Date(right).getTime();
+                const bothDates = Number.isFinite(leftTime) && Number.isFinite(rightTime) &&
+                  (this.activeModelInfo?.fields || []).some((field) => field.name === this.tableSortBy && field.type === "DateTime");
+                const comparison = bothDates ? leftTime - rightTime : String(left).localeCompare(String(right), undefined, { numeric: true });
+                return comparison * direction;
+              });
             })
             .catch((err) => {
               if (requestId !== this.tableLoadRequestId || tableName !== this.activeTableName) return;
@@ -3024,6 +3040,7 @@
           return fetch(path, {
             method,
             headers,
+            cache: "no-store",
             body: body ? JSON.stringify(body) : null
           }).then(async (res) => {
             const payload = await res.json().catch(() => null);
@@ -3289,7 +3306,7 @@
         apiRequestWithMeta(method, path, body = null, retried = false) {
           const headers = { "Content-Type": "application/json" };
           if (this.accessToken) headers.Authorization = `Bearer ${this.accessToken}`;
-          return fetch(path, { method, headers, body: body ? JSON.stringify(body) : null }).then(async (res) => {
+          return fetch(path, { method, headers, cache: "no-store", body: body ? JSON.stringify(body) : null }).then(async (res) => {
             const payload = await res.json().catch(() => null);
             if (!res.ok) {
               if (res.status === 401 && !retried && (await this.refreshAccess())) {

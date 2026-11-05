@@ -41,6 +41,11 @@ const sendMessage = asyncHandler(async (req, res) => {
 
 const markSeen = asyncHandler(async (req, res) => {
   await chatService.markSeen(req.params.roomId, req.user);
+  req.app.get("io")?.of("/chat").to(`room:${req.params.roomId}`).emit("message:status", {
+    roomId: req.params.roomId,
+    status: "SEEN",
+    by: req.user.id
+  });
   return ApiResponse.success(res, httpStatus.OK, "Messages marked as seen", null);
 });
 
