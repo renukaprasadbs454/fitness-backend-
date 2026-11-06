@@ -9,6 +9,8 @@ const exerciseInput = z.object({
   name: z.string().trim().min(1).max(120),
   muscleGroup: z.string().max(60).optional(),
   equipment: z.string().max(120).optional(),
+  imageUrl: z.string().url().max(2048).nullable().optional(),
+  videoUrl: z.string().url().max(2048).nullable().optional(),
   sets: z.number().int().positive().max(50).optional(),
   reps: z.number().int().positive().max(200).optional()
 });
@@ -20,6 +22,13 @@ const createCustomWorkout = {
     durationMinutes: z.number().int().positive().max(300).optional(),
     difficulty: z.enum(DIFFICULTIES).optional(),
     categoryKey: z.enum(CATEGORY_KEYS).optional(),
+    accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+    imageUrl: z.string().url().max(2048).nullable().optional(),
+    videoUrl: z.string().url().max(2048).nullable().optional(),
+    isAvailable: z.boolean().optional(),
+    scheduledAt: z.string().datetime({ offset: true }).nullable().optional(),
+    scheduleType: z.enum(["ONCE", "DAILY", "WEEKLY"]).optional(),
+    scheduleDays: z.array(z.enum(["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"])).max(7).optional(),
     exercises: z.array(exerciseInput).max(50).optional()
   })
 };

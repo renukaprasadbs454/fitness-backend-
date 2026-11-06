@@ -8,6 +8,12 @@ const env = require("../config/env");
 function normalizeError(err) {
   if (err instanceof ApiError) return err;
 
+  if (err.code === "PROGRESS_PHOTO_SET_FROZEN" && err.statusCode === 409) {
+    const apiError = ApiError.conflict(err.message);
+    apiError.code = err.code;
+    return apiError;
+  }
+
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === "P2002") {
       const target = err.meta?.target?.join(", ") || "field";

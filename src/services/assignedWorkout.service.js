@@ -55,6 +55,13 @@ function toCustomAssignmentDto(workout) {
     durationMinutes: workout.durationMinutes,
     difficulty: workout.difficulty,
     categoryKey: workout.categoryKey,
+    accentColor: workout.accentColor,
+    imageUrl: workout.imageUrl,
+    videoUrl: workout.videoUrl,
+    isAvailable: workout.isAvailable,
+    scheduledAt: workout.scheduledAt ?? null,
+    scheduleType: workout.scheduleType ?? "ONCE",
+    scheduleDays: workout.scheduleDays ?? [],
     createdAt: workout.createdAt,
     user: { id: workout.user.id, fullName: workout.user.fullName, email: workout.user.email },
     exercises: workout.exercises.map((e) => ({
@@ -62,6 +69,8 @@ function toCustomAssignmentDto(workout) {
       name: e.name,
       muscleGroup: e.muscleGroup,
       equipment: e.equipment,
+      imageUrl: e.imageUrl ?? null,
+      videoUrl: e.videoUrl ?? null,
       sets: e.sets,
       reps: e.reps
     }))
@@ -165,6 +174,7 @@ async function assignCustom(callerId, { userId, asCoachUserId, ...workoutData },
 
   const workout = await customWorkoutRepository.create(userId, {
     ...workoutData,
+    scheduledAt: workoutData.scheduledAt ? new Date(workoutData.scheduledAt) : null,
     assignedByUserId,
     createdByUserId: callerId
   });
@@ -179,7 +189,10 @@ async function updateCustomAssignment(callerId, id, data, callerRole) {
   if (!existing) throw ApiError.notFound("Assigned workout not found");
   await assertCoachOwnsActiveAssignment(callerId, existing, callerRole);
 
-  await customWorkoutRepository.update(id, data);
+  await customWorkoutRepository.update(id, {
+    ...data,
+    ...(data.scheduledAt !== undefined ? { scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null } : {})
+  });
   const updated = await assignedWorkoutRepository.findCustomByIdForAssigner(id, callerId);
 
   await notificationService.notify(
@@ -190,6 +203,34 @@ async function updateCustomAssignment(callerId, id, data, callerRole) {
   );
 
   return toCustomAssignmentDto(updated);
+}
+
+async function copyCustomAssignment(callerId, id, { userId, scheduledAt, scheduleType, scheduleDays }, callerRole) {
+  const source = await assignedWorkoutRepository.findCustomByIdForAssigner(id, callerId);
+  if (!source) throw ApiError.notFound("Assigned workout not found");
+  if (callerRole === "COACH") await assertCoachOwnsActiveAssignment(callerId, source, callerRole);
+  const targetUser = await requireUser(userId);
+  await assertCanAssignTo(callerId, callerRole, targetUser);
+
+  const copy = await customWorkoutRepository.create(userId, {
+    title: source.title,
+    description: source.description,
+    durationMinutes: source.durationMinutes,
+    difficulty: source.difficulty,
+    categoryKey: source.categoryKey,
+    accentColor: source.accentColor,
+    imageUrl: source.imageUrl,
+    videoUrl: source.videoUrl,
+    isAvailable: source.isAvailable,
+    scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+    scheduleType: scheduleType ?? "ONCE",
+    scheduleDays: scheduleDays ?? [],
+    assignedByUserId: source.assignedByUserId,
+    createdByUserId: callerId,
+    exercises: source.exercises.map(({ name, muscleGroup, equipment, imageUrl, videoUrl, sets, reps }) => ({ name, muscleGroup, equipment, imageUrl, videoUrl, sets, reps }))
+  });
+  await notificationService.notify(userId, "WORKOUT_ASSIGNED", "New workout assigned", `You were sent a copy of "${copy.title}".`);
+  return toCustomAssignmentDto(await assignedWorkoutRepository.findCustomByIdForAssigner(copy.id, callerId));
 }
 
 async function removeCustomAssignment(callerId, id, callerRole) {
@@ -237,6 +278,7 @@ module.exports = {
   updateAssignedPlan,
   assignCustom,
   updateCustomAssignment,
+  copyCustomAssignment,
   removeCustomAssignment,
   listMyAssignments,
   listAssignedForUser

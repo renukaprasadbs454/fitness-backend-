@@ -667,15 +667,15 @@
                 </button>
                 <div x-show="open" x-cloak x-transition class="absolute left-0 mt-1.5 w-52 max-h-64 overflow-y-auto modal-panel rounded-xl shadow-2xl border border-dark-border z-40 p-1 space-y-0.5">
                   <div class="px-2.5 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Search Field Filter</div>
-                  <button @click="tableSearchColumn = 'ALL'; open = false" type="button"
+                    <button @click="setTableSearchColumn('ALL'); open = false" type="button"
                     :class="tableSearchColumn === 'ALL' ? 'bg-primary/15 text-primary font-bold' : 'text-slate-300 hover:bg-white/5'"
                     class="w-full text-left px-3 py-2 rounded-lg text-xs font-mono transition-colors flex items-center justify-between">
                     <span>All Fields</span>
                     <svg x-show="tableSearchColumn === 'ALL'" class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                   </button>
                   <div class="my-1 border-t border-dark-border/40"></div>
-                  <template x-for="col in tableColumns()" :key="col">
-                    <button @click="tableSearchColumn = col; open = false" type="button"
+                  <template x-for="col in tableSearchColumns()" :key="col">
+                    <button @click="setTableSearchColumn(col); open = false" type="button"
                       :class="tableSearchColumn === col ? 'bg-primary/15 text-primary font-bold' : 'text-slate-300 hover:bg-white/5'"
                       class="w-full text-left px-3 py-2 rounded-lg text-xs font-mono transition-colors flex items-center justify-between">
                       <span x-text="col"></span>
@@ -688,7 +688,7 @@
               <!-- Search Input -->
               <div class="relative flex-1">
                 <svg class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
-                <input x-model="tableSearch" placeholder="Filter rows in this table..." class="w-full pl-8 pr-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-primary transition-colors">
+                <input x-model="tableSearch" @input.debounce.350ms="tablePage = 1; fetchTableRows()" placeholder="Search all rows in this table..." class="w-full pl-8 pr-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-primary transition-colors">
               </div>
             </div>
 
@@ -705,9 +705,19 @@
                 <thead class="bg-dark/90 text-slate-400 font-semibold border-b border-dark-border sticky top-0 backdrop-blur-sm z-10">
                   <tr>
                     <template x-for="col in tableColumns()" :key="col">
-                      <th class="px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-slate-300 whitespace-nowrap" :class="tableSortable(col) ? 'cursor-pointer select-none hover:text-white' : ''" @click="toggleTableSort(col)" x-text="tableHeaderLabel(col)"></th>
+                      <th class="px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-slate-300 whitespace-nowrap" :class="tableSortable(col) ? 'cursor-pointer select-none hover:text-white' : ''" :title="tableSortable(col) ? 'Sort by ' + col : ''" @click="toggleTableSort(col)" x-text="tableHeaderLabel(col)"></th>
                     </template>
                     <th class="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                  <tr class="bg-dark/60 border-b border-dark-border">
+                    <template x-for="col in tableColumns()" :key="'filter-' + col">
+                      <th class="px-2 py-2 min-w-36">
+                        <input type="search" x-model="tableColumnFilters[col]" @input.debounce.400ms="setTableColumnFilter(col, tableColumnFilters[col])" :placeholder="'Filter ' + tableHeaderLabel(col)" :aria-label="'Filter ' + tableHeaderLabel(col)" class="w-full min-w-28 px-2.5 py-2 bg-dark border border-dark-border rounded-lg text-[11px] font-normal normal-case text-white placeholder-slate-500 focus:outline-none focus:border-primary">
+                      </th>
+                    </template>
+                    <th class="px-2 py-2 text-right whitespace-nowrap">
+                      <button x-show="activeColumnFilterCount()" @click="clearTableColumnFilters()" type="button" class="px-2 py-1.5 rounded-lg text-[11px] text-primary hover:bg-primary/10">Clear filters</button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-dark-border/50 text-slate-300 font-mono text-[11px]">
@@ -967,7 +977,25 @@
             </button>
           </div>
 
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4" aria-label="User account totals">
+            <div class="bg-dark-card border border-dark-border rounded-xl p-4">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total users</p>
+              <p class="mt-1 text-2xl font-bold text-white" x-text="dashboard.totals.users"></p>
+            </div>
+            <div class="bg-dark-card border border-emerald-500/20 rounded-xl p-4">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Active</p>
+              <p class="mt-1 text-2xl font-bold text-emerald-400" x-text="dashboard.totals.activeUsers"></p>
+            </div>
+            <div class="bg-dark-card border border-red-500/20 rounded-xl p-4">
+              <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Suspended</p>
+              <p class="mt-1 text-2xl font-bold text-red-400" x-text="dashboard.totals.suspendedUsers"></p>
+            </div>
+          </div>
+
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center mb-4">
+            <select x-model="usersFilters.searchColumn" @change="usersFilters.page = 1" class="px-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white sm:w-40 focus:outline-none focus:border-primary" aria-label="Search users by column">
+              <option value="ALL">All columns</option><option value="name">Name</option><option value="email">Email</option><option value="role">Role</option><option value="coach">Coach</option><option value="status">Status</option><option value="joined">Joined</option>
+            </select>
             <div class="relative flex-1 sm:max-w-xs">
               <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
               <input type="search" x-model="usersFilters.search" @input.debounce.350ms="usersFilters.page = 1" placeholder="Search name, username, email, phone…"
@@ -1069,6 +1097,11 @@
                   </div>
                 </div>
                 <div class="flex flex-wrap gap-2">
+                  <button @click="downloadUserData(selectedUser)" :disabled="exportingUserDataId === selectedUser.id" class="px-3 py-1.5 text-sm bg-primary/15 text-primary hover:bg-primary/25 disabled:opacity-60 disabled:cursor-wait rounded-lg transition-colors inline-flex items-center gap-1.5">
+                    <svg x-show="exportingUserDataId !== selectedUser.id" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+                    <svg x-show="exportingUserDataId === selectedUser.id" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                    <span x-text="exportingUserDataId === selectedUser.id ? 'Preparing…' : 'Download all data'"></span>
+                  </button>
                   <button @click="openEditUser(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Edit</button>
                   <button @click="openChangeRole(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Change Role</button>
                   <button x-show="selectedUser.role === 'USER'" @click="openAssignCoach(selectedUser)" class="px-3 py-1.5 text-sm bg-dark-muted hover:bg-dark-border rounded-lg transition-colors">Assign Coach</button>
@@ -1107,15 +1140,22 @@
               <div class="bg-dark-card border border-dark-border rounded-xl p-6">
                 <div class="flex items-center justify-between gap-3 mb-4">
                   <h2 class="font-semibold">Transformation Photos</h2>
-                  <span class="text-xs text-slate-500" x-text="(selectedUser.progressPhotos || []).length + ' photos'"></span>
+                  <span class="text-xs text-slate-500" x-text="(selectedUser.progressPhotoSets || []).reduce((count, set) => count + set.photos.length, 0) + ' photos in ' + (selectedUser.progressPhotoSets || []).length + ' sets'"></span>
                 </div>
-                <div x-show="!selectedUser.progressPhotos?.length" class="text-sm text-slate-500">No transformation photos uploaded.</div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <template x-for="photo in (selectedUser.progressPhotos || [])" :key="photo.id">
-                    <a :href="photo.url" target="_blank" rel="noopener" class="group overflow-hidden rounded-xl border border-dark-border">
-                      <img :src="photo.url" :alt="(photo.angle || 'Transformation') + ' photo'" class="h-40 w-full object-cover group-hover:scale-105 transition-transform">
-                      <span class="block px-2 py-1.5 text-xs text-slate-400" x-text="(photo.angle || 'Photo') + ' · ' + formatDate(photo.createdAt)"></span>
-                    </a>
+                <div x-show="!selectedUser.progressPhotoSets?.length" class="text-sm text-slate-500">No transformation photos uploaded.</div>
+                <div class="space-y-4">
+                  <template x-for="set in (selectedUser.progressPhotoSets || [])" :key="set.sessionId">
+                    <div class="rounded-xl border border-dark-border p-3">
+                      <h3 class="mb-3 text-sm font-medium text-slate-200" x-text="'Set · ' + formatDate(set.createdAt)"></h3>
+                      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <template x-for="photo in set.photos" :key="photo.id">
+                          <a :href="photo.url" target="_blank" rel="noopener" class="group overflow-hidden rounded-xl border border-dark-border">
+                            <img :src="photo.url" :alt="(photo.angle || 'Transformation') + ' photo'" class="h-40 w-full object-cover group-hover:scale-105 transition-transform">
+                            <span class="block px-2 py-1.5 text-xs text-slate-400" x-text="(photo.angle || 'Photo') + ' · ' + formatDate(photo.createdAt)"></span>
+                          </a>
+                        </template>
+                      </div>
+                    </div>
                   </template>
                 </div>
               </div>
@@ -1150,10 +1190,15 @@
             </button>
           </div>
 
-          <div class="relative max-w-xs mb-4">
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            <select x-model="coachesFilters.searchColumn" @change="coachesFilters.page = 1" class="px-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white sm:w-44 focus:outline-none focus:border-primary" aria-label="Search coaches by column">
+              <option value="ALL">All columns</option><option value="name">Coach</option><option value="email">Email</option><option value="role">Role</option><option value="specialties">Specialties</option><option value="experience">Experience</option><option value="accepting">Accepting clients</option><option value="clients">Clients</option>
+            </select>
+          <div class="relative max-w-xs">
             <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
             <input type="search" x-model="coachesFilters.search" @input.debounce.350ms="coachesFilters.page = 1" placeholder="Search coaches…"
               class="w-full pl-8 pr-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary">
+          </div>
           </div>
 
           <div class="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
@@ -1252,8 +1297,11 @@
               <h1 class="text-2xl font-bold">Support Requests</h1>
               <p class="text-slate-400 text-sm mt-0.5">Help requests users send from the app. Replying notifies the user.</p>
             </div>
-            <div class="relative w-full sm:w-64">
-              <input x-model="supportFilters.search" @input.debounce.400ms="fetchSupportTickets()" placeholder="Search subject, message or user…"
+            <div class="flex w-full sm:w-auto flex-col sm:flex-row gap-2">
+              <select x-model="supportFilters.searchField" @change="fetchSupportTickets()" aria-label="Search support requests by" class="px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white focus:outline-none focus:border-primary">
+                <option value="ALL">All text</option><option value="SUBJECT">Subject</option><option value="USER">User</option><option value="MESSAGE">Message</option>
+              </select>
+              <input x-model="supportFilters.search" @input.debounce.400ms="fetchSupportTickets()" :placeholder="supportFilters.searchField === 'SUBJECT' ? 'Search subject…' : supportFilters.searchField === 'USER' ? 'Search user name or email…' : supportFilters.searchField === 'MESSAGE' ? 'Search message…' : 'Search subject, message or user…'"
                 class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm focus:outline-none focus:border-primary">
             </div>
           </div>
@@ -1295,6 +1343,13 @@
           <div class="mb-5">
             <h1 class="text-2xl font-bold">Coach Reports</h1>
             <p class="text-slate-400 text-sm mt-0.5">Problems users have reported with a coach. Review them and move the user to another coach when needed.</p>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2 mb-4">
+            <select x-model="reportFilters.searchField" @change="fetchCoachReports()" aria-label="Search coach reports by" class="px-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white sm:w-44 focus:outline-none focus:border-primary">
+              <option value="ALL">All details</option><option value="USER">User</option><option value="COACH">Coach</option><option value="TEXT">Report text</option>
+            </select>
+            <input type="search" x-model="reportFilters.search" @input.debounce.400ms="fetchCoachReports()" :placeholder="reportFilters.searchField === 'USER' ? 'Search user name or email…' : reportFilters.searchField === 'COACH' ? 'Search coach name or email…' : reportFilters.searchField === 'TEXT' ? 'Search report details, reason or admin note…' : 'Search user, coach or report text…'" class="w-full sm:max-w-md px-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary">
           </div>
 
           <div class="flex flex-wrap gap-2 mb-4">
@@ -1389,6 +1444,11 @@
               <h1 class="text-2xl font-bold">Payments</h1>
               <p class="text-slate-400 text-sm mt-0.5">Every payment recorded across coach sessions, subscriptions, and plans.</p>
             </div>
+            <div class="flex flex-wrap gap-2">
+            <select x-model="paymentsFilters.searchColumn" class="px-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white sm:w-40 focus:outline-none focus:border-primary" aria-label="Search payments by column">
+              <option value="ALL">All columns</option><option value="user">User</option><option value="amount">Amount</option><option value="purpose">Purpose</option><option value="method">Method</option><option value="status">Status</option><option value="when">When</option>
+            </select>
+            <input type="search" x-model="paymentsFilters.search" @input.debounce.350ms="paymentsFilters.page = 1" placeholder="Search payments…" class="px-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary sm:w-48">
             <select x-model="paymentsFilters.status" @change="paymentsFilters.page = 1" class="px-3 py-2.5 bg-dark-card border border-dark-border rounded-lg text-sm text-white sm:w-44 focus:outline-none focus:border-primary">
               <option value="ALL">All statuses</option>
               <option value="SUCCESS">Success</option>
@@ -1396,6 +1456,7 @@
               <option value="FAILED">Failed</option>
               <option value="REFUNDED">Refunded</option>
             </select>
+            </div>
           </div>
 
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
@@ -2205,8 +2266,8 @@
             </template>
 
             <!-- Number input -->
-            <template x-if="field.type === 'Int' || field.type === 'Float'">
-              <input type="number" :step="field.type === 'Float' ? '0.01' : '1'" x-model="field.value"
+            <template x-if="field.type === 'Int' || field.type === 'Float' || field.type === 'Decimal'">
+              <input type="number" :step="field.type === 'Int' ? '1' : '0.01'" x-model="field.value"
                 :placeholder="field.name"
                 class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary transition-colors">
             </template>
@@ -2241,9 +2302,9 @@
             </template>
 
             <!-- Text / String / JSON fallback -->
-            <template x-if="!field.isRelation && (field.type === 'String' || (field.type !== 'Boolean' && field.type !== 'Int' && field.type !== 'Float' && field.type !== 'DateTime' && field.kind !== 'enum'))">
-              <input type="text" x-model="field.value"
-                :placeholder="field.name"
+            <template x-if="!field.isRelation && (field.type === 'String' || (field.type !== 'Boolean' && field.type !== 'Int' && field.type !== 'Float' && field.type !== 'Decimal' && field.type !== 'DateTime' && field.kind !== 'enum'))">
+              <input :type="['imageUrl', 'videoUrl'].includes(field.name) ? 'url' : 'text'" x-model="field.value"
+                :placeholder="['imageUrl', 'videoUrl'].includes(field.name) ? 'https://…' : field.name"
                 class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary transition-colors">
             </template>
           </div>
@@ -2346,6 +2407,7 @@
         tableLoadRequestId: 0,
         tableSearch: "",
         tableSearchColumn: "ALL",
+        tableColumnFilters: {},
         loadingTable: false,
         activeRowData: null,
         rowFormJson: "{}",
@@ -2369,11 +2431,12 @@
         selectedWorkoutPlanId: "",
 
         // ---- Users view state ----
-        usersFilters: { search: "", status: "ALL", page: 1, sortBy: "createdAt", sortOrder: "desc" },
+        usersFilters: { search: "", searchColumn: "ALL", status: "ALL", page: 1, sortBy: "createdAt", sortOrder: "desc" },
         selectedUser: null,
+        exportingUserDataId: null,
 
         // ---- Coaches view state ----
-        coachesFilters: { search: "", page: 1 },
+        coachesFilters: { search: "", searchColumn: "ALL", page: 1 },
         selectedCoachDetails: null,
         coachDetailsLoading: false,
         coachDetailsError: "",
@@ -2382,18 +2445,19 @@
         auditPage: 1,
 
         // ---- Payments view state ----
-        paymentsFilters: { status: "ALL", page: 1 },
+        paymentsFilters: { status: "ALL", search: "", searchColumn: "ALL", page: 1 },
 
         // ---- Support / coach reports / integrations ----
         supportTickets: [],
         supportCounts: {},
-        supportFilters: { status: "OPEN", search: "" },
+        supportFilters: { status: "OPEN", search: "", searchField: "ALL" },
         activeTicket: null,
         ticketForm: { status: "OPEN", adminReply: "", category: "GENERAL", subject: "", message: "" },
         savingTicket: false,
         coachReports: [],
         reportCounts: {},
         reportFilter: "OPEN",
+        reportFilters: { search: "", searchField: "ALL" },
         activeReport: null,
         reportForm: { status: "OPEN", adminNote: "", newCoachId: "" },
         savingReport: false,
@@ -2515,10 +2579,14 @@
             model.name.toLowerCase() === tableName.toLowerCase() ||
             (model.tableName || "").toLowerCase() === tableName.toLowerCase()
           ) || null;
-          const dateFields = (this.activeModelInfo?.fields || []).filter((field) => field.kind === "scalar" && field.type === "DateTime").map((field) => field.name);
-          this.tableSortBy = dateFields.includes("createdAt") ? "createdAt" : (dateFields.includes("date") ? "date" : (dateFields[0] || "id"));
+          const sortableFields = (this.activeModelInfo?.fields || []).filter((field) =>
+            (field.kind === "scalar" || field.kind === "enum") && !field.isList && !["Json", "Bytes"].includes(field.type)
+          ).map((field) => field.name);
+          this.tableSortBy = sortableFields.includes("createdAt") ? "createdAt" : (sortableFields.includes("date") ? "date" : (sortableFields[0] || "id"));
           this.tableSortOrder = "desc";
           this.tableSearchColumn = "ALL";
+          this.tableSearch = "";
+          this.tableColumnFilters = {};
           this.currentView = "db-explorer";
           this.fetchTableRows(tableName);
         },
@@ -2609,6 +2677,7 @@
           this.activeModelInfo = this.dbSchema.find((model) => model.name === modelName) || null;
           this.tableSearchColumn = "ALL";
           this.tableSearch = "";
+          this.tableColumnFilters = {};
           this.rowFormFields = this._buildFormFields(null);
           if (modelName === "WorkoutPlanExercise" && this.selectedWorkoutPlanId) {
             const planField = this.rowFormFields.find((field) => field.name === "planId");
@@ -2689,7 +2758,7 @@
 
         tableSortable(column) {
           const field = this.activeModelInfo?.fields?.find((item) => item.name === column);
-          return field?.kind === "scalar" && field.type === "DateTime";
+          return Boolean(field && (field.kind === "scalar" || field.kind === "enum") && !field.isList && !["Json", "Bytes"].includes(field.type));
         },
 
         tableHeaderLabel(column) {
@@ -2708,12 +2777,42 @@
           this.fetchTableRows();
         },
 
+        setTableSearchColumn(column) {
+          this.tableSearchColumn = column;
+          this.tablePage = 1;
+          this.fetchTableRows();
+        },
+
+        setTableColumnFilter(column, value) {
+          this.tableColumnFilters[column] = String(value || "").slice(0, 200);
+          this.tablePage = 1;
+          this.fetchTableRows();
+        },
+
+        activeColumnFilterCount() {
+          return Object.values(this.tableColumnFilters || {}).filter((value) => String(value || "").trim()).length;
+        },
+
+        clearTableColumnFilters() {
+          this.tableColumnFilters = {};
+          this.tablePage = 1;
+          this.fetchTableRows();
+        },
+
         fetchTableRows(tableName = this.activeTableName) {
           if (!this.isAuthenticated || !tableName) return;
           const requestId = ++this.tableLoadRequestId;
           this.loadingTable = true;
-          const sortQuery = `sortBy=${encodeURIComponent(this.tableSortBy)}&sortOrder=${encodeURIComponent(this.tableSortOrder)}`;
-          this.apiRequestWithMeta("GET", `/api/v1/admin/db/tables/${tableName}?page=${this.tablePage}&limit=100&${sortQuery}`)
+          const params = new URLSearchParams({
+            page: String(this.tablePage),
+            limit: "100",
+            sortBy: this.tableSortBy,
+            sortOrder: this.tableSortOrder,
+            search: this.tableSearch.trim(),
+            searchColumn: this.tableSearchColumn || "ALL",
+            filters: JSON.stringify(Object.fromEntries(Object.entries(this.tableColumnFilters || {}).filter(([, value]) => String(value || "").trim())))
+          });
+          this.apiRequestWithMeta("GET", `/api/v1/admin/db/tables/${tableName}?${params.toString()}`)
             .then((result) => {
               if (requestId !== this.tableLoadRequestId || tableName !== this.activeTableName) return;
               this.loadingTable = false;
@@ -2728,18 +2827,7 @@
                 (m) => m.name.toLowerCase() === tableName.toLowerCase() || m.tableName.toLowerCase() === tableName.toLowerCase()
               );
               if (foundModel) this.activeModelInfo = foundModel;
-              const direction = this.tableSortOrder === "asc" ? 1 : -1;
-              this.tableRows = rows.slice().sort((a, b) => {
-                const left = a?.[this.tableSortBy];
-                const right = b?.[this.tableSortBy];
-                if (left == null || right == null) return left == null ? (right == null ? 0 : 1) : -1;
-                const leftTime = new Date(left).getTime();
-                const rightTime = new Date(right).getTime();
-                const bothDates = Number.isFinite(leftTime) && Number.isFinite(rightTime) &&
-                  (this.activeModelInfo?.fields || []).some((field) => field.name === this.tableSortBy && field.type === "DateTime");
-                const comparison = bothDates ? leftTime - rightTime : String(left).localeCompare(String(right), undefined, { numeric: true });
-                return comparison * direction;
-              });
+              this.tableRows = rows;
             })
             .catch((err) => {
               if (requestId !== this.tableLoadRequestId || tableName !== this.activeTableName) return;
@@ -2765,18 +2853,15 @@
           return ["id", "createdAt"];
         },
 
+        tableSearchColumns() {
+          return (this.activeModelInfo?.fields || [])
+            .filter((field) => field.kind === "scalar" || field.kind === "enum")
+            .map((field) => field.name);
+        },
+
         filteredTableRows() {
-          if (!this.tableSearch.trim()) return this.tableRows;
-          const search = this.tableSearch.toLowerCase();
-          if (this.tableSearchColumn && this.tableSearchColumn !== 'ALL') {
-            const col = this.tableSearchColumn;
-            return this.tableRows.filter((row) => {
-              const val = row[col];
-              if (val === null || val === undefined) return false;
-              return String(typeof val === 'object' ? JSON.stringify(val) : val).toLowerCase().includes(search);
-            });
-          }
-          return this.tableRows.filter((row) => JSON.stringify(row).toLowerCase().includes(search));
+          // Filtering and sorting are applied by the API before pagination, across the full table.
+          return this.tableRows;
         },
 
         // Foreign-key columns (e.g. userId, coachId) show a resolved
@@ -2803,7 +2888,7 @@
           if (this.activeModelInfo?.fields) {
             this.activeModelInfo.fields.forEach(f => {
               if ((f.kind === 'scalar' || f.kind === 'enum') && !f.isId && f.name !== 'createdAt' && f.name !== 'updatedAt') {
-                let value = initialData !== null ? (initialData[f.name] ?? (f.type === 'Boolean' ? false : f.type === 'Int' || f.type === 'Float' ? '' : '')) : '';
+                let value = initialData !== null ? (initialData[f.name] ?? (f.type === 'Boolean' ? false : f.type === 'Int' || f.type === 'Float' || f.type === 'Decimal' ? '' : '')) : '';
                 let originalIso = null;
                 // Format datetime values for input[type=datetime-local]
                 if (f.type === 'DateTime' && value) {
@@ -2855,6 +2940,8 @@
             } else if (f.type === 'Int') {
               data[f.name] = parseInt(f.value, 10);
             } else if (f.type === 'Float') {
+              data[f.name] = parseFloat(f.value);
+            } else if (f.type === 'Decimal') {
               data[f.name] = parseFloat(f.value);
             } else if (f.type === 'DateTime' && f.value) {
               data[f.name] = f.originalIso && f.value === f.initialValue ? f.originalIso : new Date(f.value).toISOString();
@@ -2924,15 +3011,18 @@
             if (field.required && (value === "" || value === null || value === undefined)) {
               return `${this.adminFieldLabel(field.name)} is required. Please fill it in.`;
             }
-            if ((field.type === "Int" || field.type === "Float") && value !== "" && value !== null && !Number.isFinite(Number(value))) {
+            if ((field.type === "Int" || field.type === "Float" || field.type === "Decimal") && value !== "" && value !== null && !Number.isFinite(Number(value))) {
               return `${this.adminFieldLabel(field.name)} must be a valid number.`;
+            }
+            if (field.name === "caloriesPerRep" && value !== "" && Number(value) < 0) {
+              return "Calories per rep cannot be negative.";
             }
           }
           return "";
         },
 
         adminFieldLabel(name) {
-          const labels = { planId: "Workout plan", exerciseId: "Exercise", categoryKey: "Category", durationMinutes: "Duration in minutes", sortOrder: "Exercise order", imageUrl: "Image link", videoUrl: "Video link", isActive: "Available for users", userId: "Client", coachId: "Coach", lastMessageAt: "Last message time", closedForUserAt: "Chat closed for user" };
+          const labels = { planId: "Workout plan", exerciseId: "Exercise", categoryKey: "Category", durationMinutes: "Duration in minutes", sortOrder: "Exercise order", imageUrl: "Image link", videoUrl: "Video link", caloriesPerRep: "Calories burned per rep", isActive: "Available for users", userId: "Client", coachId: "Coach", lastMessageAt: "Last message time", closedForUserAt: "Chat closed for user" };
           return labels[name] || String(name).replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
         },
 
@@ -3094,6 +3184,7 @@
           const q = new URLSearchParams({ limit: "100" });
           if (this.supportFilters.status !== "ALL") q.set("status", this.supportFilters.status);
           if (this.supportFilters.search.trim()) q.set("search", this.supportFilters.search.trim());
+          if (this.supportFilters.searchField !== "ALL") q.set("searchField", this.supportFilters.searchField);
           return this.apiRequestWithMeta("GET", `/api/v1/admin/support/tickets?${q}`)
             .then(({ data, meta }) => {
               this.supportTickets = data || [];
@@ -3158,6 +3249,8 @@
           if (!this.isAuthenticated) return Promise.resolve();
           const q = new URLSearchParams({ limit: "100" });
           if (this.reportFilter !== "ALL") q.set("status", this.reportFilter);
+          if (this.reportFilters.search.trim()) q.set("search", this.reportFilters.search.trim());
+          if (this.reportFilters.searchField !== "ALL") q.set("searchField", this.reportFilters.searchField);
           return this.apiRequestWithMeta("GET", `/api/v1/admin/coach-reports?${q}`)
             .then(({ data, meta }) => {
               this.coachReports = data || [];
@@ -3356,7 +3449,7 @@
         get dashboard() {
           if (this.liveDashboard) {
             return {
-              totals: this.liveDashboard.totals || { users: 0, coaches: 0, admins: 0, activeUsers: 0 },
+              totals: this.liveDashboard.totals || { users: 0, coaches: 0, admins: 0, activeUsers: 0, suspendedUsers: 0 },
               newRegistrations: this.liveDashboard.newRegistrations || { last7Days: 0, last30Days: 0 },
               recentUsers: this.liveDashboard.recentUsers || [],
               payments: this.liveDashboard.payments || { totalRevenue: 0, successfulCount: 0, pendingCount: 0, refundedCount: 0, failedCount: 0 },
@@ -3364,10 +3457,12 @@
             };
           }
           const admins = (this.users || []).filter((u) => u.role === "ADMIN").length;
-          const activeUsers = (this.users || []).filter((u) => u.isActive).length;
+          const userAccounts = (this.users || []).filter((u) => u.role === "USER");
+          const activeUsers = userAccounts.filter((u) => u.isActive).length;
+          const suspendedUsers = userAccounts.length - activeUsers;
           const successfulPayments = (this.payments || []).filter((p) => p.status === "SUCCESS");
           return {
-            totals: { users: (this.users || []).length, coaches: (this.coaches || []).length, admins, activeUsers },
+            totals: { users: userAccounts.length, coaches: (this.coaches || []).length, admins, activeUsers, suspendedUsers },
             newRegistrations: { last7Days: 0, last30Days: 0 },
             recentUsers: [],
             payments: {
@@ -3399,6 +3494,13 @@
           }
         },
 
+        matchesAdminColumnSearch(columns, selectedColumn, search) {
+          if (!search) return true;
+          const value = selectedColumn === "ALL" ? Object.values(columns) : columns[selectedColumn];
+          const text = (item) => Array.isArray(item) ? item.map(text).join(" ") : item && typeof item === "object" ? Object.values(item).map(text).join(" ") : String(item ?? "");
+          return text(value).toLocaleLowerCase().includes(search.toLocaleLowerCase());
+        },
+
         get pagedUsers() {
           const f = this.usersFilters;
           const search = f.search.toLowerCase();
@@ -3408,7 +3510,14 @@
           let filtered = this.users.filter((u) => {
             const roleMatch = u.role === "USER";
             const statusMatch = f.status === "ALL" || (f.status === "ACTIVE" ? u.isActive : !u.isActive);
-            const textMatch = !search || `${u.fullName} ${u.username ?? ""} ${u.email} ${u.phone ?? ""}`.toLowerCase().includes(search);
+            const textMatch = this.matchesAdminColumnSearch({
+              name: `${u.fullName || ""} ${u.username || ""}`,
+              email: u.email,
+              role: u.role,
+              coach: u.assignedCoach?.user?.fullName || "Unassigned",
+              status: u.isActive ? "Active" : "Suspended",
+              joined: u.createdAt
+            }, f.searchColumn, search);
             return roleMatch && statusMatch && textMatch;
           });
           filtered.sort((a, b) => {
@@ -3432,8 +3541,16 @@
           let filtered = this.coaches.filter((c) => {
             const name = c.user?.fullName || "";
             const email = c.user?.email || "";
-            const text = `${name} ${email} ${c.bio ?? ""}`.toLowerCase();
-            return !search || text.includes(search);
+            const text = {
+              name,
+              email,
+              role: c.user?.role || "COACH",
+              specialties: c.specialties || [],
+              experience: c.experienceYears ?? 0,
+              accepting: c.isAcceptingClients ? "Yes" : "No",
+              clients: c._count?.clients ?? 0
+            };
+            return this.matchesAdminColumnSearch(text, f.searchColumn, search);
           });
           const limit = 10;
           const total = filtered.length;
@@ -3461,7 +3578,19 @@
         // ================= COMPUTED: PAYMENTS =================
         get pagedPayments() {
           const f = this.paymentsFilters;
-          let filtered = this.payments.filter((p) => f.status === "ALL" || p.status === f.status);
+          const search = f.search.toLocaleLowerCase();
+          let filtered = this.payments.filter((p) => {
+            const statusMatch = f.status === "ALL" || p.status === f.status;
+            const searchMatch = this.matchesAdminColumnSearch({
+              user: `${p.user?.fullName || ""} ${p.user?.email || ""}`,
+              amount: `${p.amount ?? ""} ${p.currency || "INR"} ${this.formatCurrency(p.amount, p.currency)}`,
+              purpose: p.purpose,
+              method: p.method,
+              status: p.status,
+              when: p.createdAt
+            }, f.searchColumn, search);
+            return statusMatch && searchMatch;
+          });
           filtered = [...filtered].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           const limit = 20;
           const total = filtered.length;
@@ -3503,6 +3632,48 @@
           this.apiRequest("GET", `/api/v1/admin/users/${id}`).then((detail) => {
             if (this.currentView === "user-detail" && this.selectedUser?.id === id) this.selectedUser = detail;
           }).catch((err) => this.showToast(err.message || "Unable to load the latest user profile", "error"));
+        },
+
+        async downloadUserData(user) {
+          if (!user?.id || this.exportingUserDataId) return;
+          this.exportingUserDataId = user.id;
+          const path = `/api/v1/admin/users/${encodeURIComponent(user.id)}/export`;
+          try {
+            const request = () => fetch(path, {
+              method: "GET",
+              headers: this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {},
+              cache: "no-store"
+            });
+            let response = await request();
+            if (response.status === 401 && await this.refreshAccess()) response = await request();
+            if (!response.ok) {
+              const payload = await response.json().catch(() => null);
+              if (response.status === 401) this.logout();
+              throw new Error(payload?.message || "We couldn't prepare this user's data download. Please refresh and try again.");
+            }
+
+            const blob = await response.blob();
+            const disposition = response.headers.get("Content-Disposition") || "";
+            const filename = disposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i)?.[1]
+                ?.replace(/\"$/, "") || `fitnerve-${user.username || user.id}-data.csv`;
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = objectUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+
+            const mediaWarnings = Number(response.headers.get("X-FitNerve-Media-Warnings") || 0);
+            this.showToast(mediaWarnings
+                ? `CSV downloaded, but ${mediaWarnings} stored file(s) could not be embedded. See the media_warnings row in the export.`
+                : "Full user data downloaded as CSV, including related records and available uploaded files.");
+          } catch (error) {
+            this.showToast(error.message || "We couldn't download this user's data. Please try again.", "error");
+          } finally {
+            this.exportingUserDataId = null;
+          }
         },
 
         // ================= ADD USER =================

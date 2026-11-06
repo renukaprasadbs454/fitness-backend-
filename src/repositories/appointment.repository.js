@@ -45,6 +45,16 @@ const appointmentRepository = {
       }
     }),
 
+  bookingWindowsForCoach: (coachId, from, to) =>
+    prisma.appointment.findMany({
+      where: {
+        coachId,
+        status: { in: ["PENDING", "CONFIRMED"] },
+        scheduledAt: { lt: to }
+      },
+      select: { scheduledAt: true, durationMinutes: true }
+    }).then((items) => items.filter((item) => new Date(item.scheduledAt).getTime() + item.durationMinutes * 60000 > from.getTime())),
+
   // Sessions per client, optionally only with one coach: { userId -> { total, upcoming } }.
   countsByClient: async (userIds, coachId) => {
     if (!userIds.length) return new Map();

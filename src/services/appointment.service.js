@@ -58,7 +58,7 @@ async function assertNoConflict(coachId, scheduledAt, durationMinutes, excludeAp
         s.startTime <= toHHMM(startsAt) &&
         s.endTime >= toHHMM(endsAt)
     );
-    if (slots.length > 0 && !withinAvailability) {
+    if (!withinAvailability) {
       throw ApiError.badRequest("Requested time is outside the coach's availability");
     }
   }
@@ -76,7 +76,8 @@ async function assertNoConflict(coachId, scheduledAt, durationMinutes, excludeAp
   }
 }
 
-async function create(userId, { coachId, title, scheduledAt, durationMinutes = 45, notes }, { onChatMessage } = {}) {
+async function create(userId, { coachId, title, scheduledAt, durationMinutes = 60, notes }, { onChatMessage } = {}) {
+  if (![45, 60].includes(durationMinutes)) throw ApiError.badRequest("Choose a 45- or 60-minute coaching session");
   const coach = await coachRepository.findById(coachId);
   if (!coach) throw ApiError.notFound("Coach not found");
   const user = await userRepository.findById(userId);
@@ -242,6 +243,7 @@ async function updateStatus(userId, userRole, id, status) {
     throw ApiError.forbidden("You can only cancel your own appointment");
   }
 
+  const wasAlreadyCancelled = appointment.status === "CANCELLED";
   let updated = await appointmentRepository.updateStatus(id, status);
 
   if (status === "CONFIRMED") {
@@ -249,6 +251,23 @@ async function updateStatus(userId, userRole, id, status) {
   } else if (status === "CANCELLED" && (appointment.meetingEventId || appointment.meetingLink)) {
     await meetingService.cancelMeeting(appointment.meetingEventId);
     updated = await appointmentRepository.updateMeeting(id, { meetingLink: null, meetingProvider: null, meetingEventId: null });
+  }
+
+  if (status === "CANCELLED" && !wasAlreadyCancelled) {
+    const when = formatIst(appointment.scheduledAt);
+    const cancelledBy = userRole === "ADMIN"
+      ? "an administrator"
+      : isOwner ? (appointment.user?.fullName || "your client") : (appointment.coach?.user?.fullName || "your coach");
+    const recipients = userRole === "ADMIN"
+      ? [appointment.userId, appointment.coach?.userId].filter(Boolean)
+      : [isOwner ? appointment.coach?.userId : appointment.userId].filter(Boolean);
+    await Promise.all(recipients.map((recipientId) => notificationService.notify(
+      recipientId,
+      "APPOINTMENT_CHANGED",
+      "Session cancelled",
+      `Your session "${appointment.title}" on ${when} was cancelled by ${cancelledBy}.`,
+      { data: { appointmentId: appointment.id, status: "CANCELLED" } }
+    ).catch((err) => logger.warn(`[appointments] cancellation notice failed: ${err.message}`))));
   }
 
   return updated;
@@ -266,13 +285,17 @@ async function reschedule(userId, userRole, id, { scheduledAt, durationMinutes }
   if (appointment.status === "CANCELLED" || appointment.status === "COMPLETED") {
     throw ApiError.badRequest("Cannot reschedule a cancelled or completed appointment");
   }
+  const requestedDuration = durationMinutes ?? appointment.durationMinutes;
+  if (isOwner && !isCoachOnAppointment && userRole !== "ADMIN" && ![45, 60].includes(requestedDuration)) {
+    throw ApiError.badRequest("Choose a 45- or 60-minute coaching session");
+  }
 
   // Weekly availability describes when clients may book. A coach (or admin) moving a session
   // isn't bound by it; a client moving their own booking is.
   await assertNoConflict(
     appointment.coachId,
     scheduledAt,
-    durationMinutes || appointment.durationMinutes,
+    requestedDuration,
     id,
     { checkAvailability: isOwner && !isCoachOnAppointment && userRole !== "ADMIN" }
   );

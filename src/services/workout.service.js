@@ -38,6 +38,9 @@ function toPlanDto(plan) {
         name: e.exercise.name,
         muscleGroup: e.exercise.muscleGroup,
         equipment: e.exercise.equipment,
+        imageUrl: e.exercise.imageUrl ?? null,
+        videoUrl: e.exercise.videoUrl ?? null,
+        caloriesPerRep: e.exercise.caloriesPerRep ?? null,
         sets: e.sets,
         reps: e.reps
       }))
@@ -77,10 +80,28 @@ async function deletePlan(id) {
   await workoutRepository.deletePlan(id);
 }
 
-async function completePlan(userId, planId) {
+async function completePlan(userId, planId, { exerciseReps } = {}) {
   const plan = await workoutRepository.findPlanById(planId);
   if (!plan) throw ApiError.notFound("Workout plan not found");
-  const completion = await workoutRepository.createCompletion(userId, planId);
+  const prescribedReps = new Map(plan.exercises.map((entry) => [
+    entry.exerciseId,
+    (entry.sets ?? 0) * (entry.reps ?? 0)
+  ]));
+  const repsByExercise = exerciseReps === undefined
+    ? prescribedReps
+    : new Map(exerciseReps.map(({ exerciseId, repsCompleted }) => [exerciseId, repsCompleted]));
+  if (exerciseReps && repsByExercise.size !== exerciseReps.length) {
+    throw ApiError.badRequest("Each exercise can only be listed once.");
+  }
+  if (repsByExercise.size > plan.exercises.length || [...repsByExercise.keys()].some((id) => !prescribedReps.has(id))) {
+    throw ApiError.badRequest("Workout contains an exercise that is not part of this plan.");
+  }
+  const caloriesExact = plan.exercises.reduce((sum, entry) => {
+    const reps = repsByExercise.get(entry.exerciseId) ?? 0;
+    return sum + reps * Number(entry.exercise.caloriesPerRep ?? 0);
+  }, 0);
+  const caloriesBurned = Math.round(caloriesExact);
+  const completion = await workoutRepository.createCompletion(userId, planId, caloriesBurned);
   await activityFeed.record(userId, "WORKOUT_COMPLETED", `Completed ${plan.title} workout`);
   return completion;
 }

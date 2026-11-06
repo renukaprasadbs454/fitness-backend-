@@ -278,7 +278,7 @@ router.delete(
 router.post(
   "/:id/complete",
   authenticate,
-  validate(schemas.idParam),
+  validate(schemas.completePlan),
   workoutController.completePlan
 );
 

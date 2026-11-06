@@ -158,6 +158,7 @@ const userRepository = {
     prisma.refreshToken.updateMany({ where: { userId, revoked: false }, data: { revoked: true } }),
 
   countByRole: (role) => prisma.user.count({ where: { role } }),
+  countByRoleAndStatus: (role, isActive) => prisma.user.count({ where: { role, isActive } }),
 
   countActive: () => prisma.user.count({ where: { isActive: true } }),
 

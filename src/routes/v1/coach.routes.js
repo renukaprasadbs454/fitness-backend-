@@ -221,6 +221,14 @@ router.get("/:id", cacheResponse(60), validate(schemas.idParam), coachController
  */
 router.get("/:coachId/availability", cacheResponse(60), coachController.listAvailability);
 
+// Return only busy time windows, never participant names or session details.
+router.get(
+  "/:coachId/booking-windows",
+  authenticate,
+  requireRole(ROLES.USER, ROLES.ADMIN),
+  coachController.listBookingWindows
+);
+
 /**
  * @swagger
  * /coaches/{coachId}/availability:

@@ -41,19 +41,25 @@ async function listMine(userId) {
 async function adminList(query) {
   const { page, limit, skip } = parsePagination(query);
   const search = query.search?.trim();
+  const searchField = query.searchField || "ALL";
+  const searchMatches = search
+    ? searchField === "SUBJECT"
+      ? [{ subject: { contains: search, mode: "insensitive" } }]
+      : searchField === "USER"
+        ? [{ user: { fullName: { contains: search, mode: "insensitive" } } }, { user: { email: { contains: search, mode: "insensitive" } } }]
+        : searchField === "MESSAGE"
+          ? [{ message: { contains: search, mode: "insensitive" } }]
+          : [
+              { subject: { contains: search, mode: "insensitive" } },
+              { message: { contains: search, mode: "insensitive" } },
+              { user: { fullName: { contains: search, mode: "insensitive" } } },
+              { user: { email: { contains: search, mode: "insensitive" } } }
+            ]
+    : null;
   const where = {
     status: query.status || undefined,
     category: query.category || undefined,
-    ...(search
-      ? {
-          OR: [
-            { subject: { contains: search, mode: "insensitive" } },
-            { message: { contains: search, mode: "insensitive" } },
-            { user: { fullName: { contains: search, mode: "insensitive" } } },
-            { user: { email: { contains: search, mode: "insensitive" } } }
-          ]
-        }
-      : {})
+    ...(searchMatches ? { OR: searchMatches } : {})
   };
 
   const [items, total, grouped] = await Promise.all([

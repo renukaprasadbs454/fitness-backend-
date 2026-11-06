@@ -162,6 +162,20 @@ async function listAvailability(coachId) {
   return coachRepository.listAvailability(coachId);
 }
 
+async function listBookingWindows(coachId, { from, to }) {
+  await getCoachById(coachId);
+  const start = new Date(from);
+  const end = new Date(to);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
+    throw ApiError.badRequest("Choose a valid date range to view booked sessions");
+  }
+  if (end.getTime() - start.getTime() > 32 * 24 * 60 * 60 * 1000) {
+    throw ApiError.badRequest("Date range cannot be longer than 32 days");
+  }
+  const sessions = await appointmentRepository.bookingWindowsForCoach(coachId, start, end);
+  return sessions.map(({ scheduledAt, durationMinutes }) => ({ scheduledAt, durationMinutes }));
+}
+
 /**
  * The Clients page only includes active users currently assigned to this coach.
  */
@@ -221,13 +235,16 @@ async function listClientProgressPhotos(userId, clientId) {
   const mediaRepository = require("../repositories/media.repository");
   const { resolveReadUrl } = require("../utils/storage");
   const photos = await mediaRepository.listByUser(clientId, "PROGRESS_IMAGE");
-  return photos.map((photo) => ({
-    id: photo.id,
-    url: resolveReadUrl(photo.url),
-    angle: photo.angle,
-    sessionId: photo.sessionId,
-    createdAt: photo.createdAt
-  }));
+  const photoSets = await require("../repositories/progress.repository").progressPhotoSessions(clientId);
+  const setCreatedAtById = new Map(photoSets.map((photo) => [photo.sessionId, photo.setCreatedAt]));
+  const sets = new Map();
+  for (const photo of photos) {
+    const sessionId = photo.sessionId || `legacy-${photo.id}`;
+    if (!sets.has(sessionId)) sets.set(sessionId, { sessionId, createdAt: setCreatedAtById.get(sessionId) || photo.createdAt, photos: [] });
+    const set = sets.get(sessionId);
+    set.photos.push({ id: photo.id, url: resolveReadUrl(photo.url), angle: photo.angle, createdAt: photo.createdAt });
+  }
+  return [...sets.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 async function listMyAppointments(userId, query) {
@@ -257,6 +274,7 @@ module.exports = {
   updateAvailabilitySlot,
   deleteAvailabilitySlot,
   listAvailability,
+  listBookingWindows,
   listMyClients,
   listClientProgressPhotos,
   listMyAppointments

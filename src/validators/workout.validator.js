@@ -5,6 +5,16 @@ const DIFFICULTIES = ["BEGINNER", "INTERMEDIATE", "ADVANCED"];
 
 const idParam = { params: z.object({ id: z.string().uuid() }) };
 
+const completePlan = {
+  params: idParam.params,
+  body: z.object({
+    exerciseReps: z.array(z.object({
+      exerciseId: z.string().uuid(),
+      repsCompleted: z.number().int().min(0).max(10000)
+    })).max(100).optional()
+  }).optional()
+};
+
 const listPlans = {
   query: z.object({
     category: z.enum(CATEGORY_KEYS).optional(),
@@ -43,7 +53,10 @@ const createExercise = {
     name: z.string().trim().min(2).max(120),
     description: z.string().max(1000).optional(),
     muscleGroup: z.string().max(60).optional(),
-    equipment: z.string().max(120).optional()
+    equipment: z.string().max(120).optional(),
+    imageUrl: z.string().url().max(2048).nullable().optional(),
+    videoUrl: z.string().url().max(2048).nullable().optional(),
+    caloriesPerRep: z.number().min(0).max(100).nullable().optional()
   })
 };
 
@@ -84,6 +97,7 @@ const updateScheduleStatus = {
 
 module.exports = {
   idParam,
+  completePlan,
   listPlans,
   createPlan,
   updatePlan,

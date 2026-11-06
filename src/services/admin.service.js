@@ -16,11 +16,12 @@ async function dashboardStats() {
   const since30d = new Date();
   since30d.setDate(since30d.getDate() - 30);
 
-  const [totalUsers, totalCoaches, activeUsers, newLast7d, newLast30d, admins, recentUsers, payments] =
+  const [totalUsers, totalCoaches, activeUsers, suspendedUsers, newLast7d, newLast30d, admins, recentUsers, payments] =
     await Promise.all([
       userRepository.countByRole("USER"),
       coachRepository.count(), // no specialty filter → all coaches
-      userRepository.countActive(),
+      userRepository.countByRoleAndStatus("USER", true),
+      userRepository.countByRoleAndStatus("USER", false),
       userRepository.countCreatedSince(since7d),
       userRepository.countCreatedSince(since30d),
       userRepository.countByRole("ADMIN"),
@@ -29,7 +30,7 @@ async function dashboardStats() {
     ]);
 
   return {
-    totals: { users: totalUsers, coaches: totalCoaches, admins, activeUsers },
+    totals: { users: totalUsers, coaches: totalCoaches, admins, activeUsers, suspendedUsers },
     newRegistrations: { last7Days: newLast7d, last30Days: newLast30d },
     recentUsers,
     payments,
@@ -56,15 +57,25 @@ async function getUserById(id) {
   const mediaRepository = require("../repositories/media.repository");
   const { resolveReadUrl } = require("../utils/storage");
   const photos = await mediaRepository.listByUser(id, "PROGRESS_IMAGE");
-  return {
-    ...safe,
-    progressPhotos: photos.map((photo) => ({
+  const photoSets = await require("../repositories/progress.repository").progressPhotoSessions(id);
+  const setCreatedAtById = new Map(photoSets.map((photo) => [photo.sessionId, photo.setCreatedAt]));
+  const groupedPhotos = new Map();
+  for (const photo of photos) {
+    const sessionId = photo.sessionId || `legacy-${photo.id}`;
+    if (!groupedPhotos.has(sessionId)) {
+      groupedPhotos.set(sessionId, { sessionId, createdAt: setCreatedAtById.get(sessionId) || photo.createdAt, photos: [] });
+    }
+    const session = groupedPhotos.get(sessionId);
+    session.photos.push({
       id: photo.id,
       url: resolveReadUrl(photo.url),
       angle: photo.angle,
-      sessionId: photo.sessionId,
       createdAt: photo.createdAt
-    }))
+    });
+  }
+  return {
+    ...safe,
+    progressPhotoSets: [...groupedPhotos.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
   };
 }
 
@@ -430,26 +441,105 @@ async function getModelData(modelName, query = {}) {
 
   const scalarFields = modelInfo.fields.filter((f) => f.kind === "scalar" || f.kind === "enum");
   const requestedSortBy = String(query.sortBy || "");
-  const sortBy = scalarFields.some((field) => field.name === requestedSortBy)
+  const sortableFields = scalarFields.filter((field) => !["Json", "Bytes"].includes(field.type));
+  const sortBy = sortableFields.some((field) => field.name === requestedSortBy)
     ? requestedSortBy
-    : (scalarFields.some((field) => field.name === "createdAt") ? "createdAt" : scalarFields[0]?.name);
+    : (sortableFields.some((field) => field.name === "createdAt") ? "createdAt" : sortableFields[0]?.name);
   const sortOrder = query.sortOrder === "asc" ? "asc" : "desc";
+  const search = String(query.search || "").trim().slice(0, 200);
+  const requestedSearchColumn = String(query.searchColumn || "");
+  const searchableFields = scalarFields;
+  const selectedSearchField = requestedSearchColumn && requestedSearchColumn !== "ALL"
+    ? searchableFields.find((field) => field.name === requestedSearchColumn)
+    : null;
+  const searchFields = requestedSearchColumn && requestedSearchColumn !== "ALL"
+    ? (selectedSearchField ? [selectedSearchField] : [])
+    : searchableFields;
+  let requestedFilters = {};
+  if (query.filters) {
+    try {
+      requestedFilters = typeof query.filters === "string" ? JSON.parse(query.filters) : query.filters;
+    } catch {
+      requestedFilters = {};
+    }
+  }
+  const fieldByName = new Map(scalarFields.map((field) => [field.name, field]));
+  const columnFilters = Object.entries(requestedFilters || {})
+    .filter(([name, value]) => fieldByName.has(name) && String(value ?? "").trim())
+    .map(([name, value]) => ({ field: fieldByName.get(name), value: String(value).trim().slice(0, 200) }));
+  const memorySearchFields = searchFields.filter((field) =>
+    field.isList || ["Json", "Bytes"].includes(field.type)
+  );
+  const memoryFilterFields = columnFilters.filter(({ field }) => field.isList || ["Json", "Bytes"].includes(field.type));
+  const databaseFilterFields = columnFilters.filter(({ field }) => !field.isList && !["Json", "Bytes"].includes(field.type));
+  const memorySearchRequired = Boolean(search && memorySearchFields.length);
+  const searchAllFieldsWithMemory = Boolean(search && requestedSearchColumn === "ALL" && memorySearchFields.length);
+  const toCondition = (field, value, substring = true) => {
+    if (field.kind === "enum") {
+      const matches = (field.enumValues || []).filter((item) => item.toLowerCase().includes(value.toLowerCase()));
+      return matches.length ? { [field.name]: { in: matches } } : { id: "__no_match__" };
+    }
+    if (field.type === "String") return { [field.name]: { contains: value, mode: "insensitive" } };
+    if (["Int", "Float", "Decimal"].includes(field.type)) return /^-?\d+(\.\d+)?$/.test(value) ? { [field.name]: Number(value) } : { id: "__no_match__" };
+    if (field.type === "BigInt") return /^-?\d+$/.test(value) ? { [field.name]: BigInt(value) } : { id: "__no_match__" };
+    if (field.type === "Boolean") return /^(true|false|yes|no|1|0)$/i.test(value) ? { [field.name]: /^(true|yes|1)$/i.test(value) } : { id: "__no_match__" };
+    if (field.type === "DateTime") {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return { id: "__no_match__" };
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const end = new Date(date);
+        end.setUTCDate(end.getUTCDate() + 1);
+        return { [field.name]: { gte: date, lt: end } };
+      }
+      return { [field.name]: date };
+    }
+    return substring ? { [field.name]: { contains: value, mode: "insensitive" } } : { [field.name]: value };
+  };
+  const whereParts = databaseFilterFields.map(({ field, value }) => toCondition(field, value));
+  const searchConditions = search && !searchAllFieldsWithMemory
+    ? searchFields.filter((field) => !field.isList && !["Json", "Bytes"].includes(field.type)).map((field) => toCondition(field, search))
+    : [];
+  if (search && !searchAllFieldsWithMemory && !memorySearchRequired) {
+    whereParts.push({ OR: searchConditions.length ? searchConditions : [{ id: "__no_match__" }] });
+  }
+  const where = whereParts.length ? { AND: whereParts } : undefined;
   const selectObj = {};
   scalarFields.forEach((f) => {
     selectObj[f.name] = true;
   });
 
-  const [rawItems, total] = await Promise.all([
-    delegate
-      .findMany({
-        skip,
-        take: limit,
-        select: selectObj,
-        orderBy: { [sortBy || "createdAt"]: sortOrder }
-      })
-      .catch(() => delegate.findMany({ skip, take: limit, select: selectObj })),
-    delegate.count().catch(() => 0)
-  ]);
+  const orderBy = { [sortBy || "createdAt"]: sortOrder };
+  let rawItems;
+  let total;
+  if (memorySearchRequired || searchAllFieldsWithMemory || memoryFilterFields.length) {
+    // Prisma cannot substring-search JSON, bytes, or scalar-list fields consistently.
+    // Load rows once, match their serialized values, then paginate the filtered set.
+    const allRows = await delegate.findMany({ where, select: selectObj, orderBy });
+    const searchableValues = (value) => {
+      if (value === null || value === undefined) return "";
+      if (Buffer.isBuffer(value)) return value.toString("base64");
+      if (value instanceof Date) return value.toISOString();
+      if (Array.isArray(value)) return value.map(searchableValues).join(" ");
+      if (typeof value === "object") return Object.entries(value).map(([key, nested]) => `${key} ${searchableValues(nested)}`).join(" ");
+      return String(value);
+    };
+    const matched = allRows.filter((row) => {
+      const filtersMatch = memoryFilterFields.every(({ field, value }) =>
+        searchableValues(row[field.name]).toLocaleLowerCase().includes(value.toLocaleLowerCase())
+      );
+      if (!filtersMatch || !search) return filtersMatch;
+      return searchFields.some((field) => searchableValues(row[field.name]).toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+    });
+    total = matched.length;
+    rawItems = matched.slice(skip, skip + limit);
+  } else {
+    const [items, count] = await Promise.all([
+      delegate.findMany({ skip, take: limit, where, select: selectObj, orderBy }),
+      delegate.count({ where })
+    ]);
+    rawItems = items;
+    total = count;
+  }
 
   const items = await resolveRelationLabels(prisma, modelInfo, rawItems);
 

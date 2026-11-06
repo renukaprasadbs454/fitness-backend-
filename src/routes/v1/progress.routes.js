@@ -81,6 +81,8 @@ router.post(
  */
 router.get("/photo-sessions", authenticate, progressController.photoSessions);
 
+router.post("/photo-sessions/:sessionId/freeze", authenticate, validate(schemas.freezePhotoSet), progressController.freezePhotoSet);
+
 /**
  * @swagger
  * /progress/report:

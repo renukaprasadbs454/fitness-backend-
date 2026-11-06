@@ -7,7 +7,7 @@ const createAppointment = {
     coachId: z.string().uuid(),
     title: z.string().trim().min(2).max(150),
     scheduledAt: z.string().datetime({ offset: true }),
-    durationMinutes: z.number().int().positive().max(240).optional(),
+    durationMinutes: z.union([z.literal(45), z.literal(60)]).optional(),
     notes: z.string().max(1000).optional()
   })
 };

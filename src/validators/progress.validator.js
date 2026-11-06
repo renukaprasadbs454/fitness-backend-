@@ -26,8 +26,13 @@ const logMeasurement = {
 const logPhoto = {
   body: z.object({
     angle: z.enum(["FRONT", "BACK", "LEFT", "RIGHT"]),
-    sessionId: z.string().min(1).max(100)
+    sessionId: z.string().min(1).max(100).optional()
   })
+};
+
+const freezePhotoSet = {
+  params: z.object({ sessionId: z.string().min(1).max(100) }),
+  body: z.object({})
 };
 
 const report = {
@@ -36,4 +41,4 @@ const report = {
   })
 };
 
-module.exports = { logWeight, logMeasurement, logPhoto, report };
+module.exports = { logWeight, logMeasurement, logPhoto, freezePhotoSet, report };

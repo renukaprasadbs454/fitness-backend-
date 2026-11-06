@@ -123,6 +123,12 @@ router.patch(
   validate(schemas.updateCustomAssignment),
   workoutAssignmentController.updateCustomAssignment
 );
+router.post(
+  "/custom/:id/copy",
+  authenticate,
+  validate(schemas.copyCustomAssignment),
+  workoutAssignmentController.copyCustomAssignment
+);
 router.delete("/custom/:id", authenticate, validate(schemas.idParam), workoutAssignmentController.removeCustomAssignment);
 
 /**

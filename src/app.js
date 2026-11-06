@@ -69,7 +69,10 @@ app.use(
         return callback(null, true);
       }
 
-      return callback(new Error("Not allowed by CORS"));
+      // A disallowed origin should receive a normal response without CORS
+      // headers. Turning this into an Express error causes OPTIONS requests to
+      // become 500s, which obscures the real issue and floods server logs.
+      return callback(null, false);
     },
     credentials: true
   })

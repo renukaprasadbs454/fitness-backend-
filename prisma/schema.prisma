@@ -150,11 +150,12 @@ model User {
   assignedCoachId String? @map("assigned_coach_id")
   assignedCoach   Coach?  @relation("CoachClients", fields: [assignedCoachId], references: [id], onDelete: SetNull)
 
-  profile       UserProfile?
-  coach         Coach?
-  refreshTokens RefreshToken[]
-  otpCodes      OtpCode[]
-  media         Media[]
+  profile               UserProfile?
+  coach                 Coach?
+  refreshTokens         RefreshToken[]
+  otpCodes              OtpCode[]
+  media                 Media[]
+  progressPhotoSetLocks ProgressPhotoSetLock[]
 
   bmiLogs                  BmiLog[]
   calorieLogs              CalorieLog[]
@@ -163,6 +164,7 @@ model User {
   weightLogs               WeightLog[]
   bodyMeasurements         BodyMeasurement[]
   workoutCompletions       WorkoutCompletion[]
+  customWorkoutCompletions CustomWorkoutCompletion[]
   scheduledWorkouts        ScheduledWorkout[]
   appointments             Appointment[]
   notifications            Notification[]
@@ -332,6 +334,19 @@ model Media {
   @@map("media")
 }
 
+// Keeps the 24-hour progress-photo set window even if a user resets/deletes
+// every image from the set.
+model ProgressPhotoSetLock {
+  id        String   @id
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  frozenAt  DateTime? @map("frozen_at")
+
+  @@index([userId, createdAt])
+  @@map("progress_photo_set_locks")
+}
+
 // ────────────────────────────────────────────────────────────
 // PHASE 2 — BMI MODULE
 // ────────────────────────────────────────────────────────────
@@ -446,6 +461,9 @@ model Exercise {
   description String?
   muscleGroup String?  @map("muscle_group")
   equipment   String?
+  imageUrl    String?  @map("image_url")
+  videoUrl    String?  @map("video_url")
+  caloriesPerRep Float? @map("calories_per_rep")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -499,6 +517,7 @@ model WorkoutCompletion {
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   planId      String      @map("plan_id")
   plan        WorkoutPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  caloriesBurned Int?     @map("calories_burned")
   completedAt DateTime    @default(now()) @map("completed_at")
 
   @@index([userId, completedAt])
@@ -545,6 +564,10 @@ model CustomWorkout {
   durationMinutes  Int?                @map("duration_minutes")
   difficulty       WorkoutDifficulty?
   categoryKey      WorkoutCategoryKey? @map("category_key")
+  accentColor      String              @default("#2563EB") @map("accent_color")
+  imageUrl         String?              @map("image_url")
+  videoUrl         String?              @map("video_url")
+  isAvailable      Boolean              @default(true) @map("is_available")
   // Set when another user builds this workout for the owner (userId) —
   // null for workouts users author for themselves. When an admin sends this
   // "as" a coach, this holds the coach's id (for attribution to the owner),
@@ -553,16 +576,35 @@ model CustomWorkout {
   assignedByUser   User?               @relation("UserAssignedCustomWorkouts", fields: [assignedByUserId], references: [id], onDelete: SetNull)
   createdByUserId  String?             @map("created_by_user_id")
   createdByUser    User?               @relation("UserCreatedCustomWorkouts", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  completedAt      DateTime?            @map("completed_at")
+  completedAt      DateTime?           @map("completed_at")
+  scheduledAt      DateTime?           @map("scheduled_at")
+  scheduleType     String              @default("ONCE") @map("schedule_type")
+  scheduleDays     String[]            @default([]) @map("schedule_days")
   createdAt        DateTime            @default(now()) @map("created_at")
   updatedAt        DateTime            @updatedAt @map("updated_at")
 
   exercises CustomWorkoutExercise[]
+  completions CustomWorkoutCompletion[]
 
   @@index([userId])
   @@index([assignedByUserId])
   @@index([createdByUserId])
+  @@index([userId, scheduledAt])
   @@map("custom_workouts")
+}
+
+model CustomWorkoutCompletion {
+  id              String        @id @default(uuid())
+  customWorkoutId String        @map("custom_workout_id")
+  customWorkout   CustomWorkout @relation(fields: [customWorkoutId], references: [id], onDelete: Cascade)
+  userId          String        @map("user_id")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completionDate  DateTime      @map("completion_date") @db.Date
+  completedAt     DateTime      @default(now()) @map("completed_at")
+
+  @@unique([customWorkoutId, completionDate])
+  @@index([userId, completedAt])
+  @@map("custom_workout_completions")
 }
 
 model CustomWorkoutExercise {
@@ -572,6 +614,8 @@ model CustomWorkoutExercise {
   name            String
   muscleGroup     String?       @map("muscle_group")
   equipment       String?
+  imageUrl        String?       @map("image_url")
+  videoUrl        String?       @map("video_url")
   sets            Int?
   reps            Int?
   sortOrder       Int           @default(0) @map("sort_order")

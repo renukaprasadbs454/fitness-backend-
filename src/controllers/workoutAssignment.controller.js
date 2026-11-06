@@ -26,6 +26,11 @@ const assignCustomWorkout = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.CREATED, "Workout assigned", workout);
 });
 
+const copyCustomAssignment = asyncHandler(async (req, res) => {
+  const workout = await assignedWorkoutService.copyCustomAssignment(req.user.id, req.params.id, req.body, req.user.role);
+  return ApiResponse.success(res, httpStatus.CREATED, "Workout copied and assigned", workout);
+});
+
 const listMyAssignedWorkouts = asyncHandler(async (req, res) => {
   const result = await assignedWorkoutService.listMyAssignments(req.user.id, req.query, req.user.role);
   return ApiResponse.success(res, httpStatus.OK, "Assigned workouts retrieved", result);
@@ -57,6 +62,7 @@ module.exports = {
   searchUsers,
   assignWorkoutPlan,
   assignCustomWorkout,
+  copyCustomAssignment,
   listMyAssignedWorkouts,
   unassignWorkoutPlan,
   updateAssignedWorkoutPlan

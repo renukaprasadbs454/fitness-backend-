@@ -83,6 +83,18 @@ router.post("/users", validate(schemas.createUser), adminController.createUser);
 
 /**
  * @swagger
+ * /admin/users/{id}/export:
+ *   get:
+ *     summary: Download a complete user data export, including related records and uploaded media
+ *     tags: [Admin]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: User data export downloaded as JSON }
+ */
+router.get("/users/:id/export", validate(schemas.idParam), adminController.exportUserData);
+
+/**
+ * @swagger
  * /admin/users/{id}:
  *   get:
  *     summary: Get full user details (profile + coach relation if any)

@@ -2,19 +2,20 @@ const prisma = require("../database/prismaClient");
 
 const workoutInclude = {
   exercises: { orderBy: { sortOrder: "asc" } },
+  completions: { orderBy: { completedAt: "desc" }, take: 1 },
   assignedByUser: { select: { id: true, fullName: true } }
 };
 
 const customWorkoutRepository = {
   listForUser: (userId) =>
     prisma.customWorkout.findMany({
-      where: { userId },
+      where: { userId, isAvailable: true },
       include: workoutInclude,
       orderBy: { createdAt: "desc" }
     }),
 
   findByIdForUser: (id, userId) =>
-    prisma.customWorkout.findFirst({ where: { id, userId }, include: workoutInclude }),
+    prisma.customWorkout.findFirst({ where: { id, userId, isAvailable: true }, include: workoutInclude }),
 
   create: (userId, { exercises, ...data }) =>
     prisma.customWorkout.create({

@@ -90,7 +90,39 @@ async function listMine(userId) {
 
 async function adminList(query) {
   const { page, limit, skip } = parsePagination(query);
-  const where = { status: query.status || undefined };
+  const search = String(query.search || "").trim().slice(0, 150);
+  const searchField = query.searchField || "ALL";
+  const textMatch = search
+    ? searchField === "USER"
+      ? [
+          { user: { fullName: { contains: search, mode: "insensitive" } } },
+          { user: { email: { contains: search, mode: "insensitive" } } }
+        ]
+      : searchField === "COACH"
+        ? [
+            { coach: { user: { fullName: { contains: search, mode: "insensitive" } } } },
+            { coach: { user: { email: { contains: search, mode: "insensitive" } } } }
+          ]
+        : searchField === "TEXT"
+          ? [
+              { details: { contains: search, mode: "insensitive" } },
+              { adminNote: { contains: search, mode: "insensitive" } },
+              { reason: { in: Object.keys(REASON_LABELS).filter((reason) => reason.toLowerCase().includes(search.toLowerCase())) } }
+            ]
+          : [
+              { user: { fullName: { contains: search, mode: "insensitive" } } },
+              { user: { email: { contains: search, mode: "insensitive" } } },
+              { coach: { user: { fullName: { contains: search, mode: "insensitive" } } } },
+              { coach: { user: { email: { contains: search, mode: "insensitive" } } } },
+              { details: { contains: search, mode: "insensitive" } },
+              { adminNote: { contains: search, mode: "insensitive" } },
+              { reason: { in: Object.keys(REASON_LABELS).filter((reason) => reason.toLowerCase().includes(search.toLowerCase())) } }
+            ]
+    : null;
+  const where = {
+    status: query.status || undefined,
+    ...(textMatch ? { OR: textMatch } : {})
+  };
   const [reports, total, grouped] = await Promise.all([
     prisma.coachReport.findMany({ where, include: adminInclude, orderBy: { createdAt: "desc" }, skip, take: limit }),
     prisma.coachReport.count({ where }),

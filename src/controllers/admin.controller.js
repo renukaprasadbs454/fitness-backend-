@@ -1,4 +1,5 @@
 const adminService = require("../services/admin.service");
+const userDataExportService = require("../services/userDataExport.service");
 const notificationService = require("../services/notification.service");
 const chatService = require("../services/chat.service");
 const appointmentService = require("../services/appointment.service");
@@ -26,6 +27,24 @@ const listUsers = asyncHandler(async (req, res) => {
 const getUserById = asyncHandler(async (req, res) => {
   const user = await adminService.getUserById(req.params.id);
   return ApiResponse.success(res, httpStatus.OK, "User retrieved", user);
+});
+
+const exportUserData = asyncHandler(async (req, res) => {
+  const data = await userDataExportService.buildUserDataExport(req.params.id);
+    const csv = userDataExportService.buildUserDataCsv(data);
+  const safeName = (data.subject.fullName || "user")
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "user";
+    const filename = `fitnerve-${safeName}-${data.subject.id.slice(0, 8)}-data.csv`;
+
+  res.status(httpStatus.OK);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Cache-Control", "no-store, private");
+  res.setHeader("X-FitNerve-Media-Warnings", String(data.mediaWarnings.length));
+    return res.send(csv);
 });
 
 const updateUser = asyncHandler(async (req, res) => {
@@ -261,6 +280,7 @@ module.exports = {
   dashboardStats,
   listUsers,
   getUserById,
+  exportUserData,
   updateUser,
   suspendUser,
   activateUser,

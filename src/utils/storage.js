@@ -187,6 +187,25 @@ async function deleteFile(storageKey) {
   }
 }
 
+/** Reads a stored upload for an authorized data export. */
+async function readFile(storageKey) {
+  if (!storageKey || typeof storageKey !== "string") throw new Error("The stored file reference is missing.");
+
+  if (env.storage.driver === "s3") {
+    if (!env.storage.aws.bucket) throw new Error("File storage is not configured.");
+    const result = await getS3().getObject({ Bucket: env.storage.aws.bucket, Key: storageKey }).promise();
+    return Buffer.from(result.Body);
+  }
+
+  const uploadRoot = path.resolve(process.cwd(), env.storage.localUploadDir);
+  const filePath = path.resolve(process.cwd(), storageKey);
+  const relativePath = path.relative(uploadRoot, filePath);
+  if (!relativePath || relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new Error("The stored file reference is outside the uploads folder.");
+  }
+  return fs.promises.readFile(filePath);
+}
+
 // 1x1 transparent PNG used to exercise the whole upload -> sign -> download path.
 const DIAGNOSTIC_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -250,4 +269,4 @@ async function diagnose() {
   return report;
 }
 
-module.exports = { saveFile, deleteFile, resolveReadUrl, detectImageType, diagnose };
+module.exports = { saveFile, deleteFile, readFile, resolveReadUrl, detectImageType, diagnose };

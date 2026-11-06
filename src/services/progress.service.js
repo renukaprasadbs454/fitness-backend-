@@ -1,6 +1,7 @@
 const progressRepository = require("../repositories/progress.repository");
-const mediaService = require("./media.service");
 const activityFeed = require("./activityFeed.service");
+const { saveFile, deleteFile } = require("../utils/storage");
+const ApiError = require("../utils/ApiError");
 
 async function logWeight(userId, { weightKg, loggedAt }) {
   const log = await progressRepository.createWeightLog(userId, {
@@ -20,7 +21,28 @@ async function logMeasurement(userId, data) {
 }
 
 async function logPhoto(userId, file, { angle, sessionId }) {
-  return mediaService.uploadImage(userId, file, "PROGRESS_IMAGE", { angle, sessionId });
+  if (!file) throw ApiError.badRequest("No file provided");
+  const { url, storageKey, mimeType } = await saveFile(file, "progress");
+  try {
+    const result = await progressRepository.createProgressPhoto(userId, {
+      url,
+      storageKey,
+      mimeType,
+      sizeBytes: file.size,
+      angle
+    }, sessionId);
+    if (result.replacedStorageKey) await deleteFile(result.replacedStorageKey);
+    return result.media;
+  } catch (error) {
+    await deleteFile(storageKey).catch(() => {});
+    throw error;
+  }
+}
+
+async function freezePhotoSet(userId, sessionId) {
+  const frozen = await progressRepository.freezeProgressPhotoSet(userId, sessionId);
+  if (!frozen) throw ApiError.notFound("Photo set not found");
+  return frozen;
 }
 
 async function photoSessions(userId) {
@@ -29,11 +51,11 @@ async function photoSessions(userId) {
   const sessionsById = new Map();
   for (const photo of photos) {
     if (!sessionsById.has(photo.sessionId)) {
-      sessionsById.set(photo.sessionId, { sessionId: photo.sessionId, createdAt: photo.createdAt, photos: [] });
+      sessionsById.set(photo.sessionId, { sessionId: photo.sessionId, createdAt: photo.setCreatedAt || photo.createdAt, frozen: photo.setFrozen, photos: [] });
     }
     const session = sessionsById.get(photo.sessionId);
     session.photos.push({ id: photo.id, angle: photo.angle, url: photo.url, createdAt: photo.createdAt });
-    if (photo.createdAt < session.createdAt) session.createdAt = photo.createdAt;
+    session.frozen = session.frozen || photo.setFrozen;
   }
 
   return [...sessionsById.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -82,4 +104,4 @@ async function report(userId, { range = "weekly" } = {}) {
   };
 }
 
-module.exports = { logWeight, logMeasurement, logPhoto, photoSessions, report };
+module.exports = { logWeight, logMeasurement, logPhoto, freezePhotoSet, photoSessions, report };

@@ -20,7 +20,7 @@ const recommended = asyncHandler(async (req, res) => {
 });
 
 const completePlan = asyncHandler(async (req, res) => {
-  const result = await workoutService.completePlan(req.user.id, req.params.id);
+  const result = await workoutService.completePlan(req.user.id, req.params.id, req.body || {});
   return ApiResponse.success(res, httpStatus.CREATED, "Workout marked complete", result);
 });
 

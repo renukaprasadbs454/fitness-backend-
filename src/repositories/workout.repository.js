@@ -101,7 +101,7 @@ const workoutRepository = {
   deleteExercise: (id) => prisma.exercise.delete({ where: { id } }),
 
   // ── Completions ────────────────────────────────────────
-  createCompletion: (userId, planId) => prisma.workoutCompletion.create({ data: { userId, planId } }),
+  createCompletion: (userId, planId, caloriesBurned = null) => prisma.workoutCompletion.create({ data: { userId, planId, caloriesBurned } }),
 
   completedTodayUserIds: async () => {
     const startOfDay = new Date();

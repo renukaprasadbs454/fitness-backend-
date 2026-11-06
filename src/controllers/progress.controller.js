@@ -25,9 +25,14 @@ const photoSessions = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Progress photo sessions retrieved", result);
 });
 
+const freezePhotoSet = asyncHandler(async (req, res) => {
+  const result = await progressService.freezePhotoSet(req.user.id, req.params.sessionId);
+  return ApiResponse.success(res, httpStatus.OK, "Photo set saved", result);
+});
+
 const report = asyncHandler(async (req, res) => {
   const result = await progressService.report(req.user.id, req.query);
   return ApiResponse.success(res, httpStatus.OK, "Progress report retrieved", result);
 });
 
-module.exports = { logWeight, logMeasurement, logPhoto, photoSessions, report };
+module.exports = { logWeight, logMeasurement, logPhoto, freezePhotoSet, photoSessions, report };

@@ -44,7 +44,36 @@ const activityRepository = {
 
   workoutCompletionsSince: (userId, sinceDate) => prisma.workoutCompletion.count({ where: { userId, completedAt: { gte: sinceDate } } }),
 
-  customWorkoutCompletionsSince: (userId, sinceDate) => prisma.customWorkout.count({ where: { userId, completedAt: { gte: sinceDate } } }),
+  customWorkoutCompletionsSince: async (userId, sinceDate) => {
+    const [recorded, legacy] = await Promise.all([
+      prisma.customWorkoutCompletion.count({ where: { userId, completedAt: { gte: sinceDate } } }),
+      prisma.customWorkout.count({ where: { userId, completedAt: { gte: sinceDate }, completions: { none: {} } } })
+    ]);
+    return recorded + legacy;
+  },
+
+  completedWorkoutsSince: async (userId, sinceDate) => {
+    const [plans, custom, legacyCustom, profile] = await Promise.all([
+      prisma.workoutCompletion.findMany({
+        where: { userId, completedAt: { gte: sinceDate } },
+        select: { completedAt: true, caloriesBurned: true, plan: { select: { durationMinutes: true, categoryKey: true } } }
+      }),
+      prisma.customWorkoutCompletion.findMany({
+        where: { userId, completedAt: { gte: sinceDate } },
+        select: { completedAt: true, customWorkout: { select: { durationMinutes: true, categoryKey: true } } }
+      }),
+      prisma.customWorkout.findMany({
+        where: { userId, completedAt: { gte: sinceDate }, completions: { none: {} } },
+        select: { completedAt: true, durationMinutes: true, categoryKey: true }
+      }),
+      prisma.userProfile.findUnique({ where: { userId }, select: { weightKg: true } })
+    ]);
+    const customRows = [
+      ...custom.map((completion) => ({ ...completion.customWorkout, completedAt: completion.completedAt })),
+      ...legacyCustom
+    ];
+    return { plans, custom: customRows, weightKg: Number(profile?.weightKg) || 70 };
+  },
 
   recentActivityFeed: (userId, take = 10) =>
     prisma.activityLog.findMany({

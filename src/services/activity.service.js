@@ -7,10 +7,23 @@ function todayDateOnly() {
 }
 
 const STEP_MILESTONE = 10000;
+const WORKOUT_MET = { CARDIO: 7, STRENGTH: 5, MUSCLE_GAIN: 5, WEIGHT_LOSS: 6, YOGA: 3, GENERAL_FITNESS: 5 };
+
+function estimatedWorkoutCalories(completed, weightKg) {
+  return completed.reduce((sum, workout) => {
+    const met = WORKOUT_MET[workout.categoryKey ?? workout.plan?.categoryKey] ?? 5;
+    const durationMinutes = workout.durationMinutes ?? workout.plan?.durationMinutes ?? 30;
+    return sum + Math.round(met * 3.5 * weightKg / 200 * durationMinutes);
+  }, 0);
+}
 
 async function logSteps(userId, input) {
   const date = input.date ? new Date(input.date) : todayDateOnly();
-  const { steps, distanceKm, caloriesBurned, activeMinutes } = input;
+  const { steps, distanceKm, activeMinutes } = input;
+  // Treat this as step activity only; workout calories are added from workout
+  // completion records in the report, so device-wide active calories cannot
+  // inflate a small step count or get counted twice.
+  const caloriesBurned = Math.round(steps * 0.04);
   const previous = await activityRepository.findStepLog(userId, date);
 
   const log = await activityRepository.upsertStepLog(userId, date, {
@@ -52,15 +65,25 @@ async function report(userId, { range = "weekly" } = {}) {
   since.setDate(since.getDate() - (days - 1));
   since.setHours(0, 0, 0, 0);
 
-  const [logs, feed, planCompletions, customCompletions] = await Promise.all([
+  const [logs, feed, planCompletions, customCompletions, completedWorkouts] = await Promise.all([
     activityRepository.stepLogsSince(userId, since),
     activityRepository.recentActivityFeed(userId, 10),
     activityRepository.workoutCompletionsSince(userId, since),
-    activityRepository.customWorkoutCompletionsSince(userId, since)
+    activityRepository.customWorkoutCompletionsSince(userId, since),
+    activityRepository.completedWorkoutsSince(userId, since)
   ]);
 
   const totalSteps = logs.reduce((sum, l) => sum + l.steps, 0);
-  const totalCalories = logs.reduce((sum, l) => sum + (l.caloriesBurned || 0), 0);
+  const activityCalories = logs.reduce((sum, l) => sum + (l.caloriesBurned || 0), 0);
+  const workoutRows = [...completedWorkouts.plans, ...completedWorkouts.custom];
+  const workoutCaloriesByDate = new Map();
+  for (const workout of workoutRows) {
+    const date = workout.completedAt.toISOString().slice(0, 10);
+    const calories = workout.caloriesBurned ?? estimatedWorkoutCalories([workout], completedWorkouts.weightKg);
+    workoutCaloriesByDate.set(date, (workoutCaloriesByDate.get(date) ?? 0) + calories);
+  }
+  const workoutCalories = [...workoutCaloriesByDate.values()].reduce((sum, value) => sum + value, 0);
+  const totalCalories = activityCalories + workoutCalories;
   const totalActiveMinutes = logs.reduce((sum, l) => sum + (l.activeMinutes || 0), 0);
   const totalDistanceKm = logs.reduce((sum, l) => sum + Number(l.distanceKm || 0), 0);
   const daysLogged = logs.length;
@@ -71,6 +94,8 @@ async function report(userId, { range = "weekly" } = {}) {
     totals: {
       steps: totalSteps,
       calories: totalCalories,
+      activityCalories,
+      workoutCalories,
       activeMinutes: totalActiveMinutes,
       distanceKm: Math.round(totalDistanceKm * 100) / 100,
       workoutsCompleted: planCompletions + customCompletions
@@ -79,12 +104,22 @@ async function report(userId, { range = "weekly" } = {}) {
       stepsPerDay: daysLogged ? Math.round(totalSteps / daysLogged) : 0
     },
     daysLogged,
-    dailyBreakdown: logs.map((l) => ({
-      date: l.date.toISOString().slice(0, 10),
-      steps: l.steps,
-      caloriesBurned: l.caloriesBurned,
-      activeMinutes: l.activeMinutes
-    })),
+    dailyBreakdown: [...new Set([
+      ...logs.map((l) => l.date.toISOString().slice(0, 10)),
+      ...workoutCaloriesByDate.keys()
+    ])].sort().map((date) => {
+      const log = logs.find((entry) => entry.date.toISOString().slice(0, 10) === date);
+      const activityKcal = log?.caloriesBurned || 0;
+      const workoutKcal = workoutCaloriesByDate.get(date) ?? 0;
+      return {
+        date,
+        steps: log?.steps ?? 0,
+        caloriesBurned: activityKcal + workoutKcal,
+        activityCalories: activityKcal,
+        workoutCalories: workoutKcal,
+        activeMinutes: log?.activeMinutes ?? 0
+      };
+    }),
     recentActivity: feed.map((f) => f.description)
   };
 }

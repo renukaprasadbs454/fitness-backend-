@@ -386,7 +386,7 @@
       </header>
 
       <main class="flex-1 overflow-y-auto p-6">
-        <div class="max-w-5xl mx-auto">
+        <div class="mx-auto transition-[max-width] duration-300" :class="currentView === 'workouts' ? 'max-w-7xl' : 'max-w-5xl'">
 
           <!-- Dashboard -->
           <template x-if="currentView === 'dashboard'">
@@ -708,9 +708,20 @@
                 </template>
               </div>
 
+              <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                <select x-model="appointmentsSearchField" class="sm:w-48 px-3.5 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white" aria-label="Search appointments by">
+                  <option value="all">All appointment fields</option><option value="client">Client</option><option value="email">Client email</option><option value="session">Session</option><option value="status">Status</option><option value="date">Date and time</option><option value="meeting">Meeting link</option>
+                </select>
+                <input x-model="appointmentsSearch" type="search" placeholder="Search appointments…" class="flex-1 px-3.5 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white placeholder-slate-600">
+                <select x-model="appointmentsSort" class="sm:w-56 px-3 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white">
+                  <option value="date-asc">Soonest first</option><option value="date-desc">Latest first</option><option value="client-asc">Client name A–Z</option><option value="status-asc">Status A–Z</option>
+                </select>
+              </div>
+
               <div class="card overflow-hidden">
                 <div x-show="appointments.length === 0" class="p-6 text-sm text-slate-500">No appointments found.</div>
-                <template x-for="a in appointments" :key="a.id">
+                <div x-show="appointments.length > 0 && visibleAppointments.length === 0" class="p-6 text-sm text-slate-500">No appointments match your search.</div>
+                <template x-for="a in visibleAppointments" :key="a.id">
                   <div class="flex flex-wrap items-center justify-between gap-3 border-b border-dark-border px-5 py-4 last:border-b-0">
                     <div class="min-w-[200px] flex-1">
                       <p class="text-sm font-semibold" x-text="a.title"></p>
@@ -768,7 +779,11 @@
               </div>
 
               <div class="flex flex-col sm:flex-row gap-3 mb-4">
-                <input x-model="clientsSearch" type="search" placeholder="Search by name, username, email or coach…" class="flex-1 px-3.5 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white placeholder-slate-600">
+                <select x-model="clientsSearchField" class="sm:w-48 px-3.5 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white" aria-label="Search clients by">
+                  <option value="all">All client fields</option><option value="name">Name</option><option value="username">Username</option><option value="email">Email</option><option value="coach">Coach</option><option value="goal">Fitness goal</option><option value="status">Status</option>
+                </select>
+                <input x-model="clientsSearch" type="search" placeholder="Search clients…" class="flex-1 px-3.5 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white placeholder-slate-600">
+                <select x-model="clientsSort" class="sm:w-56 px-3 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white"><option value="name-asc">Name A–Z</option><option value="name-desc">Name Z–A</option><option value="sessions-desc">Most sessions</option><option value="sessions-asc">Fewest sessions</option></select>
                 <select x-show="false" x-cloak x-model="clientsFilter" class="sm:w-64 px-3 py-2.5 bg-dark-card border border-dark-border rounded-xl text-sm text-white">
                   <option value="all">All coaches</option>
                   <option value="mine" x-text="'Assigned to me (' + clientsData.summary.mine + ')'"></option>
@@ -813,13 +828,33 @@
           <!-- Assign Workouts -->
           <template x-if="currentView === 'workouts'">
             <div>
-              <h2 class="text-2xl font-bold mb-1">Assign Workouts</h2>
-              <p class="text-slate-400 text-sm mb-6">Send a workout from the library, or build one from scratch, to the clients assigned to you.</p>
+              <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <div class="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-primary-light">
+                    <span class="h-1.5 w-1.5 rounded-full bg-primary-light"></span> Coaching workspace
+                  </div>
+                  <h2 class="text-3xl font-extrabold tracking-tight">Assign Workouts</h2>
+                  <p class="mt-1 max-w-2xl text-sm leading-6 text-slate-400">Choose an assigned client, then send a library plan or create a workout tailored to them.</p>
+                </div>
+                <div class="inline-flex items-center gap-2 self-start rounded-xl border border-dark-border bg-dark-card/70 px-3.5 py-2 text-xs text-slate-400 sm:self-auto">
+                  <svg class="h-4 w-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 3.5a11.955 11.955 0 01-8.618 2.484A12.02 12.02 0 003 8c0 5.591 3.824 10.29 9 11.622C17.176 18.29 21 13.591 21 8c0-.847-.088-1.673-.254-2.472z"/></svg>
+                  Only clients assigned to you
+                </div>
+              </div>
 
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)] xl:gap-6">
                 <!-- New assignment -->
-                <div class="card p-5">
-                  <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">New Assignment</h3>
+                <div class="card">
+                  <div class="border-b border-dark-border bg-gradient-to-r from-primary/10 via-transparent to-transparent px-5 py-4 sm:px-6">
+                    <div class="flex items-center gap-3">
+                      <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary-light">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6v12m6-6H6"/></svg>
+                      </span>
+                      <div><h3 class="font-bold">New assignment</h3><p class="mt-0.5 text-xs text-slate-500">Set up a workout for one client</p></div>
+                      <span class="ml-auto badge badge-blue">NEW</span>
+                    </div>
+                  </div>
+                  <div class="p-5 sm:p-6">
 
                   <div x-show="false" x-cloak class="mb-4">
                     <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Step 1 — Coach</label>
@@ -832,16 +867,16 @@
                     <p class="mt-1 text-[11px] text-slate-500">The client sees this as a personalised plan from the coach you pick.</p>
                   </div>
 
-                  <div class="mb-4">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Client</label>
+                  <div class="mb-5 rounded-2xl border border-dark-border bg-dark/45 p-4">
+                    <label class="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300"><span class="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/15 text-[11px] text-primary-light">1</span> Choose client</label>
                     <template x-if="!assignForm.selectedUser">
                       <div class="space-y-2">
                         <input x-model="clientSearch" @input.debounce.300ms="searchClients(clientSearch)" placeholder="Search your clients by name, username or email…"
                           class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-600">
                         <div class="max-h-52 overflow-y-auto rounded-xl border border-dark-border divide-y divide-dark-border">
                           <template x-for="u in clientResults" :key="u.id">
-                            <button @click="assignForm.selectedUser = u" class="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-white/5">
-                              <span class="w-7 h-7 rounded-full bg-primary/15 text-primary-light text-[11px] font-bold flex items-center justify-center flex-shrink-0" x-text="initials(u.fullName)"></span>
+                            <button @click="assignForm.selectedUser = u" class="w-full flex items-center gap-3 px-3.5 py-3 text-left text-sm transition-colors hover:bg-primary/5">
+                              <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary-light" x-text="initials(u.fullName)"></span>
                               <span class="min-w-0"><span class="font-medium block truncate" x-text="u.fullName"></span><span class="text-xs text-slate-500 block truncate" x-text="u.email"></span></span>
                             </button>
                           </template>
@@ -850,16 +885,19 @@
                       </div>
                     </template>
                     <template x-if="assignForm.selectedUser">
-                      <div class="flex items-center justify-between rounded-xl border border-primary/40 bg-primary/5 px-3 py-2.5">
-                        <span class="text-sm font-medium" x-text="assignForm.selectedUser.fullName"></span>
-                        <button @click="assignForm.selectedUser = null" class="text-xs text-primary-light hover:underline">Change</button>
+                      <div class="flex items-center justify-between gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3.5 py-3">
+                        <span class="flex min-w-0 items-center gap-3">
+                          <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-xs font-bold text-emerald-400" x-text="initials(assignForm.selectedUser.fullName)"></span>
+                          <span class="min-w-0"><span class="block truncate text-sm font-semibold" x-text="assignForm.selectedUser.fullName"></span><span class="block truncate text-xs text-slate-500" x-text="assignForm.selectedUser.email"></span></span>
+                        </span>
+                        <button @click="assignForm.selectedUser = null" class="rounded-lg px-3 py-2 text-xs font-semibold text-primary-light transition hover:bg-primary/10">Change</button>
                       </div>
                     </template>
                   </div>
 
-                  <div x-show="assignForm.selectedUser" class="mb-4 flex gap-2">
-                    <button @click="assignForm.mode = 'CATALOG'" class="flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" :class="assignForm.mode === 'CATALOG' ? 'bg-primary text-white' : 'bg-dark-muted text-slate-300 hover:bg-dark-border'">From Library</button>
-                    <button @click="assignForm.mode = 'CUSTOM'" class="flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" :class="assignForm.mode === 'CUSTOM' ? 'bg-primary text-white' : 'bg-dark-muted text-slate-300 hover:bg-dark-border'">Build Custom</button>
+                  <div x-show="assignForm.selectedUser" class="mb-4 flex gap-2 rounded-2xl border border-dark-border bg-dark/35 p-1.5">
+                    <button @click="assignForm.mode = 'CATALOG'" class="flex-1 rounded-xl px-3 py-2.5 text-xs font-bold transition-colors" :class="assignForm.mode === 'CATALOG' ? 'bg-primary text-white shadow-lg shadow-primary/15' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'">From Library</button>
+                    <button @click="assignForm.mode = 'CUSTOM'" class="flex-1 rounded-xl px-3 py-2.5 text-xs font-bold transition-colors" :class="assignForm.mode === 'CUSTOM' ? 'bg-primary text-white shadow-lg shadow-primary/15' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'">Build Custom</button>
                   </div>
 
                   <template x-if="assignForm.selectedUser && assignForm.mode === 'CATALOG'">
@@ -890,30 +928,57 @@
                   <template x-if="assignForm.selectedUser && assignForm.mode === 'CUSTOM'">
                     <div class="space-y-3">
                       <div>
-                        <label class="block text-xs text-slate-500 mb-1.5">Title</label>
-                        <input x-model="assignForm.title" placeholder="e.g. Push Day" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-600">
+                        <label class="mb-1.5 block text-xs text-slate-400">Category <span class="text-red-400">Required</span></label>
+                        <select x-model="assignForm.categoryKey" required class="w-full rounded-xl border border-dark-border bg-dark px-3 py-2.5 text-sm text-white">
+                          <option value="">Choose a category</option>
+                          <template x-for="c in workoutCategories" :key="c"><option :value="c" x-text="c.replace(/_/g, ' ')"></option></template>
+                        </select>
                       </div>
                       <div>
-                        <label class="block text-xs text-slate-500 mb-1.5">Description</label>
-                        <input x-model="assignForm.description" placeholder="Optional notes" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white placeholder-slate-600">
+                        <label class="mb-1.5 block text-xs text-slate-400">Title <span class="text-red-400">Required</span></label>
+                        <input x-model="assignForm.title" required maxlength="120" placeholder="e.g. Push Day" class="w-full rounded-xl border border-dark-border bg-dark px-3 py-2.5 text-sm text-white placeholder-slate-600">
+                      </div>
+                      <div>
+                        <label class="mb-1.5 block text-xs text-slate-400">Description <span class="text-slate-600">Optional</span></label>
+                        <textarea x-model="assignForm.description" maxlength="1000" rows="2" placeholder="Optional notes for the client" class="w-full rounded-xl border border-dark-border bg-dark px-3 py-2.5 text-sm text-white placeholder-slate-600"></textarea>
                       </div>
                       <div class="grid grid-cols-2 gap-3">
                         <div>
-                          <label class="block text-xs text-slate-500 mb-1.5">Duration (min)</label>
-                          <input type="number" min="0" x-model="assignForm.durationMinutes" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white">
+                          <label class="mb-1.5 block text-xs text-slate-400">Duration in minutes <span class="text-red-400">Required</span></label>
+                          <input type="number" min="1" max="300" required x-model="assignForm.durationMinutes" placeholder="e.g. 45" class="w-full rounded-xl border border-dark-border bg-dark px-3 py-2.5 text-sm text-white">
                         </div>
                         <div>
-                          <label class="block text-xs text-slate-500 mb-1.5">Difficulty</label>
-                          <select x-model="assignForm.difficulty" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white">
+                          <label class="mb-1.5 block text-xs text-slate-400">Difficulty <span class="text-red-400">Required</span></label>
+                          <select x-model="assignForm.difficulty" required class="w-full rounded-xl border border-dark-border bg-dark px-3 py-2.5 text-sm text-white">
+                            <option value="">Choose difficulty</option>
                             <template x-for="d in difficulties" :key="d"><option :value="d" x-text="d.charAt(0) + d.slice(1).toLowerCase()"></option></template>
                           </select>
                         </div>
                       </div>
-                      <div>
-                        <label class="block text-xs text-slate-500 mb-1.5">Category</label>
-                        <select x-model="assignForm.categoryKey" class="w-full px-3 py-2.5 bg-dark border border-dark-border rounded-xl text-sm text-white">
-                          <template x-for="c in workoutCategories" :key="c"><option :value="c" x-text="c.replace(/_/g, ' ')"></option></template>
-                        </select>
+                      <div class="grid grid-cols-2 gap-3">
+                        <div>
+                          <label class="mb-1.5 block text-xs text-slate-400">Accent Color <span class="text-red-400">Required</span></label>
+                          <div class="flex items-center gap-3 rounded-xl border border-dark-border bg-dark px-3 py-2">
+                            <input type="color" x-model="assignForm.accentColor" aria-label="Choose accent color" class="h-8 w-10 cursor-pointer rounded border-0 bg-transparent p-0">
+                            <span class="font-mono text-sm text-slate-300" x-text="assignForm.accentColor"></span>
+                          </div>
+                        </div>
+                        <div class="flex items-end pb-2">
+                          <label class="flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+                            <input type="checkbox" x-model="assignForm.isAvailable" class="h-4 w-4 accent-blue-500">
+                            <span>Available for users <span class="text-xs text-slate-500">(optional)</span></span>
+                          </label>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <label class="mb-1.5 block text-xs text-slate-400">Image link <span class="text-slate-600">Optional</span></label>
+                          <input type="url" x-model="assignForm.imageUrl" placeholder="https://…" class="w-full rounded-xl border border-dark-border bg-dark px-3 py-2.5 text-sm text-white placeholder-slate-600">
+                        </div>
+                        <div>
+                          <label class="mb-1.5 block text-xs text-slate-400">Video link <span class="text-slate-600">Optional</span></label>
+                          <input type="url" x-model="assignForm.videoUrl" placeholder="https://…" class="w-full rounded-xl border border-dark-border bg-dark px-3 py-2.5 text-sm text-white placeholder-slate-600">
+                        </div>
                       </div>
                       <div class="flex items-center justify-between pt-1">
                         <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Exercises</label>
@@ -927,6 +992,8 @@
                           </div>
                           <input x-model="row.name" placeholder="Name (e.g. Bench Press)" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
                           <input x-model="row.muscleGroup" placeholder="Muscle group" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
+                          <input type="url" x-model="row.imageUrl" placeholder="Exercise image link (optional)" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
+                          <input type="url" x-model="row.videoUrl" placeholder="Exercise video link (optional)" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
                           <div class="grid grid-cols-2 gap-2">
                             <input type="number" min="1" x-model="row.sets" placeholder="Sets" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
                             <input type="number" min="1" x-model="row.reps" placeholder="Reps" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
@@ -936,27 +1003,48 @@
                     </div>
                   </template>
 
-                  <p x-show="assignFormError" x-text="assignFormError" class="mt-3 text-xs text-orange-400"></p>
-                  <button x-show="assignForm.selectedUser" @click="submitAssignWorkout()" :disabled="assignFormSaving" class="btn-primary w-full mt-4 px-4 py-2.5 rounded-xl text-sm disabled:opacity-50 flex items-center justify-center gap-2">
-                    <span x-show="assignFormSaving" class="loader" style="border-top-color:#fff;border-color:rgba(255,255,255,0.3)"></span>
-                    <span x-text="assignFormSaving ? 'Sending…' : 'Assign Workout'"></span>
-                  </button>
+                  <p x-show="assignFormError" x-text="assignFormError" class="mt-3 rounded-xl border border-orange-400/20 bg-orange-400/5 px-3.5 py-3 text-sm text-orange-300"></p>
+                  <div x-show="assignForm.selectedUser" class="sticky bottom-0 z-10 -mx-5 mt-5 border-t border-dark-border bg-dark-card/95 px-5 pb-1 pt-4 backdrop-blur sm:-mx-6 sm:px-6">
+                    <button @click="submitAssignWorkout()" :disabled="assignFormSaving" class="btn-primary flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm disabled:opacity-50">
+                      <span x-show="assignFormSaving" class="loader" style="border-top-color:#fff;border-color:rgba(255,255,255,0.3)"></span>
+                      <span x-text="assignFormSaving ? 'Sending…' : 'Assign workout to client'"></span>
+                      <svg x-show="!assignFormSaving" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7l7 7-7 7"/></svg>
+                    </button>
+                  </div>
+                  </div>
                 </div>
 
                 <!-- Assigned workouts -->
-                <div class="card p-5">
-                  <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Assigned by You</h3>
-                    <button @click="fetchSentAssignments()" class="text-xs text-slate-400 hover:text-white">Refresh</button>
+                <div class="card min-h-[360px] overflow-hidden">
+                  <div class="border-b border-dark-border bg-gradient-to-r from-emerald-500/10 via-transparent to-transparent px-5 py-4 sm:px-6">
+                    <div class="flex items-center justify-between gap-3">
+                      <div><h3 class="font-bold">Assigned by you</h3><p class="mt-0.5 text-xs text-slate-500">Review, edit, or remove a workout</p></div>
+                      <button @click="fetchSentAssignments()" class="inline-flex items-center gap-2 rounded-lg border border-dark-border bg-dark-card/70 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-emerald-500/30 hover:text-white">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M5.6 9A7 7 0 0118 6l2 3M4 15l2 3a7 7 0 0012.4-3"/></svg> Refresh
+                      </button>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                      <span class="rounded-lg border border-dark-border bg-dark/35 px-3 py-1.5 text-xs text-slate-400"><strong class="mr-1 text-white" x-text="sentAssignments.length"></strong>total</span>
+                      <span class="rounded-lg border border-dark-border bg-dark/35 px-3 py-1.5 text-xs text-slate-400"><strong class="mr-1 text-blue-300" x-text="sentAssignments.filter((a) => a.type === 'plan').length"></strong>library</span>
+                      <span class="rounded-lg border border-dark-border bg-dark/35 px-3 py-1.5 text-xs text-slate-400"><strong class="mr-1 text-orange-300" x-text="sentAssignments.filter((a) => a.type === 'custom').length"></strong>custom</span>
+                    </div>
                   </div>
-                  <div class="flex gap-2 mb-3">
+                  <div class="p-5 sm:p-6">
+                  <div class="mb-4 flex flex-wrap gap-2">
                     <template x-for="f in ['ALL', 'LIBRARY', 'CUSTOM']" :key="f">
-                      <button @click="assignFilter = f" :class="assignFilter === f ? 'bg-primary text-white' : 'bg-dark-card text-slate-400 border border-dark-border'" class="px-3 py-1 rounded-full text-xs font-semibold" x-text="f === 'ALL' ? 'All' : f === 'LIBRARY' ? 'Library' : 'Custom'"></button>
+                      <button @click="assignFilter = f" :class="assignFilter === f ? 'bg-primary text-white shadow-lg shadow-primary/15' : 'bg-dark-card text-slate-400 border border-dark-border hover:text-slate-200'" class="rounded-full px-3.5 py-1.5 text-xs font-semibold transition" x-text="f === 'ALL' ? 'All' : f === 'LIBRARY' ? 'Library' : 'Custom'"></button>
                     </template>
                   </div>
-                  <div class="space-y-2 max-h-[620px] overflow-y-auto">
+                  <div class="flex flex-col sm:flex-row gap-2 mb-3">
+                    <select x-model="assignmentsSearchField" class="sm:w-44 px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white" aria-label="Search assigned workouts by">
+                      <option value="all">All workout fields</option><option value="workout">Workout name</option><option value="client">Client</option><option value="email">Client email</option><option value="type">Workout type</option><option value="exercise">Exercise</option><option value="date">Assigned date</option>
+                    </select>
+                    <input x-model="assignmentsSearch" type="search" placeholder="Search assigned workouts…" class="flex-1 px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white placeholder-slate-500">
+                    <select x-model="assignmentsSort" class="sm:w-48 px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white"><option value="newest">Newest assigned</option><option value="oldest">Oldest assigned</option><option value="title">Workout name A–Z</option><option value="client">Client name A–Z</option></select>
+                  </div>
+                  <div class="max-h-[720px] space-y-3 overflow-y-auto pr-1">
                     <template x-for="a in filteredAssignments" :key="a.type + a.id">
-                      <div class="rounded-xl border border-dark-border p-3">
+                      <div class="rounded-2xl border border-dark-border bg-dark/30 p-4 transition hover:border-primary/30 hover:bg-dark/50">
                         <div class="flex items-start justify-between gap-2">
                           <div class="min-w-0">
                             <p class="text-sm font-semibold truncate" x-text="a.title || 'Workout'"></p>
@@ -977,7 +1065,15 @@
                         </div>
                       </div>
                     </template>
-                    <p x-show="!filteredAssignments.length" class="text-center text-sm text-slate-500 py-8">No workouts assigned yet.</p>
+                    <div x-show="!filteredAssignments.length && !sentAssignments.length" class="rounded-2xl border border-dashed border-dark-border bg-dark/20 px-5 py-12 text-center">
+                      <span class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary-light">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M6 4.5h12A1.5 1.5 0 0119.5 6v14l-3.75-2.25L12 20l-3.75-2.25L4.5 20V6A1.5 1.5 0 016 4.5zM8 9h8M8 12h6"/></svg>
+                      </span>
+                      <p class="font-semibold text-slate-200">No workouts assigned yet</p>
+                      <p class="mx-auto mt-1 max-w-xs text-xs leading-5 text-slate-500">Once you assign a library or custom workout, it will appear here for quick updates.</p>
+                    </div>
+                    <p x-show="!filteredAssignments.length && sentAssignments.length" class="rounded-2xl border border-dashed border-dark-border py-10 text-center text-sm text-slate-500">No assignments match these filters. Try another search or filter.</p>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -1002,7 +1098,11 @@
                 <div class="w-full md:w-72 flex-shrink-0 border-r border-dark-border flex flex-col" :class="activeRoom ? 'hidden md:flex' : 'flex'">
                   <div class="p-3 border-b border-dark-border space-y-2">
                     <button @click="openNewChat()" class="btn-primary w-full py-2 rounded-xl text-xs">+ New Chat</button>
-                    <input x-model="chatSearch" type="search" placeholder="Search by client or coach name" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white placeholder-slate-600">
+                    <select x-model="chatSearchField" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white" aria-label="Search conversations by">
+                      <option value="all">All conversation fields</option><option value="client">Client name</option><option value="message">Latest message</option><option value="date">Latest message date</option><option value="unread">Unread count</option>
+                    </select>
+                    <input x-model="chatSearch" type="search" placeholder="Search conversations…" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white placeholder-slate-600">
+                    <select x-model="chatSort" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white"><option value="recent">Most recent</option><option value="oldest">Oldest first</option><option value="name">Name A–Z</option><option value="unread">Unread first</option></select>
                     <select x-show="false" x-cloak x-model="chatCoachFilter" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-xl text-xs text-white">
                       <option value="all" x-text="'All coaches (' + chatRooms.length + ')'"></option>
                       <template x-for="g in chatCoachGroups" :key="g.id">
@@ -1203,6 +1303,8 @@
                 </div>
                 <input x-model="row.name" placeholder="Name" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
                 <input x-model="row.muscleGroup" placeholder="Muscle group" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
+                <input type="url" x-model="row.imageUrl" placeholder="Exercise image link (optional)" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
+                <input type="url" x-model="row.videoUrl" placeholder="Exercise video link (optional)" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
                 <div class="grid grid-cols-2 gap-2">
                   <input type="number" min="1" x-model="row.sets" placeholder="Sets" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
                   <input type="number" min="1" x-model="row.reps" placeholder="Reps" class="w-full px-3 py-2 bg-dark border border-dark-border rounded-lg text-sm text-white placeholder-slate-600">
@@ -1349,13 +1451,20 @@
         <button @click="clientPhotosOpen = false" class="rounded-lg px-3 py-1.5 text-slate-400 hover:bg-white/10" aria-label="Close">✕</button>
       </div>
       <p x-show="clientPhotosLoading" class="py-8 text-center text-sm text-slate-400">Loading photos…</p>
-      <p x-show="!clientPhotosLoading && !clientProgressPhotos.length" class="py-8 text-center text-sm text-slate-400">This client hasn't uploaded transformation photos yet.</p>
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        <template x-for="photo in clientProgressPhotos" :key="photo.id">
-          <a :href="photo.url" target="_blank" rel="noopener" class="overflow-hidden rounded-xl border border-dark-border">
-            <img :src="photo.url" :alt="(photo.angle || 'Transformation') + ' photo'" class="h-44 w-full object-cover">
-            <span class="block px-2 py-1.5 text-xs text-slate-400" x-text="(photo.angle || 'Photo') + ' · ' + new Date(photo.createdAt).toLocaleDateString()"></span>
-          </a>
+      <p x-show="!clientPhotosLoading && !clientProgressPhotoSets.length" class="py-8 text-center text-sm text-slate-400">This client hasn't uploaded transformation photos yet.</p>
+      <div class="space-y-4">
+        <template x-for="set in clientProgressPhotoSets" :key="set.sessionId">
+          <section class="rounded-xl border border-dark-border p-3">
+            <h3 class="mb-3 text-sm font-semibold text-slate-200" x-text="'Set · ' + new Date(set.createdAt).toLocaleDateString()"></h3>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <template x-for="photo in set.photos" :key="photo.id">
+                <a :href="photo.url" target="_blank" rel="noopener" class="overflow-hidden rounded-xl border border-dark-border">
+                  <img :src="photo.url" :alt="(photo.angle || 'Transformation') + ' photo'" class="h-44 w-full object-cover">
+                  <span class="block px-2 py-1.5 text-xs text-slate-400" x-text="(photo.angle || 'Photo') + ' · ' + new Date(photo.createdAt).toLocaleDateString()"></span>
+                </a>
+              </template>
+            </div>
+          </section>
         </template>
       </div>
     </div>
@@ -1410,6 +1519,9 @@
         notificationUnread: 0,
         notificationPoll: null,
         appointmentsFilter: "ALL",
+        appointmentsSearch: "",
+        appointmentsSearchField: "all",
+        appointmentsSort: "date-asc",
         appointmentsCoachId: "",
         availability: [],
         slotForm: { dayOfWeek: "MONDAY", startTime: "09:00", endTime: "10:00" },
@@ -1438,13 +1550,16 @@
         clientResults: [],
         assignForm: {
           selectedUser: null, coachUserId: "", mode: "CATALOG", selectedPlanId: null, note: "", scheduledAt: "",
-          title: "", description: "", durationMinutes: "", difficulty: "BEGINNER", categoryKey: "GENERAL_FITNESS",
+          title: "", description: "", durationMinutes: "", difficulty: "", categoryKey: "", accentColor: "#2563EB", imageUrl: "", videoUrl: "", isAvailable: true,
           exercises: [{ name: "", muscleGroup: "", sets: "", reps: "" }]
         },
         assignFormError: "",
         assignFormSaving: false,
         sentAssignments: [],
         assignFilter: "ALL",
+        assignmentsSearch: "",
+        assignmentsSearchField: "all",
+        assignmentsSort: "newest",
         editingAssignment: null,
         editForm: {},
         editError: "",
@@ -1462,6 +1577,8 @@
         chatPoll: null,
         chatScope: "mine",
         chatSearch: "",
+        chatSearchField: "all",
+        chatSort: "recent",
         chatCoachFilter: "all",
         chatHideEmpty: false,
         newChatCoachId: "",
@@ -1476,9 +1593,11 @@
         clientPhotosOpen: false,
         clientPhotosLoading: false,
         clientPhotosUser: null,
-        clientProgressPhotos: [],
+        clientProgressPhotoSets: [],
         clientsFilter: "all",
         clientsSearch: "",
+        clientsSearchField: "all",
+        clientsSort: "name-asc",
         meetingStatus: { googleMeetConnected: false },
         linkTarget: null,
         linkInput: "",
@@ -1529,12 +1648,25 @@
           const rooms = this.chatRooms.filter((r) => {
             if (byCoach && r.coach?.id !== this.chatCoachFilter) return false;
             if (this.chatHideEmpty && !r.lastMessage) return false;
-            return !q || `${r.participant?.name || ""} ${r.coach?.name || ""}`.toLowerCase().includes(q);
+            if (!q) return true;
+            const fields = {
+              client: r.participant?.name || "",
+              message: r.lastMessage?.type === "IMAGE" ? "photo image" : r.lastMessage?.body || "",
+              date: r.lastMessageAt ? new Date(r.lastMessageAt).toLocaleString() : "",
+              unread: String(r.unreadCount || 0),
+            };
+            const haystack = this.chatSearchField === "all"
+              ? Object.values(fields).join(" ")
+              : fields[this.chatSearchField] || "";
+            return haystack.toLowerCase().includes(q);
           });
           return rooms.sort((a, b) => {
+            if (this.chatSort === "name") return (a.participant?.name || "").localeCompare(b.participant?.name || "", undefined, { sensitivity: "base" });
+            if (this.chatSort === "unread") return (b.unreadCount || 0) - (a.unreadCount || 0) || new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0);
+            const timeOrder = new Date(a.lastMessageAt || 0) - new Date(b.lastMessageAt || 0);
+            if (this.chatSort === "oldest") return timeOrder;
             if (!a.lastMessage !== !b.lastMessage) return a.lastMessage ? -1 : 1;
-            if (a.lastMessage) return new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0);
-            return (a.participant?.name || "").localeCompare(b.participant?.name || "");
+            return -timeOrder;
           });
         },
 
@@ -1577,9 +1709,55 @@
         },
 
         get filteredAssignments() {
-          if (this.assignFilter === "LIBRARY") return this.sentAssignments.filter((a) => a.type === "plan");
-          if (this.assignFilter === "CUSTOM") return this.sentAssignments.filter((a) => a.type === "custom");
-          return this.sentAssignments;
+          const query = (this.assignmentsSearch || "").trim().toLowerCase();
+          const items = this.sentAssignments.filter((assignment) => {
+            if (this.assignFilter === "LIBRARY" && assignment.type !== "plan") return false;
+            if (this.assignFilter === "CUSTOM" && assignment.type !== "custom") return false;
+            if (!query) return true;
+            const fields = {
+              workout: assignment.title || "",
+              client: assignment.user?.fullName || "",
+              email: assignment.user?.email || "",
+              type: assignment.type === "custom" ? "custom" : "library",
+              exercise: (assignment.exercises || []).map((exercise) => exercise.name).join(" "),
+              date: assignment.createdAt ? new Date(assignment.createdAt).toLocaleString() : "",
+            };
+            const haystack = this.assignmentsSearchField === "all"
+              ? Object.values(fields).join(" ")
+              : fields[this.assignmentsSearchField] || "";
+            return haystack.toLowerCase().includes(query);
+          });
+          return items.sort((a, b) => {
+            if (this.assignmentsSort === "oldest") return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+            if (this.assignmentsSort === "title") return String(a.title || "").localeCompare(String(b.title || ""), undefined, { sensitivity: "base" });
+            if (this.assignmentsSort === "client") return String(a.user?.fullName || "").localeCompare(String(b.user?.fullName || ""), undefined, { sensitivity: "base" });
+            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+          });
+        },
+
+        get visibleAppointments() {
+          const query = (this.appointmentsSearch || "").trim().toLowerCase();
+          const items = this.appointments.filter((appointment) => {
+            if (!query) return true;
+            const fields = {
+              client: appointment.user?.fullName || "",
+              email: appointment.user?.email || "",
+              session: appointment.title || "",
+              status: this.displayStatus(appointment) || appointment.status || "",
+              date: appointment.scheduledAt ? new Date(appointment.scheduledAt).toLocaleString() : "",
+              meeting: appointment.meetingLink || appointment.meetingProvider || "",
+            };
+            const haystack = this.appointmentsSearchField === "all"
+              ? Object.values(fields).join(" ")
+              : fields[this.appointmentsSearchField] || "";
+            return haystack.toLowerCase().includes(query);
+          });
+          return items.sort((a, b) => {
+            if (this.appointmentsSort === "client-asc") return String(a.user?.fullName || "").localeCompare(String(b.user?.fullName || ""), undefined, { sensitivity: "base" });
+            if (this.appointmentsSort === "status-asc") return String(a.status || "").localeCompare(String(b.status || ""), undefined, { sensitivity: "base" });
+            const dateOrder = new Date(a.scheduledAt || 0) - new Date(b.scheduledAt || 0);
+            return this.appointmentsSort === "date-desc" ? -dateOrder : dateOrder;
+          });
         },
 
         get upcomingAppointments() {
@@ -1601,13 +1779,30 @@
         get filteredClients() {
           const q = (this.clientsSearch || "").trim().toLowerCase();
           const f = this.clientsFilter;
-          return this.clientsData.clients.filter((c) => {
+          const clients = this.clientsData.clients.filter((c) => {
             if (f === "mine" && c.relation !== "mine") return false;
             if (f === "other" && c.relation !== "other") return false;
             if (f === "unassigned" && c.relation !== "unassigned") return false;
             if (f.startsWith("coach:") && c.assignedCoach?.id !== f.slice(6)) return false;
             if (!q) return true;
-            return `${c.fullName} ${c.username} ${c.email} ${c.assignedCoach?.name || ""}`.toLowerCase().includes(q);
+            const fields = {
+              name: c.fullName || "",
+              username: c.username || "",
+              email: c.email || "",
+              coach: c.assignedCoach?.name || "",
+              goal: [...(c.fitnessProfile?.fitnessGoals || []), c.fitnessProfile?.goal || ""].join(" "),
+              status: `${c.isActive ? "active" : "suspended"} ${c.relation || ""}`,
+            };
+            const haystack = this.clientsSearchField === "all"
+              ? Object.values(fields).join(" ")
+              : fields[this.clientsSearchField] || "";
+            return haystack.toLowerCase().includes(q);
+          });
+          return clients.sort((a, b) => {
+            if (this.clientsSort === "name-desc") return String(b.fullName || "").localeCompare(String(a.fullName || ""), undefined, { sensitivity: "base" });
+            if (this.clientsSort === "sessions-desc") return Number(b.sessions || 0) - Number(a.sessions || 0);
+            if (this.clientsSort === "sessions-asc") return Number(a.sessions || 0) - Number(b.sessions || 0);
+            return String(a.fullName || "").localeCompare(String(b.fullName || ""), undefined, { sensitivity: "base" });
           });
         },
 
@@ -1778,7 +1973,7 @@
 
         // ================= ASSIGN WORKOUTS =================
         blankExercise() {
-          return { name: "", muscleGroup: "", sets: "", reps: "" };
+          return { name: "", muscleGroup: "", imageUrl: "", videoUrl: "", sets: "", reps: "" };
         },
 
         loadWorkoutPlans() {
@@ -1801,7 +1996,7 @@
         resetAssignForm() {
           this.assignForm = {
             selectedUser: null, coachUserId: "", mode: "CATALOG", selectedPlanId: null, note: "", scheduledAt: "",
-            title: "", description: "", durationMinutes: "", difficulty: "BEGINNER", categoryKey: "GENERAL_FITNESS",
+            title: "", description: "", durationMinutes: "", difficulty: "", categoryKey: "", accentColor: "#2563EB", imageUrl: "", videoUrl: "", isAvailable: true,
             exercises: [this.blankExercise()]
           };
           this.assignFormError = "";
@@ -1830,9 +2025,24 @@
               asCoachUserId: f.coachUserId || undefined
             };
           } else {
-            if (!f.title.trim()) {
-              this.assignFormError = "Give the workout a title.";
+            if (!f.title.trim() || !f.categoryKey || !f.durationMinutes || !f.difficulty || !f.accentColor) {
+              this.assignFormError = "Complete all required workout details: category, title, duration, difficulty, and accent color.";
               return;
+            }
+            if (!Number.isInteger(Number(f.durationMinutes)) || Number(f.durationMinutes) < 1 || Number(f.durationMinutes) > 300) {
+              this.assignFormError = "Enter a duration from 1 to 300 minutes.";
+              return;
+            }
+            for (const [label, value] of [["Image", f.imageUrl], ["Video", f.videoUrl]]) {
+              if (value) {
+                try {
+                  const parsed = new URL(value.trim());
+                  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("unsupported link");
+                } catch {
+                  this.assignFormError = `Enter a valid ${label.toLowerCase()} link starting with https:// or http://.`;
+                  return;
+                }
+              }
             }
             const exercises = this.cleanExercises(f.exercises);
             if (exercises.length === 0) {
@@ -1843,9 +2053,13 @@
             body = {
               title: f.title.trim(),
               description: f.description.trim() || undefined,
-              durationMinutes: f.durationMinutes ? Number(f.durationMinutes) : undefined,
+              durationMinutes: Number(f.durationMinutes),
               difficulty: f.difficulty,
               categoryKey: f.categoryKey,
+              accentColor: f.accentColor,
+              imageUrl: f.imageUrl.trim() || undefined,
+              videoUrl: f.videoUrl.trim() || undefined,
+              isAvailable: Boolean(f.isAvailable),
               exercises,
               asCoachUserId: f.coachUserId || undefined
             };
@@ -1868,6 +2082,8 @@
             .map((row) => ({
               name: row.name.trim(),
               muscleGroup: row.muscleGroup?.trim() || undefined,
+              imageUrl: row.imageUrl?.trim() || undefined,
+              videoUrl: row.videoUrl?.trim() || undefined,
               sets: row.sets ? Number(row.sets) : undefined,
               reps: row.reps ? Number(row.reps) : undefined
             }));
@@ -1893,7 +2109,7 @@
           this.editingAssignment = a;
           this.editError = "";
           if (a.type === "custom") {
-            const exercises = (a.exercises || []).map((e) => ({ name: e.name, muscleGroup: e.muscleGroup || "", sets: e.sets ?? "", reps: e.reps ?? "" }));
+            const exercises = (a.exercises || []).map((e) => ({ name: e.name, muscleGroup: e.muscleGroup || "", imageUrl: e.imageUrl || "", videoUrl: e.videoUrl || "", sets: e.sets ?? "", reps: e.reps ?? "" }));
             this.editForm = {
               title: a.title || "",
               description: a.description || "",
@@ -1979,11 +2195,11 @@
         openClientPhotos(client) {
           if (client?.relation !== "mine") return;
           this.clientPhotosUser = client;
-          this.clientProgressPhotos = [];
+          this.clientProgressPhotoSets = [];
           this.clientPhotosLoading = true;
           this.clientPhotosOpen = true;
           this.apiRequest("GET", `/api/v1/coaches/me/clients/${encodeURIComponent(client.id)}/progress-photos`)
-            .then((photos) => { this.clientProgressPhotos = Array.isArray(photos) ? photos : []; })
+            .then((sets) => { this.clientProgressPhotoSets = Array.isArray(sets) ? sets : []; })
             .catch((err) => this.showToast(err.message || "Unable to load transformation photos", "error"))
             .finally(() => { this.clientPhotosLoading = false; });
         },

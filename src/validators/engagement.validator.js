@@ -21,6 +21,8 @@ const createCoachReport = {
 const listCoachReports = {
   query: z.object({
     status: z.enum(REPORT_STATUSES).optional(),
+    search: z.string().trim().max(150).optional(),
+    searchField: z.enum(["ALL", "USER", "COACH", "TEXT"]).optional(),
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional()
   })
@@ -75,6 +77,7 @@ const listSupportTickets = {
     status: z.enum(SUPPORT_STATUSES).optional(),
     category: z.enum(SUPPORT_CATEGORIES).optional(),
     search: z.string().trim().max(150).optional(),
+    searchField: z.enum(["ALL", "SUBJECT", "USER", "MESSAGE"]).optional(),
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional()
   })

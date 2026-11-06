@@ -25,6 +25,8 @@ const assignCustomWorkoutExercise = z.object({
   name: z.string().trim().min(1).max(120),
   muscleGroup: z.string().max(60).optional(),
   equipment: z.string().max(120).optional(),
+  imageUrl: z.string().url().max(2048).nullable().optional(),
+  videoUrl: z.string().url().max(2048).nullable().optional(),
   sets: z.number().int().positive().max(50).optional(),
   reps: z.number().int().positive().max(200).optional()
 });
@@ -34,9 +36,16 @@ const assignCustomWorkout = {
   body: z.object({
     title: z.string().trim().min(2).max(120),
     description: z.string().max(1000).optional(),
-    durationMinutes: z.number().int().positive().max(300).optional(),
-    difficulty: z.enum(DIFFICULTIES).optional(),
-    categoryKey: z.enum(CATEGORY_KEYS).optional(),
+    durationMinutes: z.number().int().positive().max(300),
+    difficulty: z.enum(DIFFICULTIES),
+    categoryKey: z.enum(CATEGORY_KEYS),
+    accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Choose a valid accent color"),
+    imageUrl: z.string().url().max(2048).optional(),
+    videoUrl: z.string().url().max(2048).optional(),
+    isAvailable: z.boolean().optional(),
+    scheduledAt: z.string().datetime({ offset: true }).nullable().optional(),
+    scheduleType: z.enum(["ONCE", "DAILY", "WEEKLY"]).optional(),
+    scheduleDays: z.array(z.enum(["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"])).max(7).optional(),
     exercises: z.array(assignCustomWorkoutExercise).max(50).optional(),
     asCoachUserId: z.string().uuid("Invalid coach id").optional()
   })
@@ -51,10 +60,27 @@ const updateCustomAssignment = {
       durationMinutes: z.number().int().positive().max(300).nullable(),
       difficulty: z.enum(DIFFICULTIES),
       categoryKey: z.enum(CATEGORY_KEYS),
+      accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+      imageUrl: z.string().url().max(2048).nullable(),
+      videoUrl: z.string().url().max(2048).nullable(),
+      isAvailable: z.boolean(),
+      scheduledAt: z.string().datetime({ offset: true }).nullable(),
+      scheduleType: z.enum(["ONCE", "DAILY", "WEEKLY"]),
+      scheduleDays: z.array(z.enum(["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"])).max(7),
       // When present the exercise list is replaced wholesale.
       exercises: z.array(assignCustomWorkoutExercise).min(1).max(50)
     })
     .partial()
+};
+
+const copyCustomAssignment = {
+  params: idParam.params,
+  body: z.object({
+    userId: z.string().uuid("Invalid user id"),
+    scheduledAt: z.string().datetime({ offset: true }).nullable().optional(),
+    scheduleType: z.enum(["ONCE", "DAILY", "WEEKLY"]).optional(),
+    scheduleDays: z.array(z.enum(["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"])).max(7).optional()
+  })
 };
 
 const listMyAssignedWorkouts = {
@@ -79,6 +105,7 @@ module.exports = {
   assignWorkoutPlan,
   assignCustomWorkout,
   updateCustomAssignment,
+  copyCustomAssignment,
   listMyAssignedWorkouts,
   updateAssignedWorkoutPlan
 };
