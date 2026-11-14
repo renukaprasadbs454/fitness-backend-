@@ -980,9 +980,8 @@
                           <input type="url" x-model="assignForm.videoUrl" placeholder="https://…" class="w-full rounded-xl border border-dark-border bg-dark px-3 py-2.5 text-sm text-white placeholder-slate-600">
                         </div>
                       </div>
-                      <div class="flex items-center justify-between pt-1">
+                      <div class="pt-1">
                         <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Exercises</label>
-                        <button @click="assignForm.exercises.push(blankExercise())" class="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary-light text-xs font-semibold rounded-lg">+ Add</button>
                       </div>
                       <template x-for="(row, idx) in assignForm.exercises" :key="idx">
                         <div class="rounded-xl border border-dark-border p-3 space-y-2">
@@ -1000,6 +999,7 @@
                           </div>
                         </div>
                       </template>
+                      <button @click="assignForm.exercises.push(blankExercise())" class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20">+ Add exercise</button>
                     </div>
                   </template>
 
@@ -1291,9 +1291,8 @@
                 <template x-for="c in workoutCategories" :key="c"><option :value="c" x-text="c.replace(/_/g, ' ')"></option></template>
               </select>
             </div>
-            <div class="flex items-center justify-between pt-1">
+            <div class="pt-1">
               <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Exercises</label>
-              <button @click="editForm.exercises.push(blankExercise())" class="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary-light text-xs font-semibold rounded-lg">+ Add</button>
             </div>
             <template x-for="(row, idx) in editForm.exercises" :key="idx">
               <div class="rounded-xl border border-dark-border p-3 space-y-2">
@@ -1311,6 +1310,7 @@
                 </div>
               </div>
             </template>
+            <button @click="editForm.exercises.push(blankExercise())" class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-300 transition hover:border-blue-400/40 hover:bg-blue-500/20">+ Add exercise</button>
           </div>
         </template>
       </div>
