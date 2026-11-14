@@ -11,6 +11,35 @@ const MAX_MESSAGES_PER_WINDOW = 30;
 const WINDOW_MS = 60 * 1000;
 const messageRateState = new Map(); // userId -> { count, windowStart }
 
+// Keep the Socket.IO handshake session rules aligned with HTTP authentication.
+// In particular, tokens tied to a refresh-token row must stop working as soon
+// as logout, password reset, or admin revocation marks that row revoked.
+function createSocketAuthenticator({ verifyToken = verifyAccessToken, findUser, findSession, now = () => new Date() }) {
+  return async function authenticateSocketToken(token) {
+    if (!token) throw new Error("Missing auth token");
+    const payload = verifyToken(token);
+    let user;
+    if (payload.sid) {
+      const session = await findSession(payload.sid);
+      if (!session || session.userId !== payload.sub || session.revoked || session.expiresAt <= now()) {
+        throw new Error("Session has ended");
+      }
+      user = session.user;
+    } else {
+      // Short-lived pre-session tokens remain accepted until their expiry,
+      // matching the HTTP migration compatibility behavior.
+      user = await findUser(payload.sub);
+    }
+    if (!user || !user.isActive) throw new Error("User is inactive");
+    return { id: user.id, role: user.role };
+  };
+}
+
+const authenticateSocketToken = createSocketAuthenticator({
+  findUser: (id) => prisma.user.findUnique({ where: { id } }),
+  findSession: (id) => prisma.refreshToken.findUnique({ where: { id }, include: { user: true } })
+});
+
 function isRateLimited(userId) {
   const now = Date.now();
   const state = messageRateState.get(userId);
@@ -59,13 +88,7 @@ function registerChatGateway(io) {
       const token =
         socket.handshake.auth?.token ||
         socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, "");
-      if (!token) return next(new Error("Missing auth token"));
-
-      const payload = verifyAccessToken(token);
-      const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-      if (!user || !user.isActive) return next(new Error("User not found or inactive"));
-
-      socket.user = { id: user.id, role: user.role };
+      socket.user = await authenticateSocketToken(token);
       next();
     } catch (err) {
       next(new Error("Invalid or expired token"));
@@ -141,12 +164,13 @@ function registerChatGateway(io) {
     });
   });
 
-  // Lets REST controllers (e.g. the image-upload send-message endpoint)
-  // push a message to a user's personal room without needing direct
-  // access to the socket namespace.
-  return (recipientUserId, message) => {
+  // Lets REST controllers (e.g. image uploads and coach web chat) deliver the
+  // same event as Socket.IO sends. The room covers an open conversation while
+  // the personal room updates badges on every other device/tab.
+  return (roomId, recipientUserId, message) => {
+    chatNsp.to(`room:${roomId}`).emit("message:new", message);
     chatNsp.to(`user:${recipientUserId}`).emit("message:new", message);
   };
 }
 
-module.exports = { registerChatGateway };
+module.exports = { registerChatGateway, createSocketAuthenticator };

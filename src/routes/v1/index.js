@@ -26,6 +26,8 @@ const favoriteRoutes = require("./favorite.routes");
 const coachReportRoutes = require("./coachReport.routes");
 const supportRoutes = require("./support.routes");
 const integrationRoutes = require("./integration.routes");
+const privacyRoutes = require("./privacy.routes");
+const adminPrivacyRoutes = require("./adminPrivacy.routes");
 
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
@@ -53,6 +55,8 @@ router.use("/favorites", favoriteRoutes);
 router.use("/coach-reports", coachReportRoutes);
 router.use("/support", supportRoutes);
 router.use("/integrations", integrationRoutes);
+router.use("/privacy", privacyRoutes);
+router.use("/admin/privacy", adminPrivacyRoutes);
 
 router.get("/health", (req, res) => res.json({ success: true, message: "OK" }));
 

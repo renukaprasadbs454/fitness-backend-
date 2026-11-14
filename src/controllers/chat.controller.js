@@ -34,7 +34,7 @@ const sendMessage = asyncHandler(async (req, res) => {
 
   // Notify the Socket.io gateway (if attached) so the recipient gets it
   // in real time even though this request came in over plain REST.
-  req.app.get("chatSocketEmitter")?.(result.recipientId, result.message);
+  req.app.get("chatSocketEmitter")?.(req.params.roomId, result.recipientId, result.message);
 
   return ApiResponse.success(res, httpStatus.CREATED, "Message sent", result.message);
 });

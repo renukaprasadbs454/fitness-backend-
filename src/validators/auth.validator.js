@@ -13,6 +13,10 @@ const register = {
     email: z.string().trim().toLowerCase().email(),
     phone: z.string().trim().min(7).max(20).optional(),
     password: passwordSchema,
+    privacyNoticeAccepted: z.literal(true, { error: "Please review and accept the FitNerve privacy notice to create an account." }),
+    privacyNoticeVersion: z.string().trim().min(1).max(40),
+    termsAccepted: z.literal(true, { error: "Please review and accept the FitNerve Terms and Conditions to create an account." }),
+    termsVersion: z.string().trim().min(1).max(40),
     // Public sign-up only ever creates client accounts. Coaches are created by an
     // admin (POST /admin/users) or the head coach (POST /coaches).
     role: z.literal("USER").optional().default("USER")

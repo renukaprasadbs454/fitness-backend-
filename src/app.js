@@ -13,6 +13,7 @@ const v1Routes = require("./routes/v1");
 const { generalLimiter } = require("./middlewares/rateLimiter.middleware");
 const { signS3Urls } = require("./middlewares/signedUrl.middleware");
 const { errorHandler, notFoundHandler } = require("./middlewares/error.middleware");
+const { isOriginAllowed } = require("./utils/corsPolicy");
 
 const app = express();
 
@@ -59,13 +60,7 @@ app.use(
         return callback(null, true);
       }
 
-      // Expo's web dev server picks whatever port is free (8081, 8082, ...),
-      // so hardcoding one port in CORS_ALLOWED_ORIGINS breaks the moment it
-      // picks a different one. In dev, allow any localhost/127.0.0.1 origin
-      // regardless of port; production still enforces the explicit allowlist.
-      const isLocalhostDev = env.nodeEnv !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-
-      if (isLocalhostDev || !env.corsAllowedOrigins.length || env.corsAllowedOrigins.includes(origin)) {
+      if (isOriginAllowed(origin, { allowedOrigins: env.corsAllowedOrigins, allowLocalhost: env.allowLocalhostCors })) {
         return callback(null, true);
       }
 

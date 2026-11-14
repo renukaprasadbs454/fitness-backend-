@@ -2380,11 +2380,18 @@
           this.connectSocket();
           // Safety net for when the socket is down: keep the conversation list fresh.
           if (!this.chatPoll) {
+            this._lastChatRoomsPoll = Date.now();
             this.chatPoll = setInterval(() => {
               if (!this.isAuthenticated) return;
-              this.fetchRooms();
-              if (!this.chatConnected && this.activeRoom && this.currentView === "chat") this.loadMessages(true);
-            }, 20000);
+              // Socket.IO is the primary live path. Refresh history every five
+              // seconds only while a conversation is open as a recovery path
+              // for networks that silently drop a websocket event.
+              if (this.activeRoom && this.currentView === "chat") this.loadMessages(true);
+              if (Date.now() - (this._lastChatRoomsPoll || 0) >= 20000) {
+                this._lastChatRoomsPoll = Date.now();
+                this.fetchRooms();
+              }
+            }, 5000);
           }
         },
 
@@ -2436,8 +2443,17 @@
         },
 
         onSocketMessage(m) {
-          if (m.senderId === this.myUserId) return;
           const viewing = this.currentView === "chat" && this.activeRoom?.id === m.roomId;
+          const room = this.chatRooms.find((r) => r.id === m.roomId);
+          // The server also emits to the recipient's personal room for badge
+          // updates, so a participant with the chat open can receive the same
+          // event through both room subscriptions. Handle it only once.
+          if ((viewing && this.chatMessages.some((x) => x.id === m.id)) || (!viewing && room?.lastMessage?.id === m.id)) return;
+
+          if (m.senderId === this.myUserId) {
+            this.afterSent(m);
+            return;
+          }
 
           if (viewing) {
             if (!this.chatMessages.some((x) => x.id === m.id)) this.chatMessages.push(m);
@@ -2447,7 +2463,6 @@
             _chatSocket.emit("message:delivered", { roomId: m.roomId });
           }
 
-          const room = this.chatRooms.find((r) => r.id === m.roomId);
           if (!room) {
             this.fetchRooms();
             return;
@@ -2523,10 +2538,14 @@
           return this.apiRequest("GET", `/api/v1/chat/rooms/${room.id}/messages?limit=100`)
             .then((items) => {
               if (this.activeRoom?.id !== room.id) return;
-              this.chatMessages = items || [];
+              // A socket event can arrive while this request is in flight.
+              // Merge by id so the older HTTP response cannot erase it.
+              const merged = new Map((this.chatMessages || []).map((message) => [message.id, message]));
+              (items || []).forEach((message) => merged.set(message.id, message));
+              this.chatMessages = [...merged.values()].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
               this.scrollChatToEnd();
             })
-            .catch((err) => this.showToast(err.message || "Failed to load messages", "error"))
+            .catch((err) => { if (!silent) this.showToast(err.message || "Failed to load messages", "error"); })
             .finally(() => { this.chatLoading = false; });
         },
 

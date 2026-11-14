@@ -5,7 +5,7 @@ const httpStatus = require("../constants/httpStatus");
 const env = require("../config/env");
 
 const register = asyncHandler(async (req, res) => {
-  const result = await authService.register(req.body);
+  const result = await authService.register(req.body, { ip: req.ip, userAgent: req.get("user-agent") });
   return ApiResponse.success(
     res,
     httpStatus.CREATED,

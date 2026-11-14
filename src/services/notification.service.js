@@ -3,6 +3,7 @@ const userRepository = require("../repositories/user.repository");
 const { parsePagination, buildMeta } = require("../utils/pagination");
 const { getMessaging } = require("../config/firebase");
 const logger = require("../config/logger");
+const prisma = require("../database/prismaClient");
 
 // Maps a NotificationType to the NotificationPreference column that gates it.
 // SYSTEM notifications have no opt-out — they're account/security related.
@@ -16,6 +17,15 @@ const TYPE_TO_PREFERENCE_FIELD = {
 };
 
 async function registerDevice(userId, { token, platform }) {
+  const latestConsent = await prisma.privacyConsentRecord.findFirst({
+    where: { userId, purposeKey: "notifications" },
+    orderBy: { createdAt: "desc" },
+    select: { granted: true }
+  });
+  if (!latestConsent?.granted) {
+    const ApiError = require("../utils/ApiError");
+    throw ApiError.forbidden("Enable push notifications in Profile → Privacy & Security before registering this device.");
+  }
   return notificationRepository.upsertDeviceToken(userId, token, platform);
 }
 

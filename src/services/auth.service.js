@@ -9,6 +9,7 @@ const { sendEmail } = require("../utils/email");
 const ApiError = require("../utils/ApiError");
 const env = require("../config/env");
 const logger = require("../config/logger");
+const prisma = require("../database/prismaClient");
 
 function sanitizeUser(user) {
   // eslint-disable-next-line no-unused-vars
@@ -90,7 +91,14 @@ async function consumeOtp(userId, purpose, code) {
   await otpRepository.markOtpCodeUsed(record.id);
 }
 
-async function register({ fullName, email, phone, password, role }) {
+async function register({ fullName, email, phone, password, role, privacyNoticeAccepted, privacyNoticeVersion, termsAccepted, termsVersion }, requestMeta = {}) {
+  if (privacyNoticeAccepted !== true || typeof privacyNoticeVersion !== "string" || termsAccepted !== true || typeof termsVersion !== "string") {
+    throw ApiError.badRequest("Review and accept both the current Privacy Policy and Terms and Conditions before creating an account.");
+  }
+  const currentPrivacyNotice = await prisma.privacyNotice.findFirst({ where: { isCurrent: true }, orderBy: { effectiveAt: "desc" } });
+  if (!currentPrivacyNotice || currentPrivacyNotice.version !== privacyNoticeVersion || !currentPrivacyNotice.termsVersion || currentPrivacyNotice.termsVersion !== termsVersion || !currentPrivacyNotice.termsBody) {
+    throw ApiError.conflict("The Privacy Policy or Terms and Conditions have changed or are not configured. Review both current documents and submit again.");
+  }
   const existing = await userRepository.findByEmail(email);
   if (existing) throw ApiError.conflict("An account with this email already exists");
 
@@ -101,8 +109,20 @@ async function register({ fullName, email, phone, password, role }) {
 
   const passwordHash = await hashPassword(password);
   const username = await generateUniqueUsername(email);
-  const user = await userRepository.create({ fullName, email, phone, passwordHash, role, username });
-  await userRepository.createProfile(user.id, {});
+  const user = await prisma.$transaction(async (tx) => {
+    const createdUser = await tx.user.create({ data: { fullName, email, phone, passwordHash, role, username } });
+    await tx.userProfile.create({ data: { userId: createdUser.id } });
+    await tx.privacyNoticeAcknowledgement.create({ data: {
+      userId: createdUser.id, noticeId: currentPrivacyNotice.id,
+      collectionPoint: "registration",
+      privacyPolicyAccepted: true,
+      termsAccepted: true,
+      termsVersion: currentPrivacyNotice.termsVersion,
+      ipAddress: typeof requestMeta.ip === "string" ? requestMeta.ip.slice(0, 64) : null,
+      userAgent: typeof requestMeta.userAgent === "string" ? requestMeta.userAgent.slice(0, 512) : null
+    } });
+    return createdUser;
+  });
 
   if (role === "COACH") {
     await coachRepository.create({ userId: user.id, specialties: [] });

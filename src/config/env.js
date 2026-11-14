@@ -59,6 +59,9 @@ const env = {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
+  // Loopback origins are useful for local web development, but may only be
+  // allowed against production APIs when an operator explicitly opts in.
+  allowLocalhostCors: process.env.NODE_ENV !== "production" || process.env.ALLOW_LOCALHOST_CORS === "true",
 
   rateLimit: {
     windowMin: parseInt(process.env.RATE_LIMIT_WINDOW_MIN || "15", 10),
