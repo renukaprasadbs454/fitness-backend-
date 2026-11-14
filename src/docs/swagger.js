@@ -23,13 +23,17 @@ const options = {
       schemas: {
         RegisterRequest: {
           type: "object",
-          required: ["fullName", "email", "password"],
+          required: ["fullName", "email", "password", "privacyNoticeAccepted", "privacyNoticeVersion", "termsAccepted", "termsVersion"],
           properties: {
             fullName: { type: "string", example: "Bobby Mathews" },
             email: { type: "string", example: "bobby@example.com" },
             phone: { type: "string", example: "+919876543210" },
             password: { type: "string", example: "StrongPass1" },
-            role: { type: "string", enum: ["USER", "COACH"], example: "USER" }
+            role: { type: "string", enum: ["USER", "COACH"], example: "USER" },
+            privacyNoticeAccepted: { type: "boolean", enum: [true], description: "Must be explicitly accepted by the person registering." },
+            privacyNoticeVersion: { type: "string", description: "Privacy Policy version returned by GET /privacy/notice." },
+            termsAccepted: { type: "boolean", enum: [true], description: "Must be explicitly accepted by the person registering." },
+            termsVersion: { type: "string", description: "Terms and Conditions version returned by GET /privacy/notice." }
           }
         },
         LoginRequest: {

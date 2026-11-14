@@ -3,11 +3,13 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas   = ["public", "privacy"]
 }
 
 // ────────────────────────────────────────────────────────────
@@ -18,6 +20,7 @@ enum Role {
   USER
   COACH
   ADMIN
+  @@schema("public")
 }
 
 enum Gender {
@@ -25,6 +28,7 @@ enum Gender {
   FEMALE
   OTHER
   PREFER_NOT_TO_SAY
+  @@schema("public")
 }
 
 enum Goal {
@@ -34,6 +38,7 @@ enum Goal {
   ENDURANCE
   GENERAL_FITNESS
   REHAB
+  @@schema("public")
 }
 
 enum MediaType {
@@ -42,6 +47,7 @@ enum MediaType {
   COACH_IMAGE
   CHAT_IMAGE
   CONTENT_IMAGE
+  @@schema("public")
 }
 
 enum PhotoAngle {
@@ -49,6 +55,7 @@ enum PhotoAngle {
   BACK
   LEFT
   RIGHT
+  @@schema("public")
 }
 
 enum DayOfWeek {
@@ -59,6 +66,7 @@ enum DayOfWeek {
   FRIDAY
   SATURDAY
   SUNDAY
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -71,6 +79,7 @@ enum ActivityLevel {
   MODERATE
   ACTIVE
   VERY_ACTIVE
+  @@schema("public")
 }
 
 enum WorkoutCategoryKey {
@@ -80,17 +89,20 @@ enum WorkoutCategoryKey {
   CARDIO
   YOGA
   GENERAL_FITNESS
+  @@schema("public")
 }
 
 enum WorkoutDifficulty {
   BEGINNER
   INTERMEDIATE
   ADVANCED
+  @@schema("public")
 }
 
 enum MeetingProvider {
   MANUAL
   GOOGLE_MEET
+  @@schema("public")
 }
 
 enum AppointmentStatus {
@@ -98,6 +110,7 @@ enum AppointmentStatus {
   CONFIRMED
   COMPLETED
   CANCELLED
+  @@schema("public")
 }
 
 enum ActivityType {
@@ -109,6 +122,7 @@ enum ActivityType {
   BMI_LOGGED
   WEIGHT_LOGGED
   OTHER
+  @@schema("public")
 }
 
 enum NotificationType {
@@ -119,11 +133,13 @@ enum NotificationType {
   COACH_MESSAGE
   ANNOUNCEMENT
   SYSTEM
+  @@schema("public")
 }
 
 enum DevicePlatform {
   IOS
   ANDROID
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -185,10 +201,18 @@ model User {
   favoriteCoaches          FavoriteCoach[]
   supportTickets           SupportTicket[]
   coachReports             CoachReport[]
+  privacyConsentRecords   PrivacyConsentRecord[]
+  privacyNoticeAcknowledgements PrivacyNoticeAcknowledgement[]
+  privacyConsentWithdrawals PrivacyConsentWithdrawal[]
+  privacyRequests          PrivacyRequest[]
+  privacyGrievances        PrivacyGrievance[]
+  privacyNominees          PrivacyNominee[]
+  privacyAuditLogs         PrivacyAuditLog[]
 
   @@index([role])
   @@index([assignedCoachId])
   @@map("users")
+  @@schema("public")
 }
 
 model GoogleCalendarConnection {
@@ -207,6 +231,7 @@ model GoogleCalendarConnection {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("google_calendar_connections")
+  @@schema("public")
 }
 
 model RefreshToken {
@@ -222,11 +247,13 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+  @@schema("public")
 }
 
 enum OtpPurpose {
   REGISTRATION
   PASSWORD_RESET
+  @@schema("public")
 }
 
 model OtpCode {
@@ -242,6 +269,7 @@ model OtpCode {
 
   @@index([userId])
   @@map("otp_codes")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -263,6 +291,7 @@ model UserProfile {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("user_profiles")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -295,6 +324,7 @@ model Coach {
 
   @@index([experienceYears])
   @@map("coaches")
+  @@schema("public")
 }
 
 model CoachAvailability {
@@ -310,6 +340,7 @@ model CoachAvailability {
   @@unique([coachId, dayOfWeek, startTime])
   @@index([coachId])
   @@map("coach_availability")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -332,6 +363,7 @@ model Media {
   @@index([userId, type])
   @@index([userId, type, sessionId])
   @@map("media")
+  @@schema("public")
 }
 
 // Keeps the 24-hour progress-photo set window even if a user resets/deletes
@@ -345,6 +377,7 @@ model ProgressPhotoSetLock {
 
   @@index([userId, createdAt])
   @@map("progress_photo_set_locks")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -363,6 +396,7 @@ model BmiLog {
 
   @@index([userId, createdAt])
   @@map("bmi_logs")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -386,6 +420,7 @@ model CalorieLog {
 
   @@index([userId, createdAt])
   @@map("calorie_logs")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -407,6 +442,7 @@ model StepLog {
   @@unique([userId, date])
   @@index([userId, date])
   @@map("step_logs")
+  @@schema("public")
 }
 
 model ActivityLog {
@@ -419,6 +455,7 @@ model ActivityLog {
 
   @@index([userId, createdAt])
   @@map("activity_logs")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -434,6 +471,7 @@ model WeightLog {
 
   @@index([userId, loggedAt])
   @@map("weight_logs")
+  @@schema("public")
 }
 
 model BodyMeasurement {
@@ -449,6 +487,7 @@ model BodyMeasurement {
 
   @@index([userId, loggedAt])
   @@map("body_measurements")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -470,6 +509,7 @@ model Exercise {
   planLinks WorkoutPlanExercise[]
 
   @@map("exercises")
+  @@schema("public")
 }
 
 model WorkoutPlan {
@@ -494,6 +534,7 @@ model WorkoutPlan {
   @@index([categoryKey])
   @@index([isActive, categoryKey, difficulty])
   @@map("workout_plans")
+  @@schema("public")
 }
 
 model WorkoutPlanExercise {
@@ -509,6 +550,7 @@ model WorkoutPlanExercise {
   @@unique([planId, exerciseId])
   @@index([planId])
   @@map("workout_plan_exercises")
+  @@schema("public")
 }
 
 model WorkoutCompletion {
@@ -522,12 +564,14 @@ model WorkoutCompletion {
 
   @@index([userId, completedAt])
   @@map("workout_completions")
+  @@schema("public")
 }
 
 enum ScheduledWorkoutStatus {
   SCHEDULED
   COMPLETED
   SKIPPED
+  @@schema("public")
 }
 
 // A user's plan to do a specific WorkoutPlan at a specific future time —
@@ -547,6 +591,7 @@ model ScheduledWorkout {
 
   @@index([userId, scheduledAt])
   @@map("scheduled_workouts")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -591,6 +636,7 @@ model CustomWorkout {
   @@index([createdByUserId])
   @@index([userId, scheduledAt])
   @@map("custom_workouts")
+  @@schema("public")
 }
 
 model CustomWorkoutCompletion {
@@ -605,6 +651,7 @@ model CustomWorkoutCompletion {
   @@unique([customWorkoutId, completionDate])
   @@index([userId, completedAt])
   @@map("custom_workout_completions")
+  @@schema("public")
 }
 
 model CustomWorkoutExercise {
@@ -622,6 +669,7 @@ model CustomWorkoutExercise {
 
   @@index([customWorkoutId])
   @@map("custom_workout_exercises")
+  @@schema("public")
 }
 
 // One user pushing an existing catalog WorkoutPlan to another user —
@@ -647,6 +695,7 @@ model AssignedWorkoutPlan {
   @@index([assignedByUserId])
   @@index([createdByUserId])
   @@map("assigned_workout_plans")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -677,6 +726,7 @@ model Appointment {
   @@index([coachId, scheduledAt])
   @@index([userId, scheduledAt])
   @@map("appointments")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -688,6 +738,7 @@ enum PaymentStatus {
   SUCCESS
   FAILED
   REFUNDED
+  @@schema("public")
 }
 
 enum PaymentMethod {
@@ -696,6 +747,7 @@ enum PaymentMethod {
   NETBANKING
   WALLET
   CASH
+  @@schema("public")
 }
 
 enum PaymentPurpose {
@@ -703,6 +755,7 @@ enum PaymentPurpose {
   SUBSCRIPTION
   CUSTOM_WORKOUT_PLAN
   OTHER
+  @@schema("public")
 }
 
 model Payment {
@@ -723,6 +776,7 @@ model Payment {
   @@index([userId, status])
   @@index([status, createdAt])
   @@map("payments")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -741,6 +795,7 @@ model Notification {
 
   @@index([userId, isRead, createdAt])
   @@map("notifications")
+  @@schema("public")
 }
 
 model DeviceToken {
@@ -754,6 +809,7 @@ model DeviceToken {
 
   @@index([userId])
   @@map("device_tokens")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -779,6 +835,7 @@ enum AdminAction {
   UPDATE_COACH_REPORT
   CONNECT_INTEGRATION
   DISCONNECT_INTEGRATION
+  @@schema("public")
 }
 
 model AdminAuditLog {
@@ -794,6 +851,7 @@ model AdminAuditLog {
   @@index([adminId, createdAt])
   @@index([targetType, targetId])
   @@map("admin_audit_logs")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -804,11 +862,13 @@ enum MessageStatus {
   SENT
   DELIVERED
   SEEN
+  @@schema("public")
 }
 
 enum MessageType {
   TEXT
   IMAGE
+  @@schema("public")
 }
 
 // One room per (user, coach) pair. Created lazily on first message
@@ -838,6 +898,7 @@ model ChatRoom {
   @@index([userId, lastMessageAt])
   @@index([coachId, lastMessageAt])
   @@map("chat_rooms")
+  @@schema("public")
 }
 
 model ChatMessage {
@@ -856,6 +917,7 @@ model ChatMessage {
 
   @@index([roomId, createdAt])
   @@map("chat_messages")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -873,6 +935,7 @@ model NotificationPreference {
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@map("notification_preferences")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -884,12 +947,14 @@ enum ContentType {
   VIDEO
   WORKOUT_TIP
   NUTRITION_TIP
+  @@schema("public")
 }
 
 enum ContentStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+  @@schema("public")
 }
 
 model ContentCategory {
@@ -901,6 +966,7 @@ model ContentCategory {
   posts ContentPost[]
 
   @@map("content_categories")
+  @@schema("public")
 }
 
 model ContentPost {
@@ -925,6 +991,7 @@ model ContentPost {
   @@index([type, status, publishedAt])
   @@index([categoryId])
   @@map("content_posts")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -948,6 +1015,7 @@ model Package {
 
   @@index([isActive, sortOrder])
   @@map("packages")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -965,6 +1033,7 @@ model FavoriteCoach {
   @@unique([userId, coachId])
   @@index([coachId])
   @@map("favorite_coaches")
+  @@schema("public")
 }
 
 enum CoachReportReason {
@@ -974,6 +1043,7 @@ enum CoachReportReason {
   NOT_A_GOOD_FIT
   INAPPROPRIATE_BEHAVIOUR
   OTHER
+  @@schema("public")
 }
 
 enum CoachReportStatus {
@@ -981,6 +1051,7 @@ enum CoachReportStatus {
   REVIEWING
   RESOLVED
   DISMISSED
+  @@schema("public")
 }
 
 // A user's complaint about a coach. Admins review it and may move the user to
@@ -1005,6 +1076,7 @@ model CoachReport {
   @@index([coachId])
   @@index([userId])
   @@map("coach_reports")
+  @@schema("public")
 }
 
 enum SupportTicketCategory {
@@ -1014,6 +1086,7 @@ enum SupportTicketCategory {
   TECHNICAL
   COACH
   OTHER
+  @@schema("public")
 }
 
 enum SupportTicketStatus {
@@ -1021,6 +1094,7 @@ enum SupportTicketStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+  @@schema("public")
 }
 
 model SupportTicket {
@@ -1041,6 +1115,7 @@ model SupportTicket {
   @@index([status, createdAt])
   @@index([userId, createdAt])
   @@map("support_tickets")
+  @@schema("public")
 }
 
 // ────────────────────────────────────────────────────────────
@@ -1062,4 +1137,253 @@ model PlatformIntegration {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@map("platform_integrations")
+  @@schema("public")
+}
+
+// ────────────────────────────────────────────────────────────
+// DPDP PRIVACY OPERATIONS (kept in a dedicated PostgreSQL schema)
+// ────────────────────────────────────────────────────────────
+
+model PrivacyNotice {
+  id          String   @id @default(uuid())
+  version     String   @unique
+  title       String
+  body        String   @db.Text
+  policyUrl   String?  @map("policy_url")
+  termsVersion String? @map("terms_version")
+  termsTitle   String? @map("terms_title")
+  termsBody    String? @db.Text @map("terms_body")
+  isCurrent   Boolean  @default(false) @map("is_current")
+  effectiveAt DateTime @default(now()) @map("effective_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  consents    PrivacyConsentRecord[]
+  acknowledgements PrivacyNoticeAcknowledgement[]
+
+  @@index([isCurrent, effectiveAt])
+  @@map("privacy_notices")
+  @@schema("privacy")
+}
+
+model PrivacyNoticeAcknowledgement {
+  id               String        @id @default(uuid())
+  userId           String        @map("user_id")
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  noticeId         String        @map("notice_id")
+  notice           PrivacyNotice @relation(fields: [noticeId], references: [id], onDelete: Restrict)
+  acknowledgedAt   DateTime      @default(now()) @map("acknowledged_at")
+  collectionPoint  String        @default("registration") @map("collection_point")
+  ipAddress        String?       @map("ip_address")
+  userAgent        String?       @map("user_agent")
+  privacyPolicyAccepted Boolean @default(false) @map("privacy_policy_accepted")
+  termsAccepted   Boolean       @default(false) @map("terms_accepted")
+  termsVersion    String?       @map("terms_version")
+
+  @@index([userId, acknowledgedAt])
+  @@map("privacy_notice_acknowledgements")
+  @@schema("privacy")
+}
+
+model PrivacyPurpose {
+  key             String   @id
+  name            String
+  description     String   @db.Text
+  dataCategories  String[] @default([]) @map("data_categories")
+  essential       Boolean  @default(false)
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  consents        PrivacyConsentRecord[]
+
+  @@map("privacy_purposes")
+  @@schema("privacy")
+}
+
+model PrivacyConsentRecord {
+  id            String         @id @default(uuid())
+  userId        String         @map("user_id")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purposeKey    String         @map("purpose_key")
+  purpose       PrivacyPurpose @relation(fields: [purposeKey], references: [key], onDelete: Restrict)
+  noticeId      String         @map("notice_id")
+  notice        PrivacyNotice  @relation(fields: [noticeId], references: [id], onDelete: Restrict)
+  granted       Boolean
+  affirmative   Boolean        @default(true)
+  collectionPoint String       @default("privacy_dashboard") @map("collection_point")
+  ipAddress     String?        @map("ip_address")
+  userAgent     String?        @map("user_agent")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  withdrawals   PrivacyConsentWithdrawal[]
+
+  @@index([userId, purposeKey, createdAt])
+  @@map("privacy_consent_records")
+  @@schema("privacy")
+}
+
+model PrivacyConsentWithdrawal {
+  id              String               @id @default(uuid())
+  userId          String               @map("user_id")
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consentRecordId String               @map("consent_record_id")
+  consentRecord   PrivacyConsentRecord @relation(fields: [consentRecordId], references: [id], onDelete: Restrict)
+  reason          String?              @db.Text
+  createdAt       DateTime             @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("privacy_consent_withdrawals")
+  @@schema("privacy")
+}
+
+model PrivacyRequest {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String
+  status       String   @default("OPEN")
+  subject      String?
+  details      String?  @db.Text
+  requestedFields String[] @default([]) @map("requested_fields")
+  response     String?  @db.Text
+  handledById  String?  @map("handled_by_id")
+  handledAt    DateTime? @map("handled_at")
+  dueAt        DateTime? @map("due_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([type, status, createdAt])
+  @@index([userId, createdAt])
+  @@map("privacy_requests")
+  @@schema("privacy")
+}
+
+model PrivacyGrievance {
+  id          String   @id @default(uuid())
+  reference   String   @unique @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject     String
+  message     String   @db.Text
+  status      String   @default("OPEN")
+  response    String?  @db.Text
+  handledById String?  @map("handled_by_id")
+  handledAt   DateTime? @map("handled_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@map("privacy_grievances")
+  @@schema("privacy")
+}
+
+model PrivacyNominee {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName        String   @map("full_name")
+  email           String
+  relationship    String
+  verifiedAt      DateTime? @map("verified_at")
+  verificationHash String? @map("verification_hash")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, isActive])
+  @@map("privacy_nominees")
+  @@schema("privacy")
+}
+
+model PrivacyProcessor {
+  id                 String   @id @default(uuid())
+  name               String   @unique
+  service            String
+  purposes           String[] @default([])
+  dataCategories     String[] @default([]) @map("data_categories")
+  storageLocations   String[] @default([]) @map("storage_locations")
+  safeguards         String?  @db.Text
+  retentionAndDelete String?  @db.Text @map("retention_and_delete")
+  contractStatus     String   @default("REVIEW_REQUIRED") @map("contract_status")
+  lastReviewedAt     DateTime? @map("last_reviewed_at")
+  updatedById        String?  @map("updated_by_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("privacy_processors")
+  @@schema("privacy")
+}
+
+model PrivacyRetentionPolicy {
+  id              String   @id @default(uuid())
+  category        String   @unique
+  purpose         String
+  periodDays      Int?     @map("period_days")
+  basis           String   @db.Text
+  enabled         Boolean  @default(false)
+  requiresApproval Boolean @default(true) @map("requires_approval")
+  updatedById     String?  @map("updated_by_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("privacy_retention_policies")
+  @@schema("privacy")
+}
+
+model PrivacyRetentionRun {
+  id            String   @id @default(uuid())
+  dryRun        Boolean  @default(true) @map("dry_run")
+  status        String   @default("PLANNED")
+  report        Json
+  approvedById  String?  @map("approved_by_id")
+  approvedAt    DateTime? @map("approved_at")
+  startedAt     DateTime @default(now()) @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+
+  @@index([status, startedAt])
+  @@map("privacy_retention_runs")
+  @@schema("privacy")
+}
+
+model PrivacyAuditLog {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actorId    String?  @map("actor_id")
+  action     String
+  subjectType String? @map("subject_type")
+  subjectId  String?  @map("subject_id")
+  metadata   Json     @default("{}")
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("privacy_audit_logs")
+  @@schema("privacy")
+}
+
+model PrivacyBreachIncident {
+  id                String   @id @default(uuid())
+  reference         String   @unique @default(uuid())
+  status            String   @default("DISCOVERED")
+  discoveredAt      DateTime @map("discovered_at")
+  occurredAt        DateTime? @map("occurred_at")
+  summary           String   @db.Text
+  affectedCount     Int?     @map("affected_count")
+  dataCategories    String[] @default([]) @map("data_categories")
+  affectedUserIds   String[] @default([]) @map("affected_user_ids")
+  investigation     String?  @db.Text
+  containment       String?  @db.Text
+  boardNoticeAt     DateTime? @map("board_notice_at")
+  boardDetailedAt   DateTime? @map("board_detailed_at")
+  affectedNoticeAt  DateTime? @map("affected_notice_at")
+  resolution        String?  @db.Text
+  createdById       String   @map("created_by_id")
+  updatedById       String?  @map("updated_by_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([status, discoveredAt])
+  @@map("privacy_breach_incidents")
+  @@schema("privacy")
 }

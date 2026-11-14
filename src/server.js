@@ -8,12 +8,20 @@ const logger = require("./config/logger");
 const prisma = require("./database/prismaClient");
 const { registerChatGateway } = require("./sockets/chat.socket");
 const { startCronJobs, stopCronJobs } = require("./jobs");
+const { isOriginAllowed } = require("./utils/corsPolicy");
 
 const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: env.corsAllowedOrigins.length ? env.corsAllowedOrigins : true,
+    origin: (origin, callback) => {
+      // CORS is not authentication; browser origins must be explicitly
+      // allowed in production, including local previews if an operator opts in.
+      if (isOriginAllowed(origin, { allowedOrigins: env.corsAllowedOrigins, allowLocalhost: env.allowLocalhostCors })) {
+        return callback(null, true);
+      }
+      return callback(new Error("Origin is not allowed by CORS"));
+    },
     credentials: true
   }
 });
