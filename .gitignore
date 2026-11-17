@@ -18,6 +18,8 @@ yarn.lock
 # ─── Firebase / GCP credentials ──────────────────────────────────────────────
 firebase-adminsdk*.json
 service-account*.json
+serviceAccountKey*.json
+*serviceAccount*.json
 google-credentials*.json
 *-firebase-*.json
 
