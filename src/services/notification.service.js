@@ -77,6 +77,23 @@ async function updatePreferences(userId, data) {
   return notificationRepository.upsertPreference(userId, data);
 }
 
+function getChannelIdForType(type) {
+  switch (type) {
+    case "APPOINTMENT_REMINDER":
+    case "APPOINTMENT_CHANGED":
+      return "meetings";
+    case "WORKOUT_REMINDER":
+    case "WORKOUT_ASSIGNED":
+      return "workouts";
+    case "COACH_MESSAGE":
+      return "messages";
+    case "ANNOUNCEMENT":
+      return "announcements";
+    default:
+      return "default";
+  }
+}
+
 /**
  * Sends a push notification to every device token registered for a user,
  * pruning tokens Firebase reports as unregistered/invalid along the way.
@@ -90,23 +107,43 @@ async function dispatchPush(userId, title, body, data = {}) {
   const tokens = await notificationRepository.listDeviceTokens(userId);
   if (!tokens.length) return;
 
+  const type = data.type || "SYSTEM";
+  const channelId = getChannelIdForType(type);
+
   const message = {
     notification: { title, body },
-    data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+    android: {
+      priority: "high",
+      notification: {
+        title,
+        body,
+        channelId,
+        sound: "default",
+        defaultSound: true,
+        defaultVibrateTimings: true,
+        notificationCount: 1,
+        clickAction: "OPEN_APP"
+      }
+    },
+    data: Object.fromEntries(
+      Object.entries({ ...data, type, title, body, channelId }).map(([k, v]) => [k, String(v ?? "")])
+    ),
     tokens: tokens.map((t) => t.token)
   };
 
   try {
     const response = await messaging.sendEachForMulticast(message);
-    response.responses.forEach((r, idx) => {
-      if (
-        !r.success &&
-        (r.error?.code === "messaging/registration-token-not-registered" ||
-          r.error?.code === "messaging/invalid-registration-token")
-      ) {
-        notificationRepository.removeDeviceToken(tokens[idx].token).catch(() => {});
-      }
-    });
+    if (response.failureCount > 0) {
+      response.responses.forEach((r, idx) => {
+        if (
+          !r.success &&
+          (r.error?.code === "messaging/registration-token-not-registered" ||
+            r.error?.code === "messaging/invalid-registration-token")
+        ) {
+          notificationRepository.removeDeviceToken(tokens[idx].token).catch(() => {});
+        }
+      });
+    }
   } catch (err) {
     logger.error(`[notification] FCM dispatch failed for user ${userId}: ${err.message}`);
   }
@@ -158,6 +195,50 @@ async function broadcastAnnouncement(title, body, { role } = {}) {
   return { recipientCount: userIds.length };
 }
 
+/**
+ * Sends custom push notification from the admin panel to:
+ * - "ALL": all active clients and coaches
+ * - "USERS": all active clients
+ * - "COACHES": all active coaches
+ * - "SPECIFIC": a single user by ID or email
+ */
+async function sendAdminNotification({ target = "ALL", userId, userEmail, title, body, type = "ANNOUNCEMENT", data = {} }) {
+  const ApiError = require("../utils/ApiError");
+  let targetIds = [];
+
+  if (target === "SPECIFIC" || userId || userEmail) {
+    if (userId) {
+      const user = await userRepository.findById(userId);
+      if (!user) throw ApiError.notFound(`No user found with ID: ${userId}`);
+      targetIds = [userId];
+    } else if (userEmail) {
+      const user = await userRepository.findByEmail(userEmail.trim().toLowerCase());
+      if (!user) throw ApiError.notFound(`No user found with email: ${userEmail}`);
+      targetIds = [user.id];
+    } else {
+      throw ApiError.badRequest("Please provide either userId or userEmail for SPECIFIC target");
+    }
+  } else if (target === "USERS" || target === "USER") {
+    targetIds = await userRepository.listActiveUserIdsByRole("USER");
+  } else if (target === "COACHES" || target === "COACH") {
+    targetIds = await userRepository.listActiveUserIdsByRole("COACH");
+  } else {
+    // "ALL"
+    const [userIds, coachIds] = await Promise.all([
+      userRepository.listActiveUserIdsByRole("USER"),
+      userRepository.listActiveUserIdsByRole("COACH")
+    ]);
+    targetIds = Array.from(new Set([...userIds, ...coachIds]));
+  }
+
+  if (!targetIds.length) {
+    return { recipientCount: 0, message: "No active recipients found for selected target" };
+  }
+
+  await notifyMany(targetIds, type, title, body, { data });
+  return { recipientCount: targetIds.length, target, type };
+}
+
 module.exports = {
   registerDevice,
   unregisterDevice,
@@ -171,5 +252,7 @@ module.exports = {
   notify,
   notifyMany,
   broadcastAnnouncement,
-  dispatchPush
+  sendAdminNotification,
+  dispatchPush,
+  getChannelIdForType
 };

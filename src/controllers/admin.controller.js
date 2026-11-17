@@ -182,6 +182,11 @@ const broadcastAnnouncement = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, httpStatus.OK, "Announcement broadcast", result);
 });
 
+const sendCustomNotification = asyncHandler(async (req, res) => {
+  const result = await notificationService.sendAdminNotification(req.body);
+  return ApiResponse.success(res, httpStatus.OK, "Notification dispatched successfully", result);
+});
+
 const getDatabaseSchema = asyncHandler(async (req, res) => {
   const schema = adminService.getDatabaseSchema();
   return ApiResponse.success(res, httpStatus.OK, "Database schema retrieved", schema);
@@ -299,6 +304,7 @@ module.exports = {
   listAuditLogs,
   listPayments,
   broadcastAnnouncement,
+  sendCustomNotification,
   getDatabaseSchema,
   getModelData,
   createModelRow,

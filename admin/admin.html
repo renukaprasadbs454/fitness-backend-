@@ -334,6 +334,13 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4zm-3 9l2 2 4-4"/></svg>
           <span x-show="!sidebarCollapsed">Privacy Management</span>
         </button>
+        <button @click="currentView = 'push-notifications'"
+          :class="[currentView === 'push-notifications' ? 'nav-item-active' : 'nav-item text-slate-400', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
+          class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Push Notifications' : ''">
+          <svg class="w-4 h-4 flex-shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          <span x-show="!sidebarCollapsed">Push Notifications</span>
+          <span x-show="!sidebarCollapsed" class="ml-auto text-[10px] bg-amber-500/20 text-amber-300 font-semibold px-1.5 py-0.5 rounded">FCM</span>
+        </button>
         <button @click="testStorage()" :disabled="storageTesting"
           :class="['nav-item text-slate-400 disabled:opacity-50', sidebarCollapsed ? 'justify-center px-0' : 'px-3']"
           class="w-full flex items-center gap-3 py-2.5 rounded-lg text-sm font-medium" :title="sidebarCollapsed ? 'Test image storage' : ''">
@@ -400,6 +407,7 @@
           <button @click="currentView = 'support'; fetchSupportTickets(); mobileNavOpen = false" :class="currentView === 'support' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Support Requests <span x-show="supportCounts.OPEN" class="ml-auto badge badge-orange" x-text="supportCounts.OPEN"></span></button>
           <button @click="currentView = 'coach-reports'; fetchCoachReports(); mobileNavOpen = false" :class="currentView === 'coach-reports' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Coach Reports <span x-show="reportCounts.OPEN" class="ml-auto badge badge-orange" x-text="reportCounts.OPEN"></span></button>
           <button @click="currentView = 'privacy'; fetchPrivacy(); mobileNavOpen = false" :class="currentView === 'privacy' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Privacy Management</button>
+          <button @click="currentView = 'push-notifications'; mobileNavOpen = false" :class="currentView === 'push-notifications' ? 'bg-primary/15 text-primary' : 'text-slate-400 hover:text-white hover:bg-white/5'" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">Push Notifications</button>
           <button @click="testStorage(); mobileNavOpen = false" :disabled="storageTesting" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-50" x-text="storageTesting ? 'Testing storage…' : 'Test image storage'"></button>
 
           <div class="px-3 pt-4 pb-1.5">
@@ -1441,6 +1449,185 @@
           <div x-show="privacyTab==='audit'" class="space-y-2"><template x-for="entry in privacyItems" :key="entry.id"><div class="rounded-lg border border-dark-border bg-dark-card p-3"><p class="text-sm font-medium" x-text="entry.action"></p><p class="mt-1 text-xs text-slate-400" x-text="`${entry.subjectType||''} ${entry.subjectId||''} · ${formatDateTime(entry.createdAt)}`"></p></div></template></div>
         </div>
 
+        <!-- ===== PUSH NOTIFICATIONS VIEW ===== -->
+        <div x-show="currentView === 'push-notifications'">
+          <div class="mb-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <h1 class="text-2xl font-bold">Push Notifications &amp; Alerts</h1>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Firebase FCM Active
+                </span>
+              </div>
+              <p class="text-slate-400 text-sm mt-1">Dispatch targeted or platform-wide push notifications to mobile Android APKs and browser clients.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400">BullMQ Priority Queue: <strong class="text-slate-200">Enabled</strong></span>
+            </div>
+          </div>
+
+          <!-- Quick Templates Bar -->
+          <div class="mb-5 p-4 rounded-xl border border-dark-border bg-dark-card">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">⚡ Quick Preset Templates</p>
+            <div class="flex flex-wrap gap-2">
+              <button @click="applyPushTemplate('meeting-reminder')" class="px-3 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 text-xs font-medium transition-colors">
+                📅 Meeting Reminder (15m)
+              </button>
+              <button @click="applyPushTemplate('meeting-scheduled')" class="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-medium transition-colors">
+                ✨ New Session Scheduled
+              </button>
+              <button @click="applyPushTemplate('meeting-rescheduled')" class="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-medium transition-colors">
+                🔄 Session Rescheduled
+              </button>
+              <button @click="applyPushTemplate('meeting-cancelled')" class="px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-medium transition-colors">
+                ❌ Session Cancelled
+              </button>
+              <button @click="applyPushTemplate('workout-reminder')" class="px-3 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-medium transition-colors">
+                🏃 Workout Streak Nudge
+              </button>
+              <button @click="applyPushTemplate('announcement')" class="px-3 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-medium transition-colors">
+                📢 App Announcement
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Grid: Composer & Mobile Lockscreen Preview -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Composer Form (7 cols) -->
+            <div class="lg:col-span-7 bg-dark-card border border-dark-border rounded-xl p-5 space-y-4">
+              <h2 class="text-base font-semibold text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Compose Notification
+              </h2>
+
+              <!-- Audience Target -->
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Target Audience</label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button type="button" @click="pushForm.target = 'ALL'" :class="pushForm.target === 'ALL' ? 'bg-primary text-dark font-bold' : 'bg-dark border border-dark-border text-slate-300 hover:border-slate-600'" class="py-2 px-3 rounded-lg text-xs font-medium transition-colors">
+                    All Active
+                  </button>
+                  <button type="button" @click="pushForm.target = 'USERS'" :class="pushForm.target === 'USERS' ? 'bg-primary text-dark font-bold' : 'bg-dark border border-dark-border text-slate-300 hover:border-slate-600'" class="py-2 px-3 rounded-lg text-xs font-medium transition-colors">
+                    Clients Only
+                  </button>
+                  <button type="button" @click="pushForm.target = 'COACHES'" :class="pushForm.target === 'COACHES' ? 'bg-primary text-dark font-bold' : 'bg-dark border border-dark-border text-slate-300 hover:border-slate-600'" class="py-2 px-3 rounded-lg text-xs font-medium transition-colors">
+                    Coaches Only
+                  </button>
+                  <button type="button" @click="pushForm.target = 'SPECIFIC'" :class="pushForm.target === 'SPECIFIC' ? 'bg-primary text-dark font-bold' : 'bg-dark border border-dark-border text-slate-300 hover:border-slate-600'" class="py-2 px-3 rounded-lg text-xs font-medium transition-colors">
+                    Specific Account
+                  </button>
+                </div>
+              </div>
+
+              <!-- Specific User Input -->
+              <div x-show="pushForm.target === 'SPECIFIC'" class="space-y-2 p-3 bg-dark/60 rounded-lg border border-dark-border">
+                <label class="block text-xs font-medium text-slate-300">Recipient Email or User UUID</label>
+                <input x-model="pushForm.userEmail" placeholder="e.g. client@example.com or 5d577544-..." class="w-full bg-dark border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary">
+                <p class="text-[11px] text-slate-500">The notification will be delivered specifically to this user's registered Android devices.</p>
+              </div>
+
+              <!-- Notification Type -->
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Notification Category (FCM Channel)</label>
+                <select x-model="pushForm.type" class="w-full bg-dark border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary">
+                  <option value="ANNOUNCEMENT">📢 Announcement (General Channel)</option>
+                  <option value="APPOINTMENT_REMINDER">📅 Session Reminder (High Priority Meetings Channel)</option>
+                  <option value="APPOINTMENT_CHANGED">🔄 Meeting Schedule / Cancel (Meetings Channel)</option>
+                  <option value="WORKOUT_REMINDER">🏃 Workout Reminder (Workouts Channel)</option>
+                  <option value="WORKOUT_ASSIGNED">💪 Workout Plan Assigned (Workouts Channel)</option>
+                  <option value="COACH_MESSAGE">💬 Coach Message (Messages Channel)</option>
+                  <option value="SYSTEM">🔔 System Alert (Direct Channel)</option>
+                </select>
+              </div>
+
+              <!-- Title -->
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="block text-xs font-medium text-slate-300">Notification Title</label>
+                  <span class="text-[10px] text-slate-500" x-text="`${pushForm.title.length}/150`"></span>
+                </div>
+                <input x-model="pushForm.title" maxlength="150" placeholder="e.g. Session starts in 15 minutes" class="w-full bg-dark border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary font-medium">
+              </div>
+
+              <!-- Body -->
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="block text-xs font-medium text-slate-300">Notification Message Body</label>
+                  <span class="text-[10px] text-slate-500" x-text="`${pushForm.body.length}/1000`"></span>
+                </div>
+                <textarea x-model="pushForm.body" maxlength="1000" rows="3" placeholder="Enter message text that will display on Android devices..." class="w-full bg-dark border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary"></textarea>
+              </div>
+
+              <!-- Send Button -->
+              <div class="pt-2 flex items-center justify-between">
+                <span class="text-xs text-slate-400">Delivered via Firebase Admin &amp; BullMQ</span>
+                <button type="button" @click="submitPushNotification()" :disabled="pushLoading || !pushForm.title.trim() || !pushForm.body.trim()" class="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-light text-dark font-bold text-sm transition-all disabled:opacity-40 flex items-center gap-2">
+                  <svg x-show="!pushLoading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                  <span x-text="pushLoading ? 'Sending push...' : 'Dispatch Push Notification'"></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Mobile Lockscreen Preview (5 cols) -->
+            <div class="lg:col-span-5 bg-dark-card border border-dark-border rounded-xl p-5 flex flex-col">
+              <h2 class="text-base font-semibold text-white mb-3 flex items-center gap-2">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                Android APK Live Preview
+              </h2>
+              <p class="text-xs text-slate-400 mb-4">Real-time simulation of how the push notification banner appears on Android lockscreens and heads-up displays.</p>
+
+              <!-- Device Simulation Frame -->
+              <div class="flex-1 bg-slate-900 border-2 border-slate-700/60 rounded-3xl p-4 shadow-2xl flex flex-col justify-between max-w-sm mx-auto w-full">
+                <!-- Clock header -->
+                <div class="text-center py-2">
+                  <p class="text-3xl font-extralight text-slate-200">09:41</p>
+                  <p class="text-[11px] text-slate-400">Tuesday, November 17</p>
+                </div>
+
+                <!-- Notification Card -->
+                <div class="my-4 bg-slate-800/90 border border-slate-700/80 backdrop-blur rounded-2xl p-3.5 shadow-lg transform transition-all duration-200 hover:scale-[1.02]">
+                  <!-- App Bar inside notification -->
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-1.5">
+                      <div class="w-4 h-4 rounded-full bg-primary flex items-center justify-center text-[9px] font-black text-dark">FN</div>
+                      <span class="text-xs font-semibold text-slate-300">FitNerve</span>
+                      <span class="text-[10px] text-slate-500">· now</span>
+                    </div>
+                    <span class="text-[9px] px-1.5 py-0.5 rounded uppercase font-bold text-slate-400 bg-slate-700/60" x-text="pushForm.type ? pushForm.type.replace(/_/g, ' ') : 'ALERT'"></span>
+                  </div>
+
+                  <!-- Notification Content -->
+                  <p class="text-xs font-bold text-white leading-snug" x-text="pushForm.title.trim() || 'Notification Title'"></p>
+                  <p class="text-[11px] text-slate-300 mt-1 line-clamp-3 leading-relaxed" x-text="pushForm.body.trim() || 'Your notification message body will display right here on user mobile devices.'"></p>
+
+                  <!-- Action Pill -->
+                  <div class="mt-2.5 pt-2 border-t border-slate-700/50 flex items-center justify-between">
+                    <span class="text-[10px] font-medium text-primary">Tap to open in app &rarr;</span>
+                    <span class="text-[9px] text-slate-500">FCM High Priority</span>
+                  </div>
+                </div>
+
+                <!-- Bottom home bar -->
+                <div class="flex justify-center pt-2">
+                  <div class="w-24 h-1 rounded-full bg-slate-600"></div>
+                </div>
+              </div>
+
+              <!-- Channel Info Box -->
+              <div class="mt-4 p-3 bg-dark/40 rounded-lg border border-dark-border text-xs text-slate-400 space-y-1">
+                <p class="font-medium text-slate-300">Android Channels Configured:</p>
+                <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-400 pt-1">
+                  <span>• <strong class="text-sky-300">meetings</strong>: High Priority</span>
+                  <span>• <strong class="text-emerald-300">workouts</strong>: High Priority</span>
+                  <span>• <strong class="text-purple-300">messages</strong>: High Priority</span>
+                  <span>• <strong class="text-amber-300">announcements</strong>: Default</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ===== AUDIT LOGS VIEW ===== -->
         <div x-show="currentView === 'audit-logs'">
           <div class="mb-5">
@@ -2444,6 +2631,17 @@
         sidebarCollapsed: false,
         mobileNavOpen: false,
 
+        // ---- Push Notifications State ----
+        pushForm: {
+          target: "ALL",
+          userEmail: "",
+          userId: "",
+          type: "ANNOUNCEMENT",
+          title: "",
+          body: ""
+        },
+        pushLoading: false,
+
         // ---- Data state ----
         users: [],
         coaches: [],
@@ -2556,6 +2754,65 @@
         // ---- Toasts ----
         toasts: [],
         toastId: 0,
+
+        // ---- Push Notification Actions ----
+        applyPushTemplate(preset) {
+          if (preset === 'meeting-reminder') {
+            this.pushForm.type = 'APPOINTMENT_REMINDER';
+            this.pushForm.title = 'Upcoming Session Reminder';
+            this.pushForm.body = 'Your scheduled coaching session is starting in 15 minutes. Tap to open the app and join the call.';
+          } else if (preset === 'meeting-scheduled') {
+            this.pushForm.type = 'APPOINTMENT_CHANGED';
+            this.pushForm.title = 'New Session Scheduled';
+            this.pushForm.body = 'A new 1-on-1 coaching session has been added to your calendar. Check your schedule.';
+          } else if (preset === 'meeting-rescheduled') {
+            this.pushForm.type = 'APPOINTMENT_CHANGED';
+            this.pushForm.title = 'Session Rescheduled';
+            this.pushForm.body = 'Your coaching session time has been updated. Open the app to review your new session time.';
+          } else if (preset === 'meeting-cancelled') {
+            this.pushForm.type = 'APPOINTMENT_CHANGED';
+            this.pushForm.title = 'Session Cancelled';
+            this.pushForm.body = 'A scheduled coaching session has been cancelled. Please check your appointments tab.';
+          } else if (preset === 'workout-reminder') {
+            this.pushForm.type = 'WORKOUT_REMINDER';
+            this.pushForm.title = 'Time for your workout!';
+            this.pushForm.body = 'Keep your fitness streak alive! Even a 20-minute session today makes a major impact.';
+          } else if (preset === 'announcement') {
+            this.pushForm.type = 'ANNOUNCEMENT';
+            this.pushForm.title = 'FitNerve Platform Announcement';
+            this.pushForm.body = 'We have exciting new workout routines and tracking features live in the app. Check them out!';
+          }
+        },
+
+        async submitPushNotification() {
+          if (!this.pushForm.title.trim() || !this.pushForm.body.trim()) {
+            return this.showToast('Please provide both a notification title and message body.', 'error');
+          }
+          if (this.pushForm.target === 'SPECIFIC' && !this.pushForm.userEmail.trim() && !this.pushForm.userId.trim()) {
+            return this.showToast('Please enter a user email or user ID for specific delivery.', 'error');
+          }
+          this.pushLoading = true;
+          try {
+            const payload = {
+              target: this.pushForm.target,
+              type: this.pushForm.type,
+              title: this.pushForm.title.trim(),
+              body: this.pushForm.body.trim(),
+              ...(this.pushForm.target === 'SPECIFIC' ? {
+                ...(this.pushForm.userEmail.trim() ? { userEmail: this.pushForm.userEmail.trim() } : {}),
+                ...(this.pushForm.userId.trim() ? { userId: this.pushForm.userId.trim() } : {})
+              } : {})
+            };
+            const res = await this.apiRequest('POST', '/api/v1/admin/notifications/send', payload);
+            this.showToast(`Push notification dispatched to ${res.recipientCount || 0} recipient(s)!`, 'success');
+            this.pushForm.title = '';
+            this.pushForm.body = '';
+          } catch (err) {
+            this.showToast(err.message || "Failed to dispatch push notification.", "error");
+          } finally {
+            this.pushLoading = false;
+          }
+        },
 
         // ================= INIT =================
         init() {

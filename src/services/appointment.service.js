@@ -107,9 +107,18 @@ async function create(userId, { coachId, title, scheduledAt, durationMinutes = 6
       "APPOINTMENT_CHANGED",
       "New session booked",
       `${user?.fullName || "A client"} booked "${title}" for ${formatIst(appointment.scheduledAt)}.`,
-      { data: { appointmentId: appointment.id } }
+      { data: { appointmentId: appointment.id, status: "BOOKED" } }
     ).catch((err) => logger.warn(`[appointments] coach booking notice failed: ${err.message}`));
   }
+
+  // Also notify the booking client with confirmation push notification
+  notificationService.notify(
+    userId,
+    "APPOINTMENT_CHANGED",
+    "Session booked",
+    `Your session "${title}" with ${coach.user?.fullName || "your coach"} on ${formatIst(appointment.scheduledAt)} has been booked.`,
+    { data: { appointmentId: appointment.id, status: "BOOKED" } }
+  ).catch((err) => logger.warn(`[appointments] client booking notice failed: ${err.message}`));
 
   // Generate a unique Meet link as part of the booking response when the
   // platform Google account is connected. If Google is unavailable, keep the

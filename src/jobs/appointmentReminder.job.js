@@ -21,12 +21,23 @@ async function runAppointmentReminderSweep() {
       await notificationService.notify(
         appt.userId,
         "APPOINTMENT_REMINDER",
-        "Upcoming appointment",
-        `${appt.title} with ${appt.coach?.user?.fullName || "your coach"} in about ${minutesUntil} min${
-          appt.meetingLink ? ". Open the app to join the call." : ""
+        "Upcoming session reminder",
+        `Your session "${appt.title}" with ${appt.coach?.user?.fullName || "your coach"} starts in about ${minutesUntil} min${
+          appt.meetingLink ? ". Tap to join the call." : ""
         }`,
-        { data: { appointmentId: appt.id } }
+        { data: { appointmentId: appt.id, meetingLink: appt.meetingLink || "" } }
       );
+      if (appt.coach?.userId) {
+        await notificationService.notify(
+          appt.coach.userId,
+          "APPOINTMENT_REMINDER",
+          "Upcoming session with client",
+          `Session "${appt.title}" with ${appt.user?.fullName || "your client"} starts in about ${minutesUntil} min${
+            appt.meetingLink ? ". Tap to join the call." : ""
+          }`,
+          { data: { appointmentId: appt.id, meetingLink: appt.meetingLink || "" } }
+        ).catch(() => {});
+      }
       await appointmentRepository.markReminded(appt.id);
     } catch (err) {
       logger.error(`[reminders] Failed to notify appointment ${appt.id}: ${err.message}`);

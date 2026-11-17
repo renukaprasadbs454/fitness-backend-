@@ -339,6 +339,37 @@ router.post(
   adminController.broadcastAnnouncement
 );
 
+/**
+ * @swagger
+ * /admin/notifications/send:
+ *   post:
+ *     summary: Dispatch a custom push + in-app notification to ALL, USERS, COACHES, or a SPECIFIC account
+ *     tags: [Admin]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title, body]
+ *             properties:
+ *               target: { type: string, enum: [ALL, USERS, COACHES, SPECIFIC], default: ALL }
+ *               userId: { type: string }
+ *               userEmail: { type: string }
+ *               title: { type: string }
+ *               body: { type: string }
+ *               type: { type: string, enum: [ANNOUNCEMENT, SYSTEM, WORKOUT_REMINDER, WORKOUT_ASSIGNED, APPOINTMENT_REMINDER, APPOINTMENT_CHANGED, COACH_MESSAGE] }
+ *               data: { type: object }
+ *     responses:
+ *       200: { description: Notification dispatched }
+ */
+router.post(
+  "/notifications/send",
+  validate(schemas.sendCustomNotification),
+  adminController.sendCustomNotification
+);
+
 // ── Image storage self-test ──────────────────────────────
 
 /**

@@ -136,6 +136,26 @@ const broadcastAnnouncement = {
   })
 };
 
+const sendCustomNotification = {
+  body: z.object({
+    target: z.enum(["ALL", "USERS", "COACHES", "SPECIFIC"]).optional().default("ALL"),
+    userId: z.string().uuid().optional(),
+    userEmail: z.string().trim().email().optional(),
+    title: z.string().trim().min(1).max(150),
+    body: z.string().trim().min(1).max(1000),
+    type: z.enum([
+      "ANNOUNCEMENT",
+      "SYSTEM",
+      "WORKOUT_REMINDER",
+      "WORKOUT_ASSIGNED",
+      "APPOINTMENT_REMINDER",
+      "APPOINTMENT_CHANGED",
+      "COACH_MESSAGE"
+    ]).optional().default("ANNOUNCEMENT"),
+    data: z.record(z.any()).optional().default({})
+  })
+};
+
 module.exports = {
   idParam,
   listUsers,
@@ -150,5 +170,6 @@ module.exports = {
   updateCoachCredentials,
   listAuditLogs,
   listPayments,
-  broadcastAnnouncement
+  broadcastAnnouncement,
+  sendCustomNotification
 };
