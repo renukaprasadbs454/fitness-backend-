@@ -74,6 +74,7 @@ git -C "$APP_DIR" pull --ff-only origin "$BRANCH"
 
 printf 'Building and starting PostgreSQL, API and Nginx...\n'
 "${COMPOSE[@]}" up -d --build --remove-orphans
+"${COMPOSE[@]}" restart nginx
 
 printf 'Applying Prisma migrations...\n'
 "${COMPOSE[@]}" exec -T backend npx prisma migrate deploy
