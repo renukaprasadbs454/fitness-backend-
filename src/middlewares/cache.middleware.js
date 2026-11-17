@@ -1,22 +1,20 @@
-// Lightweight in-process TTL response cache for read-heavy, low-churn reference
-// data (workout plans, coach directory, published content). Single-instance
-// only — fine for the current single-process deployment; would need a shared
-// store (e.g. Redis) if this API ever runs behind multiple instances.
-const store = new Map(); // url -> { expiresAt, statusCode, body }
+// Redis-backed HTTP response cache for read-heavy reference data.
+// Works across multiple instances — replaces the old in-process Map cache.
+const { cacheGet, cacheSet, cacheDel } = require("../config/cache");
 
-function cacheResponse(ttlSeconds) {
-  return (req, res, next) => {
-    const key = req.originalUrl;
-    const cached = store.get(key);
+function cacheResponse(ttlSeconds = 60) {
+  return async (req, res, next) => {
+    const key = `http:${req.originalUrl}`;
+    const cached = await cacheGet(key);
 
-    if (cached && cached.expiresAt > Date.now()) {
+    if (cached) {
       return res.status(cached.statusCode).json(cached.body);
     }
 
     const originalJson = res.json.bind(res);
     res.json = (body) => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        store.set(key, { expiresAt: Date.now() + ttlSeconds * 1000, statusCode: res.statusCode, body });
+        cacheSet(key, { statusCode: res.statusCode, body }, ttlSeconds);
       }
       return originalJson(body);
     };
@@ -25,14 +23,9 @@ function cacheResponse(ttlSeconds) {
   };
 }
 
-// Drops every cached entry whose URL starts with `prefix`. Wired in front of
-// mutation routes for the same resource so a create/update/delete can never
-// serve stale cached reads afterward.
 function invalidate(prefix) {
-  return (req, res, next) => {
-    for (const key of store.keys()) {
-      if (key.startsWith(prefix)) store.delete(key);
-    }
+  return async (req, res, next) => {
+    await cacheDel(`http:${prefix}*`);
     next();
   };
 }

@@ -9,6 +9,8 @@ const prisma = require("./database/prismaClient");
 const { registerChatGateway } = require("./sockets/chat.socket");
 const { startCronJobs, stopCronJobs } = require("./jobs");
 const { isOriginAllowed } = require("./utils/corsPolicy");
+const { disconnectRedis } = require("./config/redis");
+const { startAllWorkers, stopAllWorkers } = require("./queues");
 
 const httpServer = http.createServer(app);
 
@@ -48,14 +50,18 @@ const server = httpServer.listen(env.port, () => {
     startCronJobs();
     logger.info(`Cron reminder sweep enabled (${env.cron.reminderSweepCron})`);
   }
+  startAllWorkers(app);
+  logger.info("[queues] BullMQ workers initialized");
 });
 
 async function shutdown(signal) {
   logger.info(`${signal} received. Shutting down gracefully...`);
   stopCronJobs();
   server.close(async () => {
+    await stopAllWorkers();
+    await disconnectRedis();
     await prisma.$disconnect();
-    logger.info("HTTP server closed, Prisma disconnected.");
+    logger.info("HTTP server closed, Redis + Prisma disconnected.");
     process.exit(0);
   });
   // Force-exit if something hangs

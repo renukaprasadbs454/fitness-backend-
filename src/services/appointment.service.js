@@ -132,6 +132,23 @@ async function create(userId, { coachId, title, scheduledAt, durationMinutes = 6
     logger.warn(`[chat] booking message failed: ${err.message}`);
   }
 
+  // Schedule a delayed reminder in BullMQ if the appointment is in the future (> 1 hour away)
+  try {
+    const msUntilReminder = new Date(scheduledAt).getTime() - 60 * 60 * 1000 - Date.now();
+    if (msUntilReminder > 0) {
+      const { enqueueAppointmentReminder } = require("../queues/booking.queue");
+      await enqueueAppointmentReminder(
+        userId,
+        "Upcoming Session Reminder",
+        `Reminder: "${title}" with ${coach.user?.fullName || "your coach"} starts in 1 hour.`,
+        appointment.id,
+        msUntilReminder
+      );
+    }
+  } catch (err) {
+    logger.warn(`[appointments] BullMQ reminder scheduling failed: ${err.message}`);
+  }
+
   return appointmentWithMeeting;
 }
 

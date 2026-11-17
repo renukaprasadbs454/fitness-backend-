@@ -133,7 +133,16 @@ const env = {
     enabled: process.env.ENABLE_CRON === "true",
     // "HH:mm" 24h local server time — reminder sweep for workouts/appointments
     reminderSweepCron: process.env.REMINDER_SWEEP_CRON || "*/15 * * * *"
-  }
+  },
+
+  redis: {
+    url: process.env.REDIS_URL || "redis://localhost:6379",
+  },
+
+  bullmq: {
+    defaultAttempts: parseInt(process.env.BULLMQ_DEFAULT_ATTEMPTS || "3", 10),
+    backoffDelay: parseInt(process.env.BULLMQ_BACKOFF_DELAY || "1000", 10),
+  },
 };
 
 module.exports = env;

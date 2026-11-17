@@ -125,7 +125,13 @@ async function notify(userId, type, title, body, { dispatchPush: shouldPush = tr
       const pref = await getPreferences(userId);
       if (pref[prefField] === false) return created;
     }
-    await dispatchPush(userId, title, body, { type, ...data });
+    try {
+      const { enqueueNotification } = require("../queues/notification.queue");
+      await enqueueNotification(userId, type, title, body, { data });
+    } catch (queueErr) {
+      logger.warn(`[notification] Queue dispatch failed, falling back to direct push: ${queueErr.message}`);
+      await dispatchPush(userId, title, body, { type, ...data });
+    }
   }
 
   return created;

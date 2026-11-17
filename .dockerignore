@@ -2,5 +2,10 @@ node_modules
 npm-debug.log
 logs
 .git
-.env.local
-
+.env
+.env.*
+tests
+docs
+postman
+*.md
+.eslintrc.json

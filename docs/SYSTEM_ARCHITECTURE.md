@@ -1,6 +1,6 @@
 # FitNerve System Design and Architecture
 
-**Checked:** 2026-11-14
+**Checked:** 2026-11-17
 **Scope:** Current source tree in `BACKEND/` and `FRONTEND/`, plus workspace deployment/configuration files.
 
 This document describes the architecture that exists in this checkout. It distinguishes source-backed behavior from deployment assumptions and known gaps; it is not a certification of a live production environment.
@@ -12,7 +12,7 @@ FitNerve is a coach-supported fitness platform. Clients use a cross-platform mob
 The workspace contains two separate Git projects:
 
 - `FRONTEND/`: Expo + React Native app for Android, iOS, and web (React Native Web).
-- `BACKEND/`: Node.js + Express API, Prisma/PostgreSQL data layer, Socket.IO server, and static admin/coach portals.
+- `BACKEND/`: Node.js + Express API, Prisma/PostgreSQL data layer, Socket.IO server, Redis-backed caching and BullMQ background job processing, and static admin/coach portals.
 
 The portals are served by the backend; they are not part of the React Native app. The root Compose file runs a backend and a static web build; PostgreSQL is an optional Compose profile, so deployments may use a separately managed database.
 
@@ -26,6 +26,8 @@ flowchart LR
   API[Express REST API]
   Socket[Socket.IO /chat]
   DB[(PostgreSQL via Prisma)]
+  Redis[(Redis)]
+  Workers[BullMQ Workers]
   Storage[Local or S3-compatible media storage]
   Firebase[Firebase Cloud Messaging]
   SMTP[SMTP email provider]
@@ -38,6 +40,11 @@ flowchart LR
   Admin -->|HTTPS portal + API calls| API
   API --> DB
   Socket --> DB
+  API -->|caching and queue dispatch| Redis
+  Workers -->|job processing| Redis
+  Workers --> DB
+  Workers --> Firebase
+  Workers --> Google
   API --> Storage
   Client -->|signed media URL| Storage
   API --> Firebase
@@ -53,6 +60,8 @@ flowchart LR
 | Expo application | Client and coach-facing app screens; local navigation/state; device integrations | REST `/api/v1`, Socket.IO, Android Health Connect |
 | Express backend | Authentication, authorization, domain logic, API, uploads, admin and coach portal hosting | `/api/v1/*`, `/admin`, `/coach`, `/api-docs` |
 | PostgreSQL | Persistent application and privacy data | Prisma models/migrations |
+| Redis | Shared in-memory data store for HTTP response caching and BullMQ job queues | Redis protocol / port `6379` via `ioredis` |
+| BullMQ Workers | Background asynchronous execution for push notifications and appointment booking tasks | Redis queue consumers (`notifications`, `bookings`) |
 | Socket.IO | Authenticated real-time chat, presence, typing and delivery/read events | `/chat` namespace |
 | Object/file storage | Uploaded images and other media | Backend-managed uploads and short-lived signed URLs |
 | External services | Email, push, Google Calendar/Meet and optional AI/provider integrations | Provider APIs, configured per environment |
@@ -72,14 +81,44 @@ flowchart LR
 
 ### Backend
 
-- Node.js (package engine `>=18`) and **Express 4**. The implementation is not Fastify.
+- Node.js 26 LTS (package engine `>=26.0.0`) and **Express 4**. The implementation is not Fastify.
 - PostgreSQL, Prisma ORM 5.22, checked-in schema and migrations.
+- Redis 7 via `ioredis` for multi-instance distributed HTTP response caching and key-value storage.
+- BullMQ for distributed background task queues (`notifications` and `bookings` queues) with Redis backend.
 - REST JSON API under `/api/v1`, with Swagger/OpenAPI UI at `/api-docs`.
 - JWT access and refresh tokens, bcrypt password hashing, OTP flows, Express rate limiting, Helmet, CORS, Zod validation, Winston logging.
 - Socket.IO 4 for chat and related live events.
-- Firebase Admin SDK for Firebase Cloud Messaging (push). Firebase Authentication is not the app's primary authentication mechanism: accounts use the app's API auth and JWTs.
+- Firebase Admin SDK for Firebase Cloud Messaging (push). Push dispatch is handled asynchronously by BullMQ workers.
 - Nodemailer/SMTP for OTP and account email; Google APIs for optional Calendar/Meet workflows; node-cron for scheduled reminder sweeps.
 - AWS SDK v2-compatible S3 client for optional S3-compatible storage; local disk storage is also supported.
+
+### Caching strategy
+
+FitNerve uses a Redis-backed caching layer (`src/middlewares/cache.middleware.js` and `src/config/cache.js`) replacing single-process in-memory caches. This supports horizontal scaling across multiple container instances:
+
+- **Cached endpoints:**
+  - Coach directory (`GET /api/v1/coaches`, `GET /api/v1/coaches/:id`, `GET /api/v1/coaches/:id/availability`) — TTL 60s
+  - Published content categories and posts (`GET /api/v1/content/categories`, `GET /api/v1/content/posts`) — TTL 60s–300s
+  - Workout plans and exercise library (`GET /api/v1/workouts`, `GET /api/v1/workouts/exercises`, `GET /api/v1/workouts/:id`) — TTL 60s
+- **Cache key structure:** `http:{originalUrl}` (e.g. `http:/api/v1/coaches?page=1&limit=20`)
+- **Invalidation:** Non-blocking `SCAN`-based invalidation (`cacheDel('http:/api/v1/coaches*')`) triggered immediately on mutation routes (POST/PUT/DELETE) to prevent stale reads.
+
+### Background job processing (BullMQ)
+
+Asynchronous workflows are handled via BullMQ (`src/config/queue.js`, `src/queues/*`):
+
+- **`notifications` queue:**
+  - Priority-based push dispatch to Firebase Cloud Messaging (FCM). System alerts run at priority 1; coaching/promotional messages run at priority 3.
+  - Concurrency: 10 parallel workers.
+  - Automatic pruning of invalid FCM tokens.
+- **`bookings` queue:**
+  - Post-booking side effects (Google Meet generation, activity feed records, welcome chat messages) processed off the critical HTTP request path.
+  - Scheduled appointment reminders (`APPOINTMENT_REMINDER`) delayed to trigger prior to session start times.
+  - Concurrency: 5 parallel workers.
+- **Resilience:**
+  - Exponential backoff retry policy (default 3 attempts, configurable).
+  - Graceful shutdown: workers drain active jobs before closing Redis connections on SIGTERM/SIGINT.
+  - Automatic fallback: if Redis or the queue is unavailable, notification and booking flows fall back to direct execution.
 
 ### Data, admin and operations
 
@@ -119,15 +158,16 @@ Backend source follows a layered layout:
 
 ```text
 BACKEND/src/
-  config/       environment, logger, Firebase, Swagger
+  config/       environment, logger, Firebase, Swagger, Redis, BullMQ
   controllers/  HTTP request/response handling
   services/     domain rules and orchestration
   repositories/ Prisma data access
   routes/v1/    versioned Express routers
-  middlewares/  authentication, validation, rate limits, uploads, errors
+  middlewares/  authentication, validation, rate limits, uploads, errors, cache
   validators/   Zod schemas
   sockets/      Socket.IO gateways
-  jobs/         scheduled work
+  jobs/         scheduled cron sweeps
+  queues/       BullMQ queues & workers (notifications, bookings)
 BACKEND/prisma/
   schema.prisma
   migrations/
@@ -250,8 +290,9 @@ These are implementation observations, not legal advice or a claim of DPDP Act/R
 
 ### Local development
 
-- Root `docker-compose.yml` maps backend to port `5050` and frontend web to `3000`; configure the frontend API base URL for the actual reachable backend.
+- Root `docker-compose.yml` maps backend to port `5050`, frontend web to `3000`, and Redis to `6379`; configure the frontend API base URL for the actual reachable backend.
 - The Compose PostgreSQL service is optional under `local-db` profile. Without that profile, the backend must connect to another PostgreSQL instance via `DATABASE_URL`.
+- Redis runs automatically on port `6379` using `redis:7-alpine` with `noeviction` policy (recommended for BullMQ queue safety) and AOF persistence enabled.
 - Backend README documents a default development port of `4000`; Compose overrides it to `5050`. Treat the port as environment-configured, not fixed.
 - Frontend `EXPO_PUBLIC_*` settings are bundled at build/start time. A mobile device cannot reach a backend through its own `localhost`; use a reachable LAN or deployed URL.
 
@@ -259,6 +300,7 @@ These are implementation observations, not legal advice or a claim of DPDP Act/R
 
 - Run the Express/Socket.IO API as a persistent Node process (not a serverless-only function), behind HTTPS and a WebSocket-capable reverse proxy.
 - Use managed PostgreSQL or a separately operated PostgreSQL cluster; restrict network access to the backend and migration process.
+- Provision a Redis 7 instance or cluster for shared caching and BullMQ job management; ensure persistence and connection pooling are configured.
 - Use durable object storage if instances have ephemeral disks.
 - Serve the Expo web export from a static host/CDN, or use an equivalent supported static deployment. Ensure browser origin is allowed by API CORS configuration.
 - Admin/coach portals are served by the API origin unless intentionally split; secure admin access and protect portal/API origins with TLS and operational controls.
@@ -268,7 +310,8 @@ These are implementation observations, not legal advice or a claim of DPDP Act/R
 
 Configure secrets through the deployment secret manager; do not commit values. Relevant names include:
 
-- Core: `DATABASE_URL`, `PORT`, `NODE_ENV`, `CORS_ALLOWED_ORIGINS`.
+- Core: `DATABASE_URL`, `REDIS_URL`, `PORT`, `NODE_ENV`, `CORS_ALLOWED_ORIGINS`.
+- Job Queue: `BULLMQ_DEFAULT_ATTEMPTS`, `BULLMQ_BACKOFF_DELAY`.
 - Authentication: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, expiry values, OTP policy values.
 - Email/push: `SMTP_*`, `EMAIL_FROM`, `FCM_SERVICE_ACCOUNT_BASE64`.
 - Media: `STORAGE_DRIVER`, S3 endpoint/bucket/region/credentials.
@@ -289,6 +332,7 @@ The source and documentation inspected do not establish a fully production-verif
 5. **Operations:** verify TLS, secrets, production CORS, WebSocket proxy upgrade/timeouts, rate limits, logs/alerts, backup restore, migration rollback/recovery, health checks and disaster recovery.
 6. **End-to-end quality:** source-level screens, lint, type checking or bundling do not prove working browser/device flows. Run role-based end-to-end journeys on staging, including network loss, session expiry, authorization failures, permissions, uploads, chat reconnects and notification delivery.
 7. **Deployment manifest:** validate Render/root Compose settings against the intended directory, ports, health checks, database, storage and release process before use.
+8. **Redis infrastructure and queue monitoring:** Redis 7 is required for distributed HTTP caching and BullMQ background workers. Ensure Redis memory limits (`maxmemory`), eviction policies (`allkeys-lru`), persistent storage, and connection health are actively monitored in production environments.
 
 Production readiness should be assessed independently for Android, iOS, web, backend, admin/coach portals and privacy operations. The existing screen audit contains the latest checked findings and must be updated after validation.
 
