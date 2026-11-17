@@ -4,7 +4,7 @@ umask 077
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="${FITNERVE_DIR:-$APP_DIR}"
-BRANCH="${FITNERVE_BRANCH:-suhas-changes-3}"
+BRANCH="${FITNERVE_BRANCH:-main}"
 COMPOSE=(docker compose --project-directory "$APP_DIR" --env-file "$APP_DIR/.env.deploy" -f "$APP_DIR/docker-compose.prod.yml")
 
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
