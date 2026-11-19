@@ -105,7 +105,10 @@ async function dispatchPush(userId, title, body, data = {}) {
   if (!messaging) return;
 
   const tokens = await notificationRepository.listDeviceTokens(userId);
-  if (!tokens.length) return;
+  if (!tokens.length) {
+    logger.warn(`[notification] No registered device tokens for user ${userId}; push was not sent.`);
+    return;
+  }
 
   const type = data.type || "SYSTEM";
   const channelId = getChannelIdForType(type);
@@ -133,8 +136,12 @@ async function dispatchPush(userId, title, body, data = {}) {
 
   try {
     const response = await messaging.sendEachForMulticast(message);
+    logger.info(`[notification] FCM dispatch for user ${userId}: ${response.successCount} delivered, ${response.failureCount} failed.`);
     if (response.failureCount > 0) {
       response.responses.forEach((r, idx) => {
+        if (!r.success) {
+          logger.warn(`[notification] FCM delivery failed for user ${userId}, device ${idx}: ${r.error?.code || r.error?.message || "unknown error"}`);
+        }
         if (
           !r.success &&
           (r.error?.code === "messaging/registration-token-not-registered" ||
