@@ -2,6 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const env = require("./env");
 const logger = require("./logger");
+const { cert, getApps, initializeApp } = require("firebase-admin/app");
+const { getMessaging: getFirebaseMessaging } = require("firebase-admin/messaging");
 
 /**
  * Lazily initializes firebase-admin using either:
@@ -43,11 +45,10 @@ function getMessaging() {
       return null;
     }
 
-    const admin = require("firebase-admin");
-    if (!admin.apps.length) {
-      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    if (!getApps().length) {
+      initializeApp({ credential: cert(serviceAccount) });
     }
-    messagingInstance = admin.messaging();
+    messagingInstance = getFirebaseMessaging();
     logger.info(`[firebase] Firebase Admin initialized (project: ${serviceAccount.project_id || "unknown"}) — push notifications enabled.`);
     return messagingInstance;
   } catch (err) {
