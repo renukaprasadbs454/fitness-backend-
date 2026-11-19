@@ -124,6 +124,42 @@ curl -fsS http://127.0.0.1:8088/api/v1/health
 curl -fsS https://api-fitnerve.kwiko.org/api/v1/health
 ```
 
+The Compose Nginx config explicitly proxies `/socket.io/` upgrades to the API.
+The VPS host Nginx must also forward WebSocket upgrades in its active HTTPS
+server block. Do not replace the Certbot-managed site file with the HTTP-only
+template above. Inspect the active host config, then add this location inside
+the `server` block listening on 443 for `api-fitnerve.kwiko.org`:
+
+```nginx
+location /socket.io/ {
+    proxy_pass http://127.0.0.1:8088;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_buffering off;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+}
+```
+
+On the VPS, inspect the active config path and edit that file (commonly
+`/etc/nginx/sites-available/api-fitnerve.kwiko.org`):
+
+```bash
+nginx -T 2>/dev/null | grep -n -B 3 -A 12 'server_name api-fitnerve.kwiko.org'
+nano /etc/nginx/sites-available/api-fitnerve.kwiko.org
+nginx -t && systemctl reload nginx
+curl -i 'https://api-fitnerve.kwiko.org/socket.io/?EIO=4&transport=polling'
+```
+
+The Socket.IO probe should return HTTP 200 with an Engine.IO handshake body.
+The app can then upgrade to WebSocket; its client also falls back to polling
+when an intervening network blocks WebSockets.
+
 Certbot's system timer handles renewals; verify with `certbot renew --dry-run`.
 ## 4. SMTP/OTP verification
 
