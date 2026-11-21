@@ -141,23 +141,6 @@ async function create(userId, { coachId, title, scheduledAt, durationMinutes = 6
     logger.warn(`[chat] booking message failed: ${err.message}`);
   }
 
-  // Schedule a delayed reminder in BullMQ if the appointment is in the future (> 1 hour away)
-  try {
-    const msUntilReminder = new Date(scheduledAt).getTime() - 60 * 60 * 1000 - Date.now();
-    if (msUntilReminder > 0) {
-      const { enqueueAppointmentReminder } = require("../queues/booking.queue");
-      await enqueueAppointmentReminder(
-        userId,
-        "Upcoming Session Reminder",
-        `Reminder: "${title}" with ${coach.user?.fullName || "your coach"} starts in 1 hour.`,
-        appointment.id,
-        msUntilReminder
-      );
-    }
-  } catch (err) {
-    logger.warn(`[appointments] BullMQ reminder scheduling failed: ${err.message}`);
-  }
-
   return appointmentWithMeeting;
 }
 
@@ -189,6 +172,16 @@ async function notifyMeetingLink(appointment) {
     `Your join link for "${appointment.title}" on ${formatIst(appointment.scheduledAt)} is ready.`,
     { data: { appointmentId: appointment.id } }
   );
+}
+
+async function scheduleAppointmentReminder(appointment) {
+  if (appointment.status !== "CONFIRMED") return;
+  const scheduledAt = new Date(appointment.scheduledAt);
+  if (scheduledAt <= new Date()) return;
+
+  const delay = scheduledAt.getTime() - 60 * 60 * 1000 - Date.now();
+  const { enqueueAppointmentReminder } = require("../queues/booking.queue");
+  await enqueueAppointmentReminder(appointment.id, scheduledAt, delay);
 }
 
 /** Best-effort Meet link for a newly booked or confirmed session; never blocks booking/confirmation. */
@@ -273,7 +266,20 @@ async function updateStatus(userId, userRole, id, status) {
   let updated = await appointmentRepository.updateStatus(id, status);
 
   if (status === "CONFIRMED") {
+    await scheduleAppointmentReminder(updated).catch((err) =>
+      logger.warn(`[appointments] BullMQ reminder scheduling failed: ${err.message}`)
+    );
     updated = await autoGenerateMeeting(updated);
+    const coachName = appointment.coach?.user?.fullName || "your coach";
+    await notificationService
+      .notify(
+        appointment.userId,
+        "APPOINTMENT_CHANGED",
+        "Session confirmed",
+        `Your session "${appointment.title}" with ${coachName} on ${formatIst(appointment.scheduledAt)} has been confirmed.${updated.meetingLink ? " Your meeting link is ready in Appointments." : ""}`,
+        { data: { appointmentId: appointment.id, status: "CONFIRMED" } }
+      )
+      .catch((err) => logger.warn(`[appointments] confirmation notice failed: ${err.message}`));
   } else if (status === "CANCELLED" && (appointment.meetingEventId || appointment.meetingLink)) {
     await meetingService.cancelMeeting(appointment.meetingEventId);
     updated = await appointmentRepository.updateMeeting(id, { meetingLink: null, meetingProvider: null, meetingEventId: null });
@@ -326,12 +332,21 @@ async function reschedule(userId, userRole, id, { scheduledAt, durationMinutes }
     { checkAvailability: isOwner && !isCoachOnAppointment && userRole !== "ADMIN" }
   );
 
-  const updated = await appointmentRepository.updateSchedule(id, { scheduledAt: new Date(scheduledAt), durationMinutes });
+  const moved = new Date(scheduledAt).getTime() !== new Date(appointment.scheduledAt).getTime();
+  const updated = await appointmentRepository.updateSchedule(id, {
+    scheduledAt: new Date(scheduledAt),
+    durationMinutes,
+    resetReminder: moved
+  });
   await meetingService.rescheduleMeeting(updated);
+  if (updated.status === "CONFIRMED" && moved) {
+    await scheduleAppointmentReminder(updated).catch((err) =>
+      logger.warn(`[appointments] BullMQ reminder scheduling failed after reschedule: ${err.message}`)
+    );
+  }
 
   // Tell everyone on the session except whoever changed it, saying what actually changed.
   // Best-effort: a notification failure never undoes the change.
-  const moved = new Date(updated.scheduledAt).getTime() !== new Date(appointment.scheduledAt).getTime();
   const resized = updated.durationMinutes !== appointment.durationMinutes;
   const recipients = moved || resized ? [updated.userId, updated.coach?.userId].filter((recipient) => recipient && recipient !== userId) : [];
   for (const recipient of recipients) {

@@ -17,6 +17,28 @@ const { isOriginAllowed } = require("./utils/corsPolicy");
 
 const app = express();
 
+function storageImageOrigins() {
+  if (env.storage.driver !== "s3") return [];
+
+  const { bucket, endpoint, region, publicUrlTemplate } = env.storage.aws;
+  const origins = new Set();
+  const addOrigin = (candidate) => {
+    if (!candidate) return;
+    try {
+      origins.add(new URL(candidate).origin);
+    } catch {
+      // Ignore malformed optional storage URLs; they cannot be valid image origins.
+    }
+  };
+
+  addOrigin(endpoint);
+  if (publicUrlTemplate) {
+    addOrigin(publicUrlTemplate.replaceAll("{bucket}", bucket || "bucket").replaceAll("{key}", "csp-image"));
+  }
+  if (bucket && !endpoint) addOrigin(`https://${bucket}.s3.${region}.amazonaws.com`);
+  return [...origins];
+}
+
 // Render (and most PaaS hosts) terminate TLS at a reverse proxy in front of
 // this app. Without this, Express's req.ip resolves to that proxy's address
 // for every request regardless of who actually sent it — so express-rate-limit
@@ -33,7 +55,7 @@ app.use(
         scriptSrc: ["'self'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "'unsafe-inline'", "'unsafe-eval'"],
         styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:"],
+        imgSrc: ["'self'", "data:", ...storageImageOrigins()],
         frameSrc: ["'self'", "http://localhost:5555"],
         connectSrc: ["'self'", "http://localhost:5050", "https://localhost:5050", "http://localhost:4000", "https://localhost:4000", "http://localhost:*", "http://127.0.0.1:*"],
         objectSrc: ["'none'"],

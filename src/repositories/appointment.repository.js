@@ -77,14 +77,14 @@ const appointmentRepository = {
   updateStatus: (id, status) =>
     prisma.appointment.update({ where: { id }, data: { status }, include: includeShape }),
 
-  updateSchedule: (id, { scheduledAt, durationMinutes }) =>
+  updateSchedule: (id, { scheduledAt, durationMinutes, resetReminder = false }) =>
     prisma.appointment.update({
       where: { id },
       data: {
         scheduledAt,
         durationMinutes: durationMinutes ?? undefined,
         // A moved session needs a fresh reminder for its new time.
-        reminderSentAt: null
+        reminderSentAt: resetReminder ? null : undefined
       },
       include: includeShape
     }),
@@ -125,8 +125,22 @@ const appointmentRepository = {
       include: includeShape
     }),
 
-  markReminded: (id) =>
-    prisma.appointment.update({ where: { id }, data: { reminderSentAt: new Date() } })
+  claimReminder: (id, scheduledAt, sentAt) =>
+    prisma.appointment.updateMany({
+      where: {
+        id,
+        status: "CONFIRMED",
+        scheduledAt,
+        reminderSentAt: null
+      },
+      data: { reminderSentAt: sentAt }
+    }),
+
+  releaseReminderClaim: (id, sentAt) =>
+    prisma.appointment.updateMany({
+      where: { id, reminderSentAt: sentAt },
+      data: { reminderSentAt: null }
+    })
 };
 
 module.exports = appointmentRepository;

@@ -2,49 +2,70 @@ const appointmentRepository = require("../repositories/appointment.repository");
 const notificationService = require("../services/notification.service");
 const logger = require("../config/logger");
 
-/**
- * Runs every REMINDER_SWEEP_CRON tick (default: every 15 min). Finds
- * CONFIRMED appointments starting in the next 60 minutes that haven't
- * had a reminder sent yet, notifies the user, and marks them reminded
- * so the next sweep doesn't double-send.
- */
+async function sendAppointmentReminder(appointmentId, expectedScheduledAt) {
+  const expectedTime = new Date(expectedScheduledAt);
+  const now = new Date();
+  if (Number.isNaN(expectedTime.getTime()) || expectedTime <= now) return false;
+
+  const sentAt = new Date();
+  const claimed = await appointmentRepository.claimReminder(appointmentId, expectedTime, sentAt);
+  if (!claimed.count) return false;
+
+  try {
+    const appointment = await appointmentRepository.findById(appointmentId);
+    if (
+      !appointment ||
+      appointment.status !== "CONFIRMED" ||
+      new Date(appointment.scheduledAt).getTime() !== expectedTime.getTime() ||
+      !appointment.reminderSentAt ||
+      new Date(appointment.reminderSentAt).getTime() !== sentAt.getTime()
+    ) {
+      await appointmentRepository.releaseReminderClaim(appointmentId, sentAt);
+      return false;
+    }
+
+    const minutesUntil = Math.max(1, Math.round((expectedTime.getTime() - Date.now()) / 60000));
+    const meetingSuffix = appointment.meetingLink ? ". Tap to join the call." : "";
+    await notificationService.notify(
+      appointment.userId,
+      "APPOINTMENT_REMINDER",
+      "Upcoming session reminder",
+      `Your session "${appointment.title}" with ${appointment.coach?.user?.fullName || "your coach"} starts in about ${minutesUntil} min${meetingSuffix}`,
+      { data: { appointmentId: appointment.id, meetingLink: appointment.meetingLink || "" } }
+    );
+
+    if (appointment.coach?.userId) {
+      await notificationService.notify(
+        appointment.coach.userId,
+        "APPOINTMENT_REMINDER",
+        "Upcoming session with client",
+        `Session "${appointment.title}" with ${appointment.user?.fullName || "your client"} starts in about ${minutesUntil} min${meetingSuffix}`,
+        { data: { appointmentId: appointment.id, meetingLink: appointment.meetingLink || "" } }
+      ).catch((err) => logger.warn(`[reminders] Coach reminder failed for appointment ${appointment.id}: ${err.message}`));
+    }
+    return true;
+  } catch (err) {
+    await appointmentRepository.releaseReminderClaim(appointmentId, sentAt).catch(() => {});
+    throw err;
+  }
+}
+
+/** Find confirmed appointments starting within the next hour as a recovery path. */
 async function runAppointmentReminderSweep() {
   const now = new Date();
   const windowEnd = new Date(now.getTime() + 60 * 60 * 1000);
-
   const due = await appointmentRepository.dueForReminder(now, windowEnd);
-  if (!due.length) return { remindersSent: 0 };
+  let remindersSent = 0;
 
-  for (const appt of due) {
-    const minutesUntil = Math.round((new Date(appt.scheduledAt).getTime() - now.getTime()) / 60000);
+  for (const appointment of due) {
     try {
-      await notificationService.notify(
-        appt.userId,
-        "APPOINTMENT_REMINDER",
-        "Upcoming session reminder",
-        `Your session "${appt.title}" with ${appt.coach?.user?.fullName || "your coach"} starts in about ${minutesUntil} min${
-          appt.meetingLink ? ". Tap to join the call." : ""
-        }`,
-        { data: { appointmentId: appt.id, meetingLink: appt.meetingLink || "" } }
-      );
-      if (appt.coach?.userId) {
-        await notificationService.notify(
-          appt.coach.userId,
-          "APPOINTMENT_REMINDER",
-          "Upcoming session with client",
-          `Session "${appt.title}" with ${appt.user?.fullName || "your client"} starts in about ${minutesUntil} min${
-            appt.meetingLink ? ". Tap to join the call." : ""
-          }`,
-          { data: { appointmentId: appt.id, meetingLink: appt.meetingLink || "" } }
-        ).catch(() => {});
-      }
-      await appointmentRepository.markReminded(appt.id);
+      if (await sendAppointmentReminder(appointment.id, appointment.scheduledAt)) remindersSent += 1;
     } catch (err) {
-      logger.error(`[reminders] Failed to notify appointment ${appt.id}: ${err.message}`);
+      logger.error(`[reminders] Failed to notify appointment ${appointment.id}: ${err.message}`);
     }
   }
 
-  return { remindersSent: due.length };
+  return { remindersSent };
 }
 
-module.exports = { runAppointmentReminderSweep };
+module.exports = { runAppointmentReminderSweep, sendAppointmentReminder };

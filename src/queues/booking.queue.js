@@ -49,11 +49,22 @@ function startBookingWorker(appointmentService, app) {
       }
 
       case "APPOINTMENT_REMINDER": {
-        const notificationService = require("../services/notification.service");
-        const { userId, title, body, appointmentId } = data;
-        await notificationService.notify(userId, "APPOINTMENT_REMINDER", title, body, {
-          data: { appointmentId },
-        });
+        const { sendAppointmentReminder } = require("../jobs/appointmentReminder.job");
+        let scheduledAt = data.scheduledAt;
+        // Jobs queued before this validation was added carry no expected
+        // appointment time. Recover them only when the current confirmed
+        // session is still within its reminder window.
+        if (!scheduledAt) {
+          const appointmentRepository = require("../repositories/appointment.repository");
+          const appointment = await appointmentRepository.findById(data.appointmentId);
+          const now = Date.now();
+          const startsAt = appointment ? new Date(appointment.scheduledAt).getTime() : 0;
+          if (!appointment || appointment.status !== "CONFIRMED" || startsAt <= now || startsAt > now + 60 * 60 * 1000) {
+            break;
+          }
+          scheduledAt = appointment.scheduledAt;
+        }
+        await sendAppointmentReminder(data.appointmentId, scheduledAt);
         break;
       }
 
@@ -71,12 +82,16 @@ async function enqueuePostBookingTasks(appointmentId, userId, coachId, title, co
   });
 }
 
-async function enqueueAppointmentReminder(userId, title, body, appointmentId, delay) {
+async function enqueueAppointmentReminder(appointmentId, scheduledAt, delay) {
   const queue = getBookingQueue();
+  const scheduledTime = new Date(scheduledAt);
   await queue.add("reminder", {
     type: "APPOINTMENT_REMINDER",
-    data: { userId, title, body, appointmentId },
-  }, { delay });
+    data: { appointmentId, scheduledAt: scheduledTime.toISOString() },
+  }, {
+    delay: Math.max(0, delay),
+    jobId: `appointment-reminder-${appointmentId}-${scheduledTime.getTime()}`
+  });
 }
 
 module.exports = { getBookingQueue, startBookingWorker, enqueuePostBookingTasks, enqueueAppointmentReminder };
