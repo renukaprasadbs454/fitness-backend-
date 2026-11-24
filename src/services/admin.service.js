@@ -195,7 +195,9 @@ async function createUser(adminId, { fullName, email, phone, role, password }) {
   if (role === "COACH") await coachRepository.create({ userId: user.id, specialties: [] });
 
   await adminRepository.createAuditLog(adminId, "CREATE_USER", "USER", user.id, { role, generated: !password });
-  return { user: await userRepository.findById(user.id), temporaryPassword: tempPassword };
+  const createdUser = await userRepository.findById(user.id);
+  const { passwordHash: _passwordHash, ...safeUser } = createdUser;
+  return { user: safeUser, temporaryPassword: tempPassword };
 }
 
 async function deleteUser(adminId, id) {
