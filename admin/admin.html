@@ -564,7 +564,7 @@
                       <div class="flex" :class="message.senderId === selectedAdminRoom().userId ? 'justify-start' : 'justify-end'">
                         <div class="max-w-[85%] sm:max-w-[72%] rounded-2xl px-4 py-3 border" :class="message.senderId === selectedAdminRoom().userId ? 'bg-dark-muted border-dark-border rounded-bl-md' : 'bg-primary/15 border-primary/20 rounded-br-md'">
                           <p class="text-[10px] uppercase tracking-wide font-semibold text-slate-400 mb-1" x-text="adminRelationName(message.senderId__label, 'Participant')"></p>
-                          <a x-show="message.type === 'IMAGE' && message.imageUrl" :href="message.imageUrl" target="_blank" rel="noopener noreferrer"><img :src="message.imageUrl" alt="Chat attachment" class="max-h-56 rounded-lg mb-2"></a>
+                          <a x-show="message.type === 'IMAGE' && message.imageUrl" :href="mediaUrl(message.imageUrl)" target="_blank" rel="noopener noreferrer"><img :src="mediaUrl(message.imageUrl)" alt="Chat attachment" class="max-h-56 rounded-lg mb-2"></a>
                           <p x-show="message.body" class="text-sm whitespace-pre-wrap break-words text-slate-100" x-text="message.body"></p>
                           <div class="text-[10px] text-slate-500 mt-2 flex gap-2"><span x-text="adminDate(message.createdAt)"></span><span x-show="message.status" x-text="message.status"></span></div>
                         </div>
@@ -3461,7 +3461,13 @@
           }
         },
 
-        apiRequest(method, path, body = null, retried = false) {
+         mediaUrl(url) {
+           if (!url) return "";
+           if (/^(https?:|data:|blob:)/i.test(url)) return url;
+           return new URL(url.startsWith("/") ? url : `/${url}`, window.location.origin).href;
+         },
+
+         apiRequest(method, path, body = null, retried = false) {
           const headers = { "Content-Type": "application/json" };
           if (this.accessToken) {
             headers.Authorization = `Bearer ${this.accessToken}`;

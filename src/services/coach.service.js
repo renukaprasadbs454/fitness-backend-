@@ -233,7 +233,7 @@ async function listClientProgressPhotos(userId, clientId) {
     throw ApiError.forbidden("You can view transformation photos only for your active clients");
   }
   const mediaRepository = require("../repositories/media.repository");
-  const { resolveReadUrl } = require("../utils/storage");
+  const { resolveReadUrlForKey } = require("../utils/storage");
   const photos = await mediaRepository.listByUser(clientId, "PROGRESS_IMAGE");
   const photoSets = await require("../repositories/progress.repository").progressPhotoSessions(clientId);
   const setCreatedAtById = new Map(photoSets.map((photo) => [photo.sessionId, photo.setCreatedAt]));
@@ -242,7 +242,9 @@ async function listClientProgressPhotos(userId, clientId) {
     const sessionId = photo.sessionId || `legacy-${photo.id}`;
     if (!sets.has(sessionId)) sets.set(sessionId, { sessionId, createdAt: setCreatedAtById.get(sessionId) || photo.createdAt, photos: [] });
     const set = sets.get(sessionId);
-    set.photos.push({ id: photo.id, url: resolveReadUrl(photo.url), angle: photo.angle, createdAt: photo.createdAt });
+    // storageKey is the canonical object reference. Signing from it keeps
+    // previews working for uploads created with older/public URL formats.
+    set.photos.push({ id: photo.id, url: resolveReadUrlForKey(photo.storageKey, photo.url), angle: photo.angle, createdAt: photo.createdAt });
   }
   return [...sets.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }

@@ -1184,7 +1184,7 @@
                             <div class="max-w-[78%] rounded-2xl px-3.5 py-2 text-sm" :class="isOutgoing(m) ? 'bg-primary text-white rounded-br-md' : 'bg-dark-muted text-slate-100 rounded-bl-md'">
                               <p x-show="activeRoom.isMine === false" class="text-[10px] font-semibold mb-0.5 opacity-80" x-text="m.senderId === activeRoom.participant.id ? activeRoom.participant.name : (activeRoom.coach?.name || 'Coach')"></p>
                               <template x-if="m.type === 'IMAGE' && m.imageUrl">
-                                <a :href="m.imageUrl" target="_blank" rel="noopener"><img :src="m.imageUrl" alt="Photo" class="rounded-lg max-h-56 mb-1"></a>
+                                <a :href="mediaUrl(m.imageUrl)" target="_blank" rel="noopener"><img :src="mediaUrl(m.imageUrl)" alt="Photo" class="rounded-lg max-h-56 mb-1"></a>
                               </template>
                               <p x-show="m.body" class="whitespace-pre-wrap break-words" x-text="m.body"></p>
                               <p class="text-[10px] mt-0.5 text-right opacity-70">
@@ -1458,8 +1458,8 @@
             <h3 class="mb-3 text-sm font-semibold text-slate-200" x-text="'Set · ' + new Date(set.createdAt).toLocaleDateString()"></h3>
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <template x-for="photo in set.photos" :key="photo.id">
-                <a :href="photo.url" target="_blank" rel="noopener" class="overflow-hidden rounded-xl border border-dark-border">
-                  <img :src="photo.url" :alt="(photo.angle || 'Transformation') + ' photo'" class="h-44 w-full object-cover">
+                <a :href="photo.url" target="_blank" rel="noopener" class="group overflow-hidden rounded-xl border border-dark-border">
+                  <img :src="photo.url" :alt="(photo.angle || 'Transformation') + ' photo'" class="h-44 w-full object-cover transition group-hover:scale-105" @error="$event.target.closest('a').classList.add('hidden')">
                   <span class="block px-2 py-1.5 text-xs text-slate-400" x-text="(photo.angle || 'Photo') + ' · ' + new Date(photo.createdAt).toLocaleDateString()"></span>
                 </a>
               </template>
@@ -2927,6 +2927,12 @@
           setTimeout(() => {
             this.toasts = this.toasts.filter((t) => t.id !== id);
           }, duration);
+        },
+
+        mediaUrl(url) {
+          if (!url) return "";
+          if (/^(https?:|data:|blob:)/i.test(url)) return url;
+          return new URL(url.startsWith("/") ? url : `/${url}`, window.location.origin).href;
         },
 
         apiRequest(method, path, body = null, retried = false) {

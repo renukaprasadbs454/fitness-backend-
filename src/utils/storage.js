@@ -163,12 +163,35 @@ function s3KeyFromStoredUrl(storedUrl) {
  * Returns the input unchanged if it isn't one of ours (e.g. local /uploads
  * paths, or driver isn't "s3") — safe to call on any string. */
 function resolveReadUrl(storedUrl) {
+  // Older local chat rows may contain the storage key without the leading
+  // slash. Otherwise /coach and /admin resolve it under their portal path.
+  if (
+    env.storage.driver !== "s3" &&
+    typeof storedUrl === "string" &&
+    storedUrl &&
+    !storedUrl.startsWith("/") &&
+    storedUrl.startsWith(`${env.storage.localUploadDir}/`)
+  ) {
+    return `/${storedUrl}`;
+  }
+
   const key = s3KeyFromStoredUrl(storedUrl);
   if (!key) return storedUrl;
 
+  return resolveReadUrlForKey(key, storedUrl);
+}
+
+/**
+ * Resolves an object using its database storage key. This is more reliable
+ * than parsing the display URL, especially for legacy S3-compatible URLs or
+ * URLs whose public endpoint configuration has changed since upload.
+ */
+function resolveReadUrlForKey(storageKey, fallbackUrl = "") {
+  if (env.storage.driver !== "s3" || !storageKey) return fallbackUrl;
+
   return getS3().getSignedUrl("getObject", {
     Bucket: env.storage.aws.bucket,
-    Key: key,
+    Key: storageKey,
     Expires: SIGNED_URL_EXPIRES_SECONDS
   });
 }
@@ -269,4 +292,4 @@ async function diagnose() {
   return report;
 }
 
-module.exports = { saveFile, deleteFile, readFile, resolveReadUrl, detectImageType, diagnose };
+module.exports = { saveFile, deleteFile, readFile, resolveReadUrl, resolveReadUrlForKey, detectImageType, diagnose };
